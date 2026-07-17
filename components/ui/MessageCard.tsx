@@ -1,5 +1,4 @@
 import {View, Text, Pressable} from 'react-native'
-import {messages} from '../../data/content'
 import { liveStyles } from '../../constants/styles/live.styles'
 import { Ionicons } from '@expo/vector-icons'
 

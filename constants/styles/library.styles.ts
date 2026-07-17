@@ -25,4 +25,7 @@ export const LibraryStyles = StyleSheet.create({
     marginTop: 8,
     gap: 6,
   },
+  filterView: {
+    padding: theme.spacing.sm,
+  }
 });
