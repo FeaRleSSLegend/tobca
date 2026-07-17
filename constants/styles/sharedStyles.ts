@@ -11,6 +11,8 @@ export const sharedStyles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    paddingBottom: 0,
+    backgroundColor: theme.colors.bg
   },
   headerRow: {
     flexDirection: 'row',

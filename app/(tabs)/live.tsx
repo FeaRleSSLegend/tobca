@@ -23,7 +23,7 @@ export default function LiveScreen() {
     .slice(0, 2);
 
   return (
-    <SafeAreaView style={sharedStyles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={sharedStyles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header row: greeting + avatar */}
         <View style={sharedStyles.headerRow}>

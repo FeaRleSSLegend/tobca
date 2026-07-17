@@ -7,7 +7,7 @@ import { SearchBar } from '../../components/ui/SearchBar';
 
 export default function LibraryScreen() {
   return (
-    <SafeAreaView style={sharedStyles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={sharedStyles.container}>
       <ScrollView>
         {/* Header row*/}
               <View style={sharedStyles.headerRow}>
