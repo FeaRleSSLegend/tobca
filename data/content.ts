@@ -150,3 +150,21 @@ export const latestMessages = [...messages]
     .sort((a,b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0,2)
 
+
+// Derived from messages with type: 'series' — groups by series name,
+// counts how many episodes exist for each. Add episodes to `messages`
+// and this list updates itself, no manual bookkeeping.
+export const seriesList = Array.from(
+  new Set(messages.filter((m) => m.type === 'series' && m.series).map((m) => m.series))
+).map((name) => ({
+  name: name as string,
+  count: messages.filter((m) => m.series === name).length,
+}));
+
+// Add this after seriesList
+export const recentlyAdded = [...messages]
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    .slice(0, 4); // Show 4 most recent
+
+
+

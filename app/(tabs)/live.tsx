@@ -2,9 +2,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { theme } from "../../constants/theme";
 import { sharedStyles } from "../../constants/styles/sharedStyles";
-import { liveStyles } from "../../constants/styles/live.styles";
-import { Ionicons } from "@expo/vector-icons";
-import { messages } from "../../data/content";
+import { latestMessages } from "../../data/content";
 import { services } from "../../data/services";
 import { SectionLabel } from "../../components/ui/SectionLabel";
 import { LiveCard } from "../../components/ui/LiveCard";
@@ -12,15 +10,14 @@ import { ServicePill } from "../../components/ui/ServicePill";
 import { ReadingCard } from "../../components/ui/ReadingCard";
 import { MessageCard } from "../../components/ui/MessageCard";
 
+
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+
+
 
 export default function LiveScreen() {
   const todayName = DAY_NAMES[new Date().getDay()];
-
-  // Most recent first, not just array order — publishedAt is the source of truth.
-  const latestMessages = [...messages]
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, 2);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={sharedStyles.container}>

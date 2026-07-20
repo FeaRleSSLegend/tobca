@@ -27,5 +27,17 @@ export const LibraryStyles = StyleSheet.create({
   },
   filterView: {
     padding: theme.spacing.sm,
-  }
+  },
+  // Add to LibraryStyles
+  gridContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginBottom: theme.spacing.lg,
+      marginTop: theme.spacing.sm,
+  },
+  gridItem: {
+      width: '48%', // 2 columns with gap
+  },
 });
+
