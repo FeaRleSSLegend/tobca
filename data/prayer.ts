@@ -13,28 +13,34 @@ export interface PrayerResource {
   fileUrl: string; // TODO: replace with a real hosted PDF URL once uploaded
 }
 
-export const currentFocus: PrayerFocus = {
-  month: 'July',
-  title: 'Praying for Divine Direction & Open Doors',
-  description:
-    'A focused month of fasting and prayer for clarity, breakthrough, and new opportunities across the OliveBrook family.',
-};
-
 export const prayerResources: PrayerResource[] = [
   { id: '1', name: '21 Days Fasting Guide', pages: 8, fileUrl: 'REPLACE_ME' },
   { id: '2', name: 'Daily Prayer Points', pages: 5, fileUrl: 'REPLACE_ME' },
   { id: '3', name: 'Scriptures for Breakthrough', pages: 3, fileUrl: 'REPLACE_ME' },
 ];
 
+
+export interface PrayerFocus {
+  month: string;
+  title: string;
+  description: string;
+  currentDay?: number;
+  totalDays?: number;
+  pages?: number; // only used for archived focuses shown as doc cards
+}
+
+export const currentFocus: PrayerFocus = {
+  month: 'July',
+  title: 'Praying for Divine Direction & Open Doors',
+  description:
+    'A focused month of fasting and prayer for clarity, breakthrough, and new opportunities across the OliveBrook family.',
+  currentDay: 8,
+  totalDays: 21,
+};
+
+// prayerResources unchanged
+
 export const archivedFocuses: PrayerFocus[] = [
-  {
-    month: 'June',
-    title: 'June Focus',
-    description: 'Archived — see PDF for full content.',
-  },
-  {
-    month: 'May',
-    title: 'May Focus',
-    description: 'Archived — see PDF for full content.',
-  },
+  { month: 'June', title: 'June Focus', description: 'Archived — see PDF for full content.', pages: 6 },
+  { month: 'May', title: 'May Focus', description: 'Archived — see PDF for full content.', pages: 5 },
 ];

@@ -19,7 +19,7 @@ export default function LibraryScreen() {
 
     return (
         <SafeAreaView edges={['top', 'left', 'right']} style={sharedStyles.container}>
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={sharedStyles.headerRow}>
                     <Text style={{ fontSize: theme.fontSize.heroTitle, fontFamily: theme.fontFamily.display }}>
                         Library
