@@ -29,18 +29,28 @@ export const liveStyles = StyleSheet.create({
     borderRadius: theme.radius.full,
     marginRight: theme.spacing.sm,
   },
-  playButton: {
+  playButtonWrapper: {
+    alignSelf: 'center',
     marginTop: theme.spacing.md,
+    borderRadius: theme.radius.full,
+    overflow: 'hidden',
+  },
+  playButton: {
     width: 60,
     height: 60,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.pink,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
+  },
+  addCalendarWrapper: {
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing.sm,
+    borderRadius: theme.radius.full,
+    overflow: 'hidden',
   },
   addCalendarButton: {
     paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
@@ -149,22 +159,52 @@ export const liveStyles = StyleSheet.create({
     borderRadius: theme.radius.md,
   },
   latestMessageThumb: {
-    width: 80,
-    height: 80,
-    borderRadius: theme.radius.md,
+    width: 72,
+    height: 72,
+    borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.slateLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  latestMessagePlayCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.pink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Small dark pill in the thumbnail's corner, the way a real video
+  // thumbnail shows its length — this also frees the meta line below from
+  // repeating duration as plain text.
+  latestMessageDurationBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(10,22,33,0.75)',
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  latestMessageDurationText: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 10,
+    color: theme.colors.white,
   },
   latestMessageTitle: {
-    fontSize: theme.fontSize.body,
-    color: theme.colors.slate,
-    fontWeight: theme.fontWeight.bold,
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: theme.fontSize.bodyLg,
+    color: theme.colors.navy,
     marginBottom: theme.spacing.xs,
   },
   latestMessageMeta: {
+    fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     color: theme.colors.graySecondary,
-    marginBottom: theme.spacing.xs,
+  },
+  latestMessageSeriesTag: {
+    fontFamily: theme.fontFamily.bodyBold,
+    color: theme.colors.slate,
   },
 });

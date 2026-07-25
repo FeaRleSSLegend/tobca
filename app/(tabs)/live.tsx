@@ -8,7 +8,6 @@ import { verseOfDay } from "../../data/verseOfDay";
 import { SectionLabel } from "../../components/ui/SectionLabel";
 import { LiveCard } from "../../components/ui/LiveCard";
 import { ServicePill } from "../../components/ui/ServicePill";
-import { ReadingCard } from "../../components/ui/ReadingCard";
 import { MessageCard } from "../../components/ui/MessageCard";
 import { VerseOfDayCard } from "../../components/ui/VerseOfDayCard";
 
@@ -42,12 +41,16 @@ export default function LiveScreen() {
           </View>
         </View>
 
-        {/* Verse of the Day — the one deliberately loud, photographic moment
-            on this screen. Everything below stays quieter by comparison. */}
-        <VerseOfDayCard reference={verseOfDay.reference} text={verseOfDay.text} />
-
-        {/* Live vs Next-Service card */}
+        {/* Live vs Next-Service card — leads the screen since this is the
+            one thing on it that's actually time-sensitive; a "next service"
+            countdown loses its point if it's not the first thing you see. */}
         <LiveCard isLive={false}/>
+
+        {/* Verse of the Day — the second loud moment on this screen, but a
+            different register (photographic, devotional) from LiveCard's
+            flat dark card just above it, so the two don't compete as
+            "identical hero cards stacked twice." */}
+        <VerseOfDayCard reference={verseOfDay.reference} text={verseOfDay.text} />
 
         {/* Extra breathing room marks the shift from the two hero moments
             above into the everyday utility list below — the rest of this
@@ -74,10 +77,11 @@ export default function LiveScreen() {
           })}
         </ScrollView>
 
-        {/* Today's Reading */}
-        <SectionLabel label="Today's Reading" />
-
-        <ReadingCard/>
+        {/* Today's Reading was cut from here — it duplicated both the Verse
+            of the Day card above and the full Bible Plan tab below, and was
+            the third "streak in a box" implementation in the app. The Plan
+            tab is the real home for daily reading now; this screen doesn't
+            need its own smaller copy of it. */}
 
         {/* Latest Messages */}
         <SectionLabel label="Latest Messages" actionText="See All"/>
