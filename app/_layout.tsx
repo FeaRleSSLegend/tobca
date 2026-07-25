@@ -15,6 +15,11 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import {
+  Lora_400Regular,
+  Lora_400Regular_Italic,
+  Lora_600SemiBold,
+} from '@expo-google-fonts/lora';
 
 // Keep the native splash screen visible until fonts finish loading —
 // prevents a flash of system-font text before the real fonts swap in.
@@ -29,6 +34,9 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    Lora_400Regular,
+    Lora_400Regular_Italic,
+    Lora_600SemiBold,
   });
 
   useEffect(() => {

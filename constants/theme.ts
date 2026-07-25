@@ -14,6 +14,9 @@ export const colors = {
 
   pink: '#F80068',    // gradient start — logo swoosh
   purple: '#C820F8',  // gradient end — logo swoosh
+  success: '#0E9F6E', // "read"/completed state — deliberately not Material's default
+                       // #4CAF50; sits closer to the navy/pink palette than a
+                       // generic framework green would
 
   white: '#FFFFFF',
   black: '#0A1621',   // media viewport / video background
@@ -63,8 +66,13 @@ export const fontWeight = {
   bold: '700' as const,
 };
 
-// Two font families only — Space Grotesk for anything with personality
-// (headers, titles, numbers), Inter for everything read at length (body, meta).
+// Two font families for UI chrome — Space Grotesk for anything with
+// personality (headers, titles, numbers), Inter for everything read at
+// length in-app (body, meta). A third, serif family is used ONLY inside
+// the dedicated full-screen reading view (app/reading.tsx) — scripture
+// text gets a different typographic treatment than app chrome on purpose,
+// the same way YouVersion/Bible apps consistently do. Don't reach for
+// these outside that screen.
 export const fontFamily = {
   display: 'SpaceGrotesk_700Bold',
   displaySemibold: 'SpaceGrotesk_600SemiBold',
@@ -73,6 +81,9 @@ export const fontFamily = {
   bodyMedium: 'Inter_500Medium',
   bodySemibold: 'Inter_600SemiBold',
   bodyBold: 'Inter_700Bold',
+  serif: 'Lora_400Regular',
+  serifItalic: 'Lora_400Regular_Italic',
+  serifSemibold: 'Lora_600SemiBold',
 };
 
 export const layout = {

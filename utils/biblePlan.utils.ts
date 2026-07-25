@@ -2,6 +2,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { biblePlan, totalDays, DayPlan } from '../data/biblePlan';
 
 const STORAGE_KEY = '@bible_progress';
+const unlockKey = (date: string) => `@bible_reading_unlocked_${date}`;
+
+// The full reading view lives on a separate pushed screen now (app/reading.tsx),
+// not inline on the Plan tab — so "they finished a reading" can't just be a
+// piece of component state anymore, it has to survive a navigation away and
+// back. Persisting a simple flag per day is the same pattern already used for
+// scroll-position restore, just one key instead of a value.
+export async function markReadingUnlocked(date: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(unlockKey(date), 'true');
+  } catch (error) {
+    console.error('Error saving reading-unlocked flag:', error);
+  }
+}
+
+export async function isReadingUnlocked(date: string): Promise<boolean> {
+  try {
+    const value = await AsyncStorage.getItem(unlockKey(date));
+    return value === 'true';
+  } catch {
+    return false;
+  }
+}
 
 export interface ReadingProgress {
   completedDays: string[]; // ['January 1', 'January 2']
@@ -80,7 +103,7 @@ export function getCompletionPercentage(completedDays: string[]): number {
   return Math.round((completedDays.length / totalDays) * 100);
 }
 
-export function getWeekProgress(): { day: string; status: 'completed' | 'today' | 'pending' }[] {
+export function getWeekProgress(completedDays: string[]): { day: string; status: 'completed' | 'today' | 'pending' }[] {
   const today = new Date();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const result: { day: string; status: 'completed' | 'today' | 'pending' }[] = [];
@@ -98,9 +121,10 @@ export function getWeekProgress(): { day: string; status: 'completed' | 'today' 
     const dayNum = date.getDate();
     const dateString = `${month} ${dayNum}`;
     
-    // Check if this day has been completed (we'd need to check AsyncStorage)
-    // For now, we'll just mark today as 'today' and others as 'pending'
     let status: 'completed' | 'today' | 'pending' = 'pending';
+    if (completedDays.includes(dateString)) {
+      status = 'completed';
+    }
     if (isToday) {
       status = 'today';
     }
