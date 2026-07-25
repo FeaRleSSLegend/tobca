@@ -18,23 +18,53 @@ import {
   ReadingProgress 
 } from '../../utils/biblePlan.utils';
 import { DayPlan } from '../../data/biblePlan';
-
-// Mock verses for demo
-const mockVerses = [
-  { number: 1, text: 'Now the LORD had said unto Abram, Get thee out of thy country, and from thy kindred, and from thy father\'s house, unto a land that I will shew thee:' },
-  { number: 2, text: 'And I will make of thee a great nation, and I will bless thee, and make thy name great; and thou shalt be a blessing:' },
-  { number: 3, text: 'And I will bless them that bless thee, and curse him that curseth thee: and in thee shall all families of the earth be blessed.' },
-];
+import { TranslationCode } from '../../services/bibleVersions';
+import { getVersesForReference, Verse } from '../../services/bibleApi';
 
 export default function PlanScreen() {
-  const [translation, setTranslation] = useState<'kjv' | 'niv'>('kjv');
+  const [translation, setTranslation] = useState<TranslationCode>('niv');
   const [todayReading, setTodayReading] = useState<DayPlan | null>(null);
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
   const [isRead, setIsRead] = useState(false);
 
+  const [otVerses, setOtVerses] = useState<Verse[]>([]);
+  const [ntVerses, setNtVerses] = useState<Verse[]>([]);
+  const [psalmVerses, setPsalmVerses] = useState<Verse[]>([]);
+  const [proverbVerses, setProverbVerses] = useState<Verse[]>([]);
+  const [versesLoading, setVersesLoading] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!todayReading) return;
+
+    let cancelled = false;
+    setVersesLoading(true);
+
+    Promise.all([
+      getVersesForReference(todayReading.oldTestament, translation),
+      getVersesForReference(todayReading.newTestament, translation),
+      getVersesForReference(todayReading.psalm, translation),
+      getVersesForReference(todayReading.proverb, translation),
+    ])
+      .then(([ot, nt, psalm, proverb]) => {
+        if (cancelled) return;
+        setOtVerses(ot);
+        setNtVerses(nt);
+        setPsalmVerses(psalm);
+        setProverbVerses(proverb);
+      })
+      .catch(err => console.error('Failed to load verses:', err))
+      .finally(() => {
+        if (!cancelled) setVersesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [todayReading, translation]);
 
   const loadData = async () => {
     const reading = getTodayReading();
@@ -99,9 +129,9 @@ export default function PlanScreen() {
         <SectionLabel label="Today's Reading" />
         
         <ReadingViewport 
-          reference="Genesis 12:1–3"
+          reference={todayReading.oldTestament}
           translation={translation}
-          verses={mockVerses}
+          verses={otVerses}
           onContinue={() => console.log('Continue reading Genesis 12–14')}
         />
         

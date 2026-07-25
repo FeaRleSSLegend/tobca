@@ -2,10 +2,11 @@ import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { TranslationCode } from '../../services/bibleVersions';
 
 interface ReadingViewportProps {
   reference: string; // 'Genesis 12:1–3'
-  translation: 'kjv' | 'niv';
+  translation: TranslationCode;
   verses: { number: number; text: string }[];
   onContinue?: () => void;
 }

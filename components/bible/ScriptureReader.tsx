@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { TranslationCode } from '../../services/bibleVersions';
 
 interface Verse {
   number: number;
@@ -10,9 +11,9 @@ interface Verse {
 
 interface ScriptureReaderProps {
   reference: string;
-  translation: 'kjv' | 'niv';
+  translation: TranslationCode;
   verses?: Verse[];
-  onTranslationChange?: (translation: 'kjv' | 'niv') => void;
+  onTranslationChange?: (translation: TranslationCode) => void;
   onReadMore?: () => void;
   style?: any;
 }
@@ -55,7 +56,7 @@ export const ScriptureReader = ({
           </Pressable>
           {onTranslationChange && (
             <Pressable 
-              onPress={() => onTranslationChange(translation === 'kjv' ? 'niv' : 'kjv')}
+              onPress={() => onTranslationChange(translation === 'niv' ? 'asv' : 'niv')}
               style={[styles.controlBtn, styles.translationBtn]}
             >
               <Text style={styles.controlText}>

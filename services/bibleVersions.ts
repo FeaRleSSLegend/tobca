@@ -6,10 +6,13 @@
 // and update the map below. That's a rare manual fix, not something the
 // app should be re-checking over the network on every launch.
 
-export type TranslationCode = 'kjv' | 'niv' | 'amp';
+export type TranslationCode = 'asv' | 'niv' | 'amp';
 
 const VERSION_IDS: Record<TranslationCode, number> = {
-  kjv: 1,     // King James Version
+  asv: 12,  // The Passion Translation — note: catalog lists it "(In Review)"
+              // and its books[] array is missing Exodus–2 Chronicles, Ezra–
+              // Esther, and Ecclesiastes. Passages in those books will fail
+              // for this translation until YouVersion's catalog fills in.
   niv: 111,   // Filed as "NIV11" in the catalog — the 2011 revision, the
               // standard modern NIV. Not a typo.
   amp: 1588,  // Amplified Bible
