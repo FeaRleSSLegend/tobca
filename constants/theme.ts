@@ -3,7 +3,12 @@
 // Every screen/component should import from here — never hardcode a hex value inline.
 
 export const colors = {
-  navy: '#1A3247',       // primary text, headers, active nav state, dark surfaces
+  // Two intentional jobs, don't blur them further: (1) primary text/headers/
+  // active nav state on light backgrounds, and (2) the app's one "dark
+  // surface" color (hero cards, gradients, filled panels). If something
+  // needs a dark background, it's navy — don't reach for slate/black for
+  // that job, and don't add a third dark tone.
+  navy: '#1A3247',
   slate: '#284868',      // secondary dark, icons, nav bar accents
   slateLight: '#3E617F', // used in gradients (feature card backgrounds)
   graySecondary: '#5C6F80', // body/meta text — passes 4.5:1 contrast on white

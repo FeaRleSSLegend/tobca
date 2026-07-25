@@ -50,12 +50,13 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     minWidth: 0,
   },
+  // Plain small label, not an uppercase eyebrow — this card already sits
+  // under a "Today's Reading" SectionLabel, so restating that as a shouty
+  // caption on every card underneath it was redundant.
   eyebrow: {
-    fontFamily: theme.fontFamily.bodyBold,
+    fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.caption,
     color: theme.colors.slate,
-    textTransform: 'uppercase',
-    letterSpacing: 0.04,
     marginBottom: theme.spacing.xs,
   },
   verse: {

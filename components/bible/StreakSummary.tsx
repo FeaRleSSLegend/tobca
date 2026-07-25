@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
 
 interface StreakSummaryProps {
@@ -29,7 +30,12 @@ export const StreakSummary = ({ streak, percentage, onPress }: StreakSummaryProp
 
       <View style={styles.progressSection}>
         <View style={styles.track}>
-          <View style={[styles.fill, { width: `${Math.max(percentage, 2)}%` }]} />
+          <LinearGradient
+            colors={theme.gradient.colors}
+            start={theme.gradient.start}
+            end={theme.gradient.end}
+            style={[styles.fill, { width: `${Math.max(percentage, 2)}%` }]}
+          />
         </View>
         <Text style={styles.progressLabel}>{percentage}% of plan</Text>
       </View>
@@ -40,16 +46,15 @@ export const StreakSummary = ({ streak, percentage, onPress }: StreakSummaryProp
 };
 
 const styles = StyleSheet.create({
+  // No card chrome here on purpose — TodayCard above is the bordered,
+  // contained element on this screen; this is secondary status info and
+  // reads more calmly sitting directly on the page than boxed up to match.
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
+    marginBottom: theme.spacing.lg,
     gap: theme.spacing.md,
   },
   flameWrap: {
@@ -92,7 +97,6 @@ const styles = StyleSheet.create({
   },
   fill: {
     height: '100%',
-    backgroundColor: theme.colors.pink,
     borderRadius: theme.radius.full,
   },
   progressLabel: {

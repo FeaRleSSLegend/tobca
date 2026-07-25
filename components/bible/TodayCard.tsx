@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
 
 interface TodayCardProps {
@@ -23,14 +24,27 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead }: TodayCar
 
       {!isRead ? (
         <>
-          <Pressable 
-            onPress={onMarkAsRead} 
+          <Pressable
+            onPress={onMarkAsRead}
             disabled={!canMarkAsRead}
-            style={[styles.markBtn, !canMarkAsRead && styles.markBtnDisabled]}
+            style={styles.markBtnWrapper}
           >
-            <Text style={[styles.markBtnText, !canMarkAsRead && styles.markBtnTextDisabled]}>
-              Mark as Read
-            </Text>
+            {canMarkAsRead ? (
+              <LinearGradient
+                colors={theme.gradient.colors}
+                start={theme.gradient.start}
+                end={theme.gradient.end}
+                style={styles.markBtn}
+              >
+                <Text style={styles.markBtnText}>Mark as Read</Text>
+              </LinearGradient>
+            ) : (
+              <View style={[styles.markBtn, styles.markBtnDisabled]}>
+                <Text style={[styles.markBtnText, styles.markBtnTextDisabled]}>
+                  Mark as Read
+                </Text>
+              </View>
+            )}
           </Pressable>
           {!canMarkAsRead && (
             <Text style={styles.hint}>Open one of today's readings below to unlock this</Text>
@@ -57,18 +71,23 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
+  // Plain, not shouting — this is a status line, not a badge. (Was
+  // uppercase/bold/letter-spaced before, which put it visually on par with
+  // actual eyebrow labels elsewhere and made every card in this screen read
+  // at the same volume.)
   dayCount: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: theme.fontSize.caption,
+    fontFamily: theme.fontFamily.body,
+    fontSize: theme.fontSize.bodyLg,
     color: theme.colors.graySecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
     marginBottom: theme.spacing.md,
   },
-  markBtn: {
-    backgroundColor: theme.colors.pink,
-    padding: theme.spacing.md,
+  markBtnWrapper: {
+    width: '100%',
     borderRadius: theme.radius.sm,
+    overflow: 'hidden',
+  },
+  markBtn: {
+    padding: theme.spacing.md,
     width: '100%',
     alignItems: 'center',
   },

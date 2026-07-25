@@ -156,6 +156,11 @@ export default function PlanScreen() {
           onPress={() => setStreakModalVisible(true)}
         />
 
+        {/* Deliberate pause before the actual content — TodayCard + streak
+            status above are secondary framing, the reading carousel below
+            is why someone opened this screen. Don't let them run together. */}
+        <View style={{ height: theme.spacing.lg }} />
+
         <SectionLabel label="Today's Reading" />
 
         <ReadingCarousel readings={readings} onPressCard={openReading} />

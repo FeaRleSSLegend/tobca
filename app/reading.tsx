@@ -92,10 +92,10 @@ export default function ReadingScreen() {
         </View>
 
         <View style={styles.fontControls}>
-          <Pressable onPress={() => setFontSize(s => Math.max(15, s - 2))} style={styles.sizeBtn} hitSlop={6}>
+          <Pressable onPress={() => setFontSize(s => Math.max(15, s - 2))} style={styles.sizeBtn} hitSlop={8}>
             <Text style={styles.sizeBtnText}>A-</Text>
           </Pressable>
-          <Pressable onPress={() => setFontSize(s => Math.min(26, s + 2))} style={styles.sizeBtn} hitSlop={6}>
+          <Pressable onPress={() => setFontSize(s => Math.min(26, s + 2))} style={styles.sizeBtn} hitSlop={8}>
             <Text style={styles.sizeBtnText}>A+</Text>
           </Pressable>
         </View>

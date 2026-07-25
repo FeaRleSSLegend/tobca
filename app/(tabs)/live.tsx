@@ -4,11 +4,13 @@ import { theme } from "../../constants/theme";
 import { sharedStyles } from "../../constants/styles/sharedStyles";
 import { latestMessages } from "../../data/content";
 import { services } from "../../data/services";
+import { verseOfDay } from "../../data/verseOfDay";
 import { SectionLabel } from "../../components/ui/SectionLabel";
 import { LiveCard } from "../../components/ui/LiveCard";
 import { ServicePill } from "../../components/ui/ServicePill";
 import { ReadingCard } from "../../components/ui/ReadingCard";
 import { MessageCard } from "../../components/ui/MessageCard";
+import { VerseOfDayCard } from "../../components/ui/VerseOfDayCard";
 
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -40,8 +42,17 @@ export default function LiveScreen() {
           </View>
         </View>
 
+        {/* Verse of the Day — the one deliberately loud, photographic moment
+            on this screen. Everything below stays quieter by comparison. */}
+        <VerseOfDayCard reference={verseOfDay.reference} text={verseOfDay.text} />
+
         {/* Live vs Next-Service card */}
         <LiveCard isLive={false}/>
+
+        {/* Extra breathing room marks the shift from the two hero moments
+            above into the everyday utility list below — the rest of this
+            screen is deliberately tighter/quieter than the two cards above. */}
+        <View style={{ height: theme.spacing.xl }} />
 
         {/* This Week's Services */}
         <SectionLabel label="This Week's Services" actionText="View All"/>

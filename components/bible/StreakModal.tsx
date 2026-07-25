@@ -2,6 +2,7 @@ import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import { WeekView } from './WeekView';
+import { StatBox } from '../ui/StatBox';
 
 interface WeekDay {
   day: string;
@@ -57,18 +58,9 @@ export const StreakModal = ({
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{longestStreak}</Text>
-            <Text style={styles.statLabel}>Best Streak</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{completedCount}</Text>
-            <Text style={styles.statLabel}>Days Read</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{percentage}%</Text>
-            <Text style={styles.statLabel}>Of Plan</Text>
-          </View>
+          <StatBox value={longestStreak} label="Best Streak" />
+          <StatBox value={completedCount} label="Days Read" />
+          <StatBox value={`${percentage}%`} label="Of Plan" />
         </View>
       </View>
     </Modal>
@@ -152,26 +144,5 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: theme.colors.bg,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: theme.fontSize.sectionHeading,
-    fontWeight: '700',
-    color: theme.colors.navy,
-  },
-  statLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginTop: theme.spacing.xs,
   },
 });
