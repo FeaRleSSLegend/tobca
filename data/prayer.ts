@@ -4,6 +4,9 @@ export interface PrayerFocus {
   month: string;
   title: string;
   description: string;
+  currentDay?: number;
+  totalDays?: number;
+  pages?: number; // only used for archived focuses shown as doc cards
 }
 
 export interface PrayerResource {
@@ -19,16 +22,6 @@ export const prayerResources: PrayerResource[] = [
   { id: '3', name: 'Scriptures for Breakthrough', pages: 3, fileUrl: 'REPLACE_ME' },
 ];
 
-
-export interface PrayerFocus {
-  month: string;
-  title: string;
-  description: string;
-  currentDay?: number;
-  totalDays?: number;
-  pages?: number; // only used for archived focuses shown as doc cards
-}
-
 export const currentFocus: PrayerFocus = {
   month: 'July',
   title: 'Praying for Divine Direction & Open Doors',
@@ -37,8 +30,6 @@ export const currentFocus: PrayerFocus = {
   currentDay: 8,
   totalDays: 21,
 };
-
-// prayerResources unchanged
 
 export const archivedFocuses: PrayerFocus[] = [
   { month: 'June', title: 'June Focus', description: 'Archived — see PDF for full content.', pages: 6 },

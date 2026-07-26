@@ -1,4 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
@@ -10,17 +11,28 @@ interface GridCardProps {
   variant?: 'default' | 'compact';
 }
 
-export const GridCard = ({ 
-  title, 
-  duration, 
-  speaker, 
+export const GridCard = ({
+  title,
+  duration,
+  speaker,
   onPress,
-  variant = 'default' 
+  variant = 'default'
 }: GridCardProps) => {
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.thumbnail}>
-        <Ionicons name="play" size={20} color={theme.colors.white} />
+        {/* Deliberately NOT the same pink/purple wash PosterCard uses above
+            — that was tried and made Series and Recently Added look like
+            duplicate content blocks. Same idea (brand-tinted placeholder
+            until real thumbnail art exists), different register, so the
+            two sections stay visually distinguishable at a glance. */}
+        <LinearGradient
+          colors={[theme.colors.navy, theme.colors.slateLight]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Ionicons name="play" size={20} color={theme.colors.white} style={{ zIndex: 1 }} />
       </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={2}>
@@ -53,23 +65,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: {
-    padding: 10,
+    padding: theme.spacing.sm,
   },
   title: {
-    fontSize: 12.5,
+    fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodyBold,
     color: theme.colors.navy,
     lineHeight: 16,
     marginBottom: 4,
   },
   speaker: {
-    fontSize: 11,
+    // Was 11pt, one point under theme.ts's documented caption floor
+    // ("strict floor... never go below this"). Bumped to the floor itself.
+    fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
     color: theme.colors.graySecondary,
     marginBottom: 2,
   },
   duration: {
-    fontSize: 11,
+    fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
     color: theme.colors.grayIcon,
   },

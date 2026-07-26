@@ -11,21 +11,20 @@ interface AudioPlayerProps {
   onPlayPause?: () => void;
 }
 
-export const AudioPlayer = ({ 
-  title, 
-  subtitle, 
+// Same fix as LiveCard and CurrentMessageCard: flat navy surface instead of
+// a bespoke navy→slate gradient, with the actual brand gradient reserved
+// for the play/pause control — the one thing on this sticky bar someone is
+// actually meant to press.
+export const AudioPlayer = ({
+  title,
+  subtitle,
   isPlaying = false,
   onPress,
-  onPlayPause 
+  onPlayPause
 }: AudioPlayerProps) => {
   return (
     <Pressable onPress={onPress} style={styles.container}>
-      <LinearGradient
-        colors={[theme.colors.navy, theme.colors.slate]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
-      >
+      <View style={[styles.bar, { backgroundColor: theme.colors.navy }]}>
         <View style={styles.content}>
           <View style={styles.info}>
             <View style={styles.iconContainer}>
@@ -40,18 +39,25 @@ export const AudioPlayer = ({
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.controls}>
-            <Pressable onPress={onPlayPause} style={styles.controlButton}>
-              <Ionicons 
-                name={isPlaying ? "pause" : "play"} 
-                size={20} 
-                color={theme.colors.white} 
-              />
+            <Pressable onPress={onPlayPause} style={styles.controlButtonWrapper}>
+              <LinearGradient
+                colors={theme.gradient.colors}
+                start={theme.gradient.start}
+                end={theme.gradient.end}
+                style={styles.controlButton}
+              >
+                <Ionicons
+                  name={isPlaying ? "pause" : "play"}
+                  size={20}
+                  color={theme.colors.white}
+                />
+              </LinearGradient>
             </Pressable>
           </View>
         </View>
-      </LinearGradient>
+      </View>
     </Pressable>
   );
 };
@@ -64,7 +70,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 100,
   },
-  gradient: {
+  bar: {
     borderRadius: theme.radius.md,
     margin: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
@@ -84,12 +90,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 10,
+    gap: theme.spacing.sm,
   },
   iconContainer: {
     width: 32,
     height: 32,
-    borderRadius: 9,
+    borderRadius: theme.radius.sm,
     backgroundColor: 'rgba(248, 0, 104, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -100,21 +106,25 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 12,
+    fontSize: theme.fontSize.caption,
     color: theme.colors.white,
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 11,
+    fontSize: theme.fontSize.caption,
     color: 'rgba(255,255,255,0.55)',
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    marginLeft: 10,
+    gap: theme.spacing.md,
+    marginLeft: theme.spacing.sm,
+  },
+  controlButtonWrapper: {
+    borderRadius: theme.radius.full,
+    overflow: 'hidden',
   },
   controlButton: {
-    padding: 4,
+    padding: theme.spacing.md,
   },
 });

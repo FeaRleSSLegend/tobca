@@ -10,7 +10,7 @@ import { SectionLabel } from '../../components/ui/SectionLabel';
 import { CurrentMessage } from '../../components/ui/CurrentMessageCard';
 import { HScroll } from '../../components/ui/HScroll';
 import { PosterCard } from '../../components/ui/PosterCard';
-import { GridCard } from '../../components/ui/GridCard'; // Import new component
+import { GridCard } from '../../components/ui/GridCard';
 import { currentlyStreaming, seriesList, recentlyAdded } from '../../data/content';
 
 export default function LibraryScreen() {
@@ -37,7 +37,7 @@ export default function LibraryScreen() {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={LibraryStyles.filterView}
-                    contentContainerStyle={{ gap: theme.spacing.md }}
+                    contentContainerStyle={LibraryStyles.filterRow}
                 >
                     {filters.map((f) => (
                         <FilterPill
@@ -49,7 +49,11 @@ export default function LibraryScreen() {
                     ))}
                 </ScrollView>
 
-                <SectionLabel label="Current Message" />
+                {/* No SectionLabel here on purpose — this is Library's hero
+                    card, same role as LiveCard/VerseOfDayCard on Home, and
+                    neither of those get an outer label either. The card's
+                    own "Now streaming" eyebrow already says what this is;
+                    a SectionLabel above it was a second label for one idea. */}
                 <CurrentMessage message={currentlyStreaming} />
 
                 <SectionLabel label="Series" actionText='See All' />

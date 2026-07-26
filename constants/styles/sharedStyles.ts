@@ -32,7 +32,7 @@ export const sharedStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: theme.spacing.xl,
+    marginTop: theme.spacing.xxl,
   },
   sectionTitle: {
     fontSize: theme.fontSize.bodyLg,

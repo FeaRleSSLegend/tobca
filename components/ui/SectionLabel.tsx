@@ -1,5 +1,5 @@
-import {Text, View, Pressable} from 'react-native'
-import {sharedStyles} from "../../constants/styles/sharedStyles"
+import { Text, View, Pressable } from 'react-native'
+import { sharedStyles } from "../../constants/styles/sharedStyles"
 
 interface SectionLabelProps {
   label: string;
@@ -12,7 +12,10 @@ export const SectionLabel = ({ label, actionText }: SectionLabelProps) => {
       <Text style={sharedStyles.sectionTitle}>{label}</Text>
 
       {actionText && (
-        <Pressable>
+        // Text-only tap target (no padding of its own) — same touch-target
+        // gap as the pills/icon buttons elsewhere, and this row appears on
+        // every screen, so the fix benefits all four tabs at once.
+        <Pressable hitSlop={8}>
           <Text style={sharedStyles.seeAllLink}>{actionText}</Text>
         </Pressable>
       )}

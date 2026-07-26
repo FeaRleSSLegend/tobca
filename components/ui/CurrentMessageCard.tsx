@@ -8,20 +8,33 @@ interface CurrentMessageProps {
   message: Message;
 }
 
+// Card background is flat navy now, not a bespoke slateLight→navy blend —
+// same fix as LiveCard: navy's job is "dark surface," it doesn't need its
+// own invented gradient. The brand pink→purple gradient moved onto the
+// play button instead, since that's this card's actual primary action.
 export const CurrentMessage = ({ message }: CurrentMessageProps) => {
   return (
-    <LinearGradient
-      colors={[theme.colors.slateLight, theme.colors.navy]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.card}
-    >
-      <Pressable style={styles.playButton}>
-        <Ionicons name="play" size={16} color={theme.colors.white} />
+    <View style={styles.card}>
+      <Pressable style={styles.playButtonWrapper} hitSlop={8}>
+        <LinearGradient
+          colors={theme.gradient.colors}
+          start={theme.gradient.start}
+          end={theme.gradient.end}
+          style={styles.playButton}
+        >
+          <Ionicons name="play" size={16} color={theme.colors.white} />
+        </LinearGradient>
       </Pressable>
 
       <View>
-        <Text style={styles.eyebrow}>Now Streaming</Text>
+        {/* This is the section identity that used to live in a separate
+            SectionLabel above the card. "Now streaming" alone is a status,
+            not a title — it doesn't tell you what section you're in the
+            way FocusCard's "Prayer & Fasting" eyebrow does for Prayer.
+            This does that job now, inside the card, instead of costing a
+            whole extra row above it. */}
+        <Text style={styles.sectionEyebrow}>Current Message</Text>
+        <Text style={styles.eyebrow}>Now streaming</Text>
         <Text style={styles.title} numberOfLines={2}>
           {message.title}
         </Text>
@@ -29,36 +42,48 @@ export const CurrentMessage = ({ message }: CurrentMessageProps) => {
           {message.speaker} · {message.duration}
         </Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
     height: 150,
+    backgroundColor: theme.colors.navy,
     borderRadius: theme.radius.md,
     padding: theme.spacing.lg,
     justifyContent: 'flex-end',
     overflow: 'hidden',
-    marginTop: theme.spacing.sm
+    // Was spacing.sm (8px) — noticeably tighter than the gap every other
+    // section on this screen uses above it. Matched to sectionHeaderRow's
+    // own top margin so the hero card breathes the same as everything below it.
+    marginTop: theme.spacing.xxl,
   },
-  playButton: {
+  playButtonWrapper: {
     position: 'absolute',
     top: theme.spacing.md,
     right: theme.spacing.md,
+    borderRadius: theme.radius.full,
+    overflow: 'hidden',
+  },
+  playButton: {
     width: 36,
     height: 36,
-    borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eyebrow: {
+  sectionEyebrow: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: 'rgba(255,255,255,0.7)',
+    color: theme.colors.pink,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginBottom: theme.spacing.xs,
+  },
+  eyebrow: {
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: theme.fontSize.caption,
+    color: 'rgba(255,255,255,0.7)',
     marginBottom: 4,
   },
   title: {

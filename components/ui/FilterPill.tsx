@@ -9,17 +9,22 @@ interface FilterPillProps {
 
 export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
     return (
-        <Pressable 
+        <Pressable
             style={[
-                style.pillStyle, 
-                { 
+                style.pillStyle,
+                {
                     backgroundColor: isActive ? theme.colors.navy : theme.colors.white,
                     borderColor: isActive ? theme.colors.navy : theme.colors.grayBorder,
                 }
             ]}
             onPress={onPress}
+            // The pill's visible padding only gets it to ~33pt tall — same fix
+            // as VerseOfDayCard's shareBtn: extend the tappable area with
+            // hitSlop instead of growing the pill itself, so a row of these
+            // doesn't get visually heavier just to satisfy touch-target math.
+            hitSlop={8}
         >
-            <Text style={{ 
+            <Text style={{
                 color: isActive ? theme.colors.white : theme.colors.graySecondary,
                 fontWeight: theme.fontWeight.medium
             }}>

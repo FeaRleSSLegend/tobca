@@ -5,14 +5,22 @@ import { theme } from '../../constants/theme';
 interface DocCardProps {
   name: string;
   subtitle: string; // e.g. "8 pages"
+  icon?: keyof typeof Ionicons.glyphMap;
   onPress?: () => void;
 }
 
-export const DocCard = ({ name, subtitle, onPress }: DocCardProps) => {
+// Same card, two different meanings today: a downloadable PDF guide
+// ("Prayer Resources") and a past month's focus ("Archive"). Both used the
+// same document icon, so the two rows in Prayer looked identical at a
+// glance even though tapping one opens a PDF and the other opens an old
+// focus. `icon` defaults to the original document glyph so existing call
+// sites don't need to change, but lets Archive pass something that reads
+// as "past" instead of "file."
+export const DocCard = ({ name, subtitle, icon = 'document-text-outline', onPress }: DocCardProps) => {
   return (
     <Pressable style={styles.wrapper} onPress={onPress}>
       <View style={styles.icon}>
-        <Ionicons name="document-text-outline" size={18} color={theme.colors.slate} />
+        <Ionicons name={icon} size={18} color={theme.colors.slate} />
       </View>
       <Text style={styles.name} numberOfLines={2}>{name}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>

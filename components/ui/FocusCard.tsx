@@ -39,7 +39,10 @@ export const FocusCard = ({ focus, onPress }: FocusCardProps) => {
         </View>
       )}
 
-      <Pressable onPress={onPress}>
+      {/* Text-only tap target — same fix as the pills and See All links
+          elsewhere: extend with hitSlop rather than padding the text and
+          disturbing the card's tight bottom edge. */}
+      <Pressable onPress={onPress} hitSlop={8}>
         <Text style={styles.link}>View Full Focus →</Text>
       </Pressable>
     </View>
