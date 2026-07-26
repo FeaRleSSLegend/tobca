@@ -3,11 +3,13 @@
 // Every screen/component should import from here — never hardcode a hex value inline.
 
 export const colors = {
-  // Two intentional jobs, don't blur them further: (1) primary text/headers/
-  // active nav state on light backgrounds, and (2) the app's one "dark
-  // surface" color (hero cards, gradients, filled panels). If something
-  // needs a dark background, it's navy — don't reach for slate/black for
-  // that job, and don't add a third dark tone.
+  // One job, kept narrow on purpose: primary text/headers/active nav state
+  // on light backgrounds, plus small, specific accents (an icon, a pill, a
+  // caption) — not full-card or full-screen backgrounds. Pulled from
+  // theolivebrookchurch.org's own real usage: navy shows up in body copy,
+  // captions and button labels, never as a big colored block. When a hero
+  // moment needs a bold background, reach for `gradient` (pink→purple)
+  // instead — that's the color the site spends its "big chunk" budget on.
   navy: '#1A3247',
   slate: '#284868',      // secondary dark, icons, nav bar accents
   slateLight: '#3E617F', // used in gradients (feature card backgrounds)
@@ -28,8 +30,13 @@ export const colors = {
 } as const;
 
 // Gradient as a stop array — pass to expo-linear-gradient's `colors` prop.
-// Use ONLY for: live badge, active tab indicator, primary CTA, progress fill.
-// Everything else stays navy-on-white — the gradient is the one bold moment.
+// This IS the app's bold color, in the same proportion the real site uses
+// it: pink carries the big colored moments, purple rides along as its
+// second stop, navy stays reserved for text. Use for: hero-card backgrounds
+// (one per screen, not stacked), live badges, active tab indicator, primary
+// CTAs, progress fills. Everything else — body copy, secondary cards,
+// utility chrome like the sticky audio bar — stays navy-text-on-white so
+// the gradient reads as a genuine highlight instead of wallpaper.
 export const gradient = {
   colors: [colors.pink, colors.purple] as const,
   start: { x: 0, y: 0 },

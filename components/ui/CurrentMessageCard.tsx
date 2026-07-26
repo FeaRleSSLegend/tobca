@@ -8,33 +8,27 @@ interface CurrentMessageProps {
   message: Message;
 }
 
-// Card background is flat navy now, not a bespoke slateLight→navy blend —
-// same fix as LiveCard: navy's job is "dark surface," it doesn't need its
-// own invented gradient. The brand pink→purple gradient moved onto the
-// play button instead, since that's this card's actual primary action.
+// The site's own "Current Message" block is the boldest thing on their
+// homepage — a full pink panel, huge white play button, one caption line.
+// This card was a flat navy panel with two stacked white-on-navy eyebrows
+// ("Current Message" + "Now streaming") doing the same job twice. Matched
+// to the real thing instead: gradient panel, one caption, one big white
+// play button with a colored icon — the site's actual play button is white
+// with a pink triangle, not a small tinted circle.
 export const CurrentMessage = ({ message }: CurrentMessageProps) => {
   return (
-    <View style={styles.card}>
-      <Pressable style={styles.playButtonWrapper} hitSlop={8}>
-        <LinearGradient
-          colors={theme.gradient.colors}
-          start={theme.gradient.start}
-          end={theme.gradient.end}
-          style={styles.playButton}
-        >
-          <Ionicons name="play" size={16} color={theme.colors.white} />
-        </LinearGradient>
+    <LinearGradient
+      colors={theme.gradient.colors}
+      start={theme.gradient.start}
+      end={theme.gradient.end}
+      style={styles.card}
+    >
+      <Pressable style={styles.playButton} hitSlop={4}>
+        <Ionicons name="play" size={18} color={theme.colors.pink} style={{ marginLeft: 2 }} />
       </Pressable>
 
       <View>
-        {/* This is the section identity that used to live in a separate
-            SectionLabel above the card. "Now streaming" alone is a status,
-            not a title — it doesn't tell you what section you're in the
-            way FocusCard's "Prayer & Fasting" eyebrow does for Prayer.
-            This does that job now, inside the card, instead of costing a
-            whole extra row above it. */}
-        <Text style={styles.sectionEyebrow}>Current Message</Text>
-        <Text style={styles.eyebrow}>Now streaming</Text>
+        <Text style={styles.eyebrow}>Current Message</Text>
         <Text style={styles.title} numberOfLines={2}>
           {message.title}
         </Text>
@@ -42,49 +36,37 @@ export const CurrentMessage = ({ message }: CurrentMessageProps) => {
           {message.speaker} · {message.duration}
         </Text>
       </View>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
     height: 150,
-    backgroundColor: theme.colors.navy,
     borderRadius: theme.radius.md,
     padding: theme.spacing.lg,
     justifyContent: 'flex-end',
     overflow: 'hidden',
-    // Was spacing.sm (8px) — noticeably tighter than the gap every other
-    // section on this screen uses above it. Matched to sectionHeaderRow's
-    // own top margin so the hero card breathes the same as everything below it.
     marginTop: theme.spacing.xxl,
   },
-  playButtonWrapper: {
+  playButton: {
     position: 'absolute',
     top: theme.spacing.md,
     right: theme.spacing.md,
+    width: 44,
+    height: 44,
     borderRadius: theme.radius.full,
-    overflow: 'hidden',
-  },
-  playButton: {
-    width: 36,
-    height: 36,
+    backgroundColor: theme.colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionEyebrow: {
+  eyebrow: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.pink,
+    color: theme.colors.white,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: theme.spacing.xs,
-  },
-  eyebrow: {
-    fontFamily: theme.fontFamily.bodySemibold,
-    fontSize: theme.fontSize.caption,
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 4,
   },
   title: {
     fontFamily: theme.fontFamily.display,
@@ -95,6 +77,6 @@ const styles = StyleSheet.create({
   meta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.8)',
   },
 });

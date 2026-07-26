@@ -115,3 +115,69 @@ cruft as the dead component files). Consolidated into one declaration.
   presentational field. That's a container/presentational split the skill
   flags, but restructuring it risked changing behavior beyond a "restrained,
   explainable one-by-one" pass — left as-is beyond adding the icon.
+
+---
+
+## Round 2 — color hierarchy + search screen + scannability
+
+Prompted by screenshots of the actual live app plus screenshots of
+theolivebrookchurch.org itself (fetched and reviewed directly). The real
+site's color budget is inverted from what `theme.ts` had documented: pink
+carries the big background moments (the homepage's "Current Message" panel
+is a full pink diagonal block with a huge white play button), purple rides
+along as pink's gradient partner, and navy shows up almost entirely in body
+text and button labels — never as a full-panel background.
+
+### Color hierarchy corrected
+`theme.ts`'s own comments previously said the opposite ("navy... the app's
+one dark surface color... hero cards, gradients, filled panels" and
+"gradient... everything else stays navy-on-white") — that documented rule is
+what led every hero card toward navy in the first place. Rewrote both
+comments to state the corrected hierarchy, then applied it:
+- `CurrentMessageCard.tsx` (Library hero) — flat navy → the pink/purple
+  gradient. Play button changed from a small tinted circle to a white
+  circle with a pink icon, mirroring the site's actual button. Also
+  collapsed a duplicated eyebrow — the card had picked up both a "Current
+  Message" label AND a "Now streaming" line saying the same thing; now just
+  the one caption, matching the real site's copy exactly.
+- `FocusCard.tsx` (Prayer hero) — same navy → gradient swap. Progress fill
+  changed from a second gradient to solid white, since a gradient track
+  under a gradient fill would have almost no visible contrast.
+- `AudioPlayer.tsx` — this is sticky utility chrome, not a hero, so it went
+  the other direction: pulled *out* of navy entirely into a plain white
+  surface (matching every other card on the screen), with only the
+  play/pause button keeping color. Minimal, on request, and gives the one
+  actionable control the only color emphasis on the bar.
+
+Not touched: `LiveCard.tsx` on the Live tab uses this same flat-navy-panel
+pattern and would benefit from the identical fix, but Live wasn't part of
+this round's ask — flagging it here for whenever that tab comes back up.
+
+### "Everything in a category looks identical"
+`GridCard.tsx`'s four "Recently Added" tiles were the same navy rectangle
+with the same play triangle — title text was the only differentiator. Per
+the skill's own color-and-contrast rule ("don't rely solely on color to
+convey information"), gave each content type its own icon (mic / albums /
+headset / videocam) instead of reaching for more color to solve it.
+`MessageCard.tsx` got the same treatment for consistency in the new search
+results list, additively — it defaults to the original plain "play" icon
+when no `type` is passed, so Live tab's existing rows aren't affected.
+
+Also fixed, spotted in the screenshot: several "Recently Added" titles were
+rendering the literal placeholder string `"REPLACE_ME"` on screen. Replaced
+with real-looking titles derived from each item's series name and part
+number in `data/content.ts`.
+
+### Search is now its own screen
+`SearchBar.tsx` was a real `TextInput` that grew a results list straight
+into the Library `ScrollView` as soon as someone typed, pushing everything
+else down. Built `app/search.tsx` — same header/back-button convention
+`reading.tsx` already established — with an auto-focused input. Before
+anything is typed it shows "Recently Added" instead of a blank screen
+(researched pattern: a dedicated search screen with an empty-state prompt is
+the standard mobile pattern once content varies by type, and a blank screen
+right after opening search reads as broken rather than ready). `SearchBar`
+on Library is now a lightweight `Pressable` styled as a field that pushes
+to `/search` — the actual query state and results live entirely on the new
+screen.
+

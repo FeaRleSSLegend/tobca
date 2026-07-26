@@ -15,12 +15,25 @@ interface MessageCardProps {
     onPress?: () => void,
 }
 
-export const MessageCard = ({title, speaker, duration, series, publishedAt, onPress}: MessageCardProps) => {
+// type-based icon, same fix as GridCard's grid tiles — this row is used
+// for search results now, where sermons/series/audio/video can all show up
+// mixed together and "play" for everything stopped being a useful signal.
+// Defaults to 'play' when type isn't passed, so Live tab's existing rows
+// (which never pass type) look exactly as they did before.
+const typeIcon: Record<string, keyof typeof Ionicons.glyphMap> = {
+    sermon: 'play',
+    series: 'albums',
+    audio: 'headset',
+    video: 'videocam',
+};
+
+export const MessageCard = ({title, speaker, duration, series, type, publishedAt, onPress}: MessageCardProps) => {
+    const icon = (type && typeIcon[type]) || 'play';
     return(
         <Pressable onPress={onPress} style={liveStyles.latestMessageRow}>
               <View style={liveStyles.latestMessageThumb}>
                 <View style={liveStyles.latestMessagePlayCircle}>
-                  <Ionicons name="play" size={13} color="#FFFFFF" style={{ marginLeft: 2 }} />
+                  <Ionicons name={icon} size={13} color="#FFFFFF" style={icon === 'play' ? { marginLeft: 2 } : undefined} />
                 </View>
                 {duration && (
                   <View style={liveStyles.latestMessageDurationBadge}>

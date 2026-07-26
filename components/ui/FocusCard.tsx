@@ -8,19 +8,22 @@ interface FocusCardProps {
   onPress?: () => void;
 }
 
+// Same move as CurrentMessageCard on Library: this was a flat navy panel
+// with a thin gradient strip glued to the top as decoration. Prayer's one
+// hero moment should spend the same bold-color budget Library's does —
+// gradient IS the card now, so the strip (which only existed to give the
+// navy card a token touch of brand color) is gone.
 export const FocusCard = ({ focus, onPress }: FocusCardProps) => {
   const hasFast = focus.currentDay !== undefined && focus.totalDays !== undefined;
   const progressPct = hasFast ? (focus.currentDay! / focus.totalDays!) * 100 : 0;
 
   return (
-    <View style={styles.card}>
-      <LinearGradient
-        colors={theme.gradient.colors}
-        start={theme.gradient.start}
-        end={theme.gradient.end}
-        style={styles.topBar}
-      />
-
+    <LinearGradient
+      colors={theme.gradient.colors}
+      start={theme.gradient.start}
+      end={theme.gradient.end}
+      style={styles.card}
+    >
       <Text style={styles.eyebrow}>Prayer & Fasting</Text>
       <Text style={styles.title}>{focus.title}</Text>
       <Text style={styles.description}>{focus.description}</Text>
@@ -28,46 +31,34 @@ export const FocusCard = ({ focus, onPress }: FocusCardProps) => {
       {hasFast && (
         <View style={styles.progressRow}>
           <View style={styles.progressTrack}>
-            <LinearGradient
-              colors={theme.gradient.colors}
-              start={theme.gradient.start}
-              end={theme.gradient.end}
-              style={[styles.progressFill, { width: `${progressPct}%` }]}
-            />
+            {/* Solid white fill, not a second gradient — a gradient-on-
+                gradient fill would barely register against this background.
+                White is also exactly how the site cuts through its own pink
+                panels (see the "Learn More" / "Stream on Demand" buttons). */}
+            <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
           </View>
           <Text style={styles.progressText}>Day {focus.currentDay} of {focus.totalDays}</Text>
         </View>
       )}
 
-      {/* Text-only tap target — same fix as the pills and See All links
-          elsewhere: extend with hitSlop rather than padding the text and
-          disturbing the card's tight bottom edge. */}
       <Pressable onPress={onPress} hitSlop={8}>
         <Text style={styles.link}>View Full Focus →</Text>
       </Pressable>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.navy,
     borderRadius: theme.radius.md,
     padding: theme.spacing.lg,
     overflow: 'hidden',
     marginTop: theme.spacing.md,
   },
-  topBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-  },
   eyebrow: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.grayIcon,
+    color: theme.colors.white,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: theme.spacing.sm,
@@ -81,7 +72,7 @@ const styles = StyleSheet.create({
   description: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.85)',
     lineHeight: 20,
     marginBottom: theme.spacing.md,
   },
@@ -95,21 +86,23 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 5,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.white,
   },
   progressText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: 'rgba(255,255,255,0.85)',
+    color: theme.colors.white,
   },
   link: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
     color: theme.colors.white,
+    textDecorationLine: 'underline',
   },
 });

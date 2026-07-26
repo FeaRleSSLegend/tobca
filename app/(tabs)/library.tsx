@@ -52,7 +52,7 @@ export default function LibraryScreen() {
                 {/* No SectionLabel here on purpose — this is Library's hero
                     card, same role as LiveCard/VerseOfDayCard on Home, and
                     neither of those get an outer label either. The card's
-                    own "Now streaming" eyebrow already says what this is;
+                    own "Current Message" eyebrow already says what this is;
                     a SectionLabel above it was a second label for one idea. */}
                 <CurrentMessage message={currentlyStreaming} />
 
@@ -71,6 +71,7 @@ export default function LibraryScreen() {
                                 title={msg.title}
                                 duration={msg.duration}
                                 speaker={msg.speaker}
+                                type={msg.type}
                             />
                         </View>
                     ))}

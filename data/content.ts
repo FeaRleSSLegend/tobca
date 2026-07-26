@@ -1,7 +1,11 @@
 // data/content.ts
 // Shaped exactly like a future GET /content API response would be.
-// videoId marked "REPLACE_ME" needs a real ID from youtube.com/@TheOliveBrookChurch —
-// two entries below use real IDs found via search, everything else is placeholder.
+// videoId marked "REPLACE_ME_*" needs a real ID from youtube.com/@TheOliveBrookChurch —
+// two entries below use real IDs found via search, everything else is a stub
+// (fine — videoId isn't rendered anywhere, only used once real playback is wired up).
+// Series episode titles were literally "REPLACE_ME" and rendering that way on
+// screen (visible in the Recently Added grid) — given real placeholder titles
+// derived from their series + part number until the real ones are supplied.
 
 export type MessageType = 'sermon' | 'series' | 'audio' | 'video';
 
@@ -78,57 +82,57 @@ export const messages: Message[] = [
     publishedAt: '2023-04-05',
   },
   {
-    id: 's1-1', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '38 min',
+    id: 's1-1', title: 'The Manifold Grace of God — Part 1', speaker: 'Pst. Abu Jibril', duration: '38 min',
     videoId: 'REPLACE_ME_S1_1', series: 'The Manifold Grace of God', type: 'series',
     publishedAt: '2026-02-01',
   },
   {
-    id: 's1-2', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '41 min',
+    id: 's1-2', title: 'The Manifold Grace of God — Part 2', speaker: 'Pst. Abu Jibril', duration: '41 min',
     videoId: 'REPLACE_ME_S1_2', series: 'The Manifold Grace of God', type: 'series',
     publishedAt: '2026-02-08',
   },
   {
-    id: 's1-3', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '36 min',
+    id: 's1-3', title: 'The Manifold Grace of God — Part 3', speaker: 'Pst. Abu Jibril', duration: '36 min',
     videoId: 'REPLACE_ME_S1_3', series: 'The Manifold Grace of God', type: 'series',
     publishedAt: '2026-02-15',
   },
   {
-    id: 's2-1', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '44 min',
+    id: 's2-1', title: 'The Law of Manifestation — Part 1', speaker: 'Pst. Abu Jibril', duration: '44 min',
     videoId: 'REPLACE_ME_S2_1', series: 'The Law of Manifestation', type: 'series',
     publishedAt: '2026-03-01',
   },
   {
-    id: 's2-2', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '39 min',
+    id: 's2-2', title: 'The Law of Manifestation — Part 2', speaker: 'Pst. Abu Jibril', duration: '39 min',
     videoId: 'REPLACE_ME_S2_2', series: 'The Law of Manifestation', type: 'series',
     publishedAt: '2026-03-08',
   },
   {
-    id: 's3-1', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '45 min',
+    id: 's3-1', title: 'Moving from Prophecy to Manifestation — Part 1', speaker: 'Pst. Abu Jibril', duration: '45 min',
     videoId: 'REPLACE_ME_S3_1', series: 'Moving from Prophecy to Manifestation', type: 'series',
     publishedAt: '2026-04-05',
   },
   {
-    id: 's3-2', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '40 min',
+    id: 's3-2', title: 'Moving from Prophecy to Manifestation — Part 2', speaker: 'Pst. Abu Jibril', duration: '40 min',
     videoId: 'REPLACE_ME_S3_2', series: 'Moving from Prophecy to Manifestation', type: 'series',
     publishedAt: '2026-04-12',
   },
   {
-    id: 's4-1', title: 'REPLACE_ME', speaker: 'Pst. Yinka Jibril', duration: '37 min',
+    id: 's4-1', title: 'The Person & Work of the Holy Spirit — Part 1', speaker: 'Pst. Yinka Jibril', duration: '37 min',
     videoId: 'REPLACE_ME_S4_1', series: 'The Person & Work of the Holy Spirit', type: 'series',
     publishedAt: '2026-05-03',
   },
   {
-    id: 's4-2', title: 'REPLACE_ME', speaker: 'Pst. Yinka Jibril', duration: '42 min',
+    id: 's4-2', title: 'The Person & Work of the Holy Spirit — Part 2', speaker: 'Pst. Yinka Jibril', duration: '42 min',
     videoId: 'REPLACE_ME_S4_2', series: 'The Person & Work of the Holy Spirit', type: 'series',
     publishedAt: '2026-05-10',
   },
   {
-    id: 's5-1', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '43 min',
+    id: 's5-1', title: 'New Creation Realities — Part 1', speaker: 'Pst. Abu Jibril', duration: '43 min',
     videoId: 'REPLACE_ME_S5_1', series: 'New Creation Realities', type: 'series',
     publishedAt: '2026-06-07',
   },
   {
-    id: 's5-2', title: 'REPLACE_ME', speaker: 'Pst. Abu Jibril', duration: '38 min',
+    id: 's5-2', title: 'New Creation Realities — Part 2', speaker: 'Pst. Abu Jibril', duration: '38 min',
     videoId: 'REPLACE_ME_S5_2', series: 'New Creation Realities', type: 'series',
     publishedAt: '2026-06-14',
   },

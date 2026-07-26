@@ -24,25 +24,13 @@ export const LibraryStyles = StyleSheet.create({
     // floor without changing how dense the field looks.
     minHeight: 44,
   },
-  clearBtn: {
-    padding: 2, // hitSlop below does the real touch-target work
-  },
-  noResults: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: theme.fontSize.body,
-    color: theme.colors.graySecondary,
-    textAlign: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
-  searchInput: {
-    flex: 1, // takes remaining width after the icon
+  // Real TextInput placeholder styling used to live here, back when this
+  // was an actual input. Now SearchBar is a Pressable trigger to /search,
+  // so this is just static text standing in for the placeholder.
+  searchPlaceholder: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.navy,
-  },
-  searchText: {
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.sm,
+    color: theme.colors.grayIcon,
   },
   filterView: {
     padding: theme.spacing.sm,

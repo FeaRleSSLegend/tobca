@@ -11,10 +11,12 @@ interface AudioPlayerProps {
   onPlayPause?: () => void;
 }
 
-// Same fix as LiveCard and CurrentMessageCard: flat navy surface instead of
-// a bespoke navy→slate gradient, with the actual brand gradient reserved
-// for the play/pause control — the one thing on this sticky bar someone is
-// actually meant to press.
+// This is sticky utility chrome, not a hero moment — it doesn't compete for
+// the same bold-color budget FocusCard just got. Plain white surface (like
+// every other card on this screen) with navy doing its actual job — text —
+// instead of filling the whole bar. The one deliberate color hit is the
+// play/pause button, which is also the one thing here someone actually
+// presses, matching theme.ts's "primary CTA" job for the gradient.
 export const AudioPlayer = ({
   title,
   subtitle,
@@ -24,11 +26,11 @@ export const AudioPlayer = ({
 }: AudioPlayerProps) => {
   return (
     <Pressable onPress={onPress} style={styles.container}>
-      <View style={[styles.bar, { backgroundColor: theme.colors.navy }]}>
+      <View style={styles.bar}>
         <View style={styles.content}>
           <View style={styles.info}>
             <View style={styles.iconContainer}>
-              <Ionicons name="musical-notes" size={18} color={theme.colors.white} />
+              <Ionicons name="musical-notes" size={16} color={theme.colors.pink} />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.title} numberOfLines={1}>
@@ -71,13 +73,16 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   bar: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.grayBorder,
     borderRadius: theme.radius.md,
     margin: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     shadowColor: theme.colors.navy,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 8,
   },
@@ -96,7 +101,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.sm,
-    backgroundColor: 'rgba(248, 0, 104, 0.8)',
+    // Soft tint, not a solid fill — a small, specific accent rather than
+    // another colored block, however small.
+    backgroundColor: 'rgba(248, 0, 104, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -107,12 +114,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.white,
+    color: theme.colors.navy,
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: 'rgba(255,255,255,0.55)',
+    color: theme.colors.graySecondary,
   },
   controls: {
     flexDirection: 'row',

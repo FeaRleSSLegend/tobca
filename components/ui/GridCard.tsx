@@ -2,37 +2,49 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { MessageType } from '../../data/content';
 
 interface GridCardProps {
   title: string;
   duration: string;
   speaker?: string;
+  type?: MessageType;
   onPress?: () => void;
-  variant?: 'default' | 'compact';
 }
+
+// Every card in this grid used to be the same navy rectangle with the same
+// play triangle — title text was the only way to tell one from another,
+// which is exactly the "user has to read everything" problem raised on
+// this screen, and the skill's own color-and-contrast rule ("don't rely
+// solely on color to convey information") points at the same fix: the
+// icon needs to change, not just a tint. Until there's real thumbnail
+// artwork, the content type is the one real signal available, so each
+// type gets its own icon. Kept off pink/purple on purpose — that budget
+// belongs to the one hero card above, not four small grid tiles.
+const typeIcon: Record<MessageType, keyof typeof Ionicons.glyphMap> = {
+  sermon: 'mic',
+  series: 'albums',
+  audio: 'headset',
+  video: 'videocam',
+};
 
 export const GridCard = ({
   title,
   duration,
   speaker,
+  type = 'sermon',
   onPress,
-  variant = 'default'
 }: GridCardProps) => {
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.thumbnail}>
-        {/* Deliberately NOT the same pink/purple wash PosterCard uses above
-            — that was tried and made Series and Recently Added look like
-            duplicate content blocks. Same idea (brand-tinted placeholder
-            until real thumbnail art exists), different register, so the
-            two sections stay visually distinguishable at a glance. */}
         <LinearGradient
           colors={[theme.colors.navy, theme.colors.slateLight]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <Ionicons name="play" size={20} color={theme.colors.white} style={{ zIndex: 1 }} />
+        <Ionicons name={typeIcon[type]} size={20} color={theme.colors.white} style={{ zIndex: 1 }} />
       </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={2}>
@@ -75,8 +87,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   speaker: {
-    // Was 11pt, one point under theme.ts's documented caption floor
-    // ("strict floor... never go below this"). Bumped to the floor itself.
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
     color: theme.colors.graySecondary,
