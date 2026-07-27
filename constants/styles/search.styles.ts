@@ -7,7 +7,6 @@ import { theme } from '../theme';
 export const searchStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
   },
   header: {
     flexDirection: 'row',

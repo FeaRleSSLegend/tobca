@@ -8,12 +8,12 @@
 // has to reflow around them.
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
 import { searchStyles } from '../constants/styles/search.styles';
 import { MessageCard } from '../components/ui/MessageCard';
+import { ScreenWithWatermark } from '../components/ui/ScreenWithWatermark';
 import { messages, recentlyAdded } from '../data/content';
 
 export default function SearchScreen() {
@@ -25,7 +25,7 @@ export default function SearchScreen() {
     : [];
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={searchStyles.container}>
+    <ScreenWithWatermark style={searchStyles.container}>
       <View style={searchStyles.header}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={searchStyles.backBtn}>
           <Ionicons name="chevron-back" size={26} color={theme.colors.navy} />
@@ -93,6 +93,6 @@ export default function SearchScreen() {
           <Text style={searchStyles.noResults}>No results for "{query}"</Text>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </ScreenWithWatermark>
   );
 }

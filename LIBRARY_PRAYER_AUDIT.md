@@ -153,6 +153,58 @@ Not touched: `LiveCard.tsx` on the Live tab uses this same flat-navy-panel
 pattern and would benefit from the identical fix, but Live wasn't part of
 this round's ask — flagging it here for whenever that tab comes back up.
 
+---
+
+## Round 3 — same revamp on Live (home), app-wide logo watermark
+
+### LiveCard gets the same fix
+`LiveCard.tsx` was the flagged-but-not-touched item from Round 2 — it's the
+very first thing anyone sees on opening the app, so it got the same
+navy-panel → gradient treatment as CurrentMessageCard and FocusCard. Two
+things that used to sit on top of the navy card would have gone invisible
+once the card became the gradient itself, so both changed with it:
+- the Play button (Live state) was a gradient-filled circle → now a white
+  circle with a pink icon, matching the real site's actual play button
+- "Add to Calendar" (Next Service state) was gradient-filled → now solid
+  white with navy text, since a gradient button has no visible edge on a
+  gradient card of the same colors
+
+Caught a real contrast bug in the process: the "NEXT SERVICE" label uses
+`sharedStyles.overlineText`, which is pink text — correct everywhere else
+it's used (pink-on-white), but this card now starts as pink itself, so pink
+text on it would have been close to invisible. Gave it a local override
+(`overlineOnGradient`, white) rather than touching the shared style, since
+every other use of `overlineText` is still correctly pink-on-white.
+
+The status pills ("YouTube Live" / "LIVE NOW") moved from a flat slate fill
+to a translucent dark scrim — the same overlay treatment already used for
+duration badges on photos/colored surfaces elsewhere in the app, so a badge
+sitting on top of a now-colorful card reads the same way a badge on a photo
+thumbnail does.
+
+### App-wide "premium faded logo" background
+Built `components/ui/LogoWatermark.tsx` and added it to all four tabs plus
+the Search screen. Used the monochrome icon asset (`assets/android-icon-
+monochrome.png`) already bundled in the project for Android's themed-icon
+support — no new asset needed, and a single-shape silhouette is exactly
+what a watermark wants: legible at very low opacity with no color of its
+own to clash with what's on top of it. Tinted navy at 4% opacity, sized
+well past the screen edges so it reads as texture in the gaps around cards
+rather than a crisp logo anyone's eye catches on.
+
+Deliberately left off `app/reading.tsx` — that screen is dense body text
+for actual scripture reading, and a watermark behind long-form reading text
+works against legibility in a way it doesn't behind cards with generous
+white space. Every other screen in the app is card-based, so the watermark
+only ever shows through gaps, never through text blocks.
+
+### Dead code, again
+`Card.tsx`, `Chip.tsx`, `MediaViewport.tsx`, `ReadingCard.tsx`,
+`StatsBar.tsx`, and `CompactReading.tsx` had reappeared in this upload
+(confirmed still unimported) — removed again, along with the
+`readingTeaser*`/`streakNum`/`streakLabel` styles in `live.styles.ts` that
+only the now-deleted `ReadingCard.tsx` was using.
+
 ### "Everything in a category looks identical"
 `GridCard.tsx`'s four "Recently Added" tiles were the same navy rectangle
 with the same play triangle — title text was the only differentiator. Per
@@ -168,6 +220,8 @@ rendering the literal placeholder string `"REPLACE_ME"` on screen. Replaced
 with real-looking titles derived from each item's series name and part
 number in `data/content.ts`.
 
+---
+
 ### Search is now its own screen
 `SearchBar.tsx` was a real `TextInput` that grew a results list straight
 into the Library `ScrollView` as soon as someone typed, pushing everything
@@ -181,3 +235,44 @@ on Library is now a lightweight `Pressable` styled as a field that pushes
 to `/search` — the actual query state and results live entirely on the new
 screen.
 
+
+---
+
+## Round 4 — watermark positioning bug + the real logo
+
+Two separate issues from the same screenshot: the watermark was rendering
+as a real block pushing the header down instead of floating behind content,
+and the asset it was using turned out not to be a finished logo.
+
+### The positioning bug
+`LogoWatermark` was a direct child of `SafeAreaView`, positioned with
+`StyleSheet.absoluteFillObject`. That's supposed to pull it out of layout
+flow — but `SafeAreaView` isn't a plain `View` under the hood (it does its
+own native work measuring and applying safe-area insets), and an absolutely
+positioned child of it didn't reliably get that positioning context. Net
+effect: it rendered as a normal block and pushed everything else down.
+Fixed with a new `ScreenWithWatermark` wrapper — a plain `View` holds the
+watermark absolutely, with `SafeAreaView` stacked on top of it as a
+flex *sibling* instead of a *child*. All five screens (four tabs + Search)
+now go through this wrapper instead of managing `SafeAreaView` +
+`LogoWatermark` by hand.
+
+### The logo
+What was bundled (`assets/android-icon-monochrome.png`) had alignment-guide
+circles and dashed lines baked into the image — an unflattened icon-design
+template, not finished art. Turned the watermark off entirely rather than
+ship that as branding, and asked for the real file.
+
+Got it — `assets/brand-logo.png`, confirmed to have genuine alpha
+transparency (fully transparent corners, not a flattened white background),
+so it composites cleanly. Two changes from the placeholder version:
+- Rendered in its natural pink-to-purple-to-navy colors instead of tinted
+  flat navy — a `tintColor` override would've collapsed the actual swoosh
+  gradient into one flat tone, which is a real detail to lose when the
+  point was "the logo," not "a logo-shaped mark."
+- Sized to the file's actual 768×273 (~2.81:1) ratio instead of the square
+  box the placeholder icon used, so it's not being squeezed or needlessly
+  letterboxed.
+- Opacity nudged from 0.04 to 0.06 — a wordmark has thinner linework (the
+  swoosh strokes, the letterforms) than a bold icon shape, and 0.04 made it
+  functionally invisible.

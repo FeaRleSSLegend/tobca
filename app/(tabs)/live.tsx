@@ -1,4 +1,3 @@
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { theme } from "../../constants/theme";
 import { sharedStyles } from "../../constants/styles/sharedStyles";
@@ -10,6 +9,7 @@ import { LiveCard } from "../../components/ui/LiveCard";
 import { ServicePill } from "../../components/ui/ServicePill";
 import { MessageCard } from "../../components/ui/MessageCard";
 import { VerseOfDayCard } from "../../components/ui/VerseOfDayCard";
+import { ScreenWithWatermark } from "../../components/ui/ScreenWithWatermark";
 
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -21,7 +21,7 @@ export default function LiveScreen() {
   const todayName = DAY_NAMES[new Date().getDay()];
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={sharedStyles.container}>
+    <ScreenWithWatermark style={sharedStyles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header row: greeting + avatar */}
         <View style={sharedStyles.headerRow}>
@@ -99,6 +99,6 @@ export default function LiveScreen() {
           ))}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenWithWatermark>
   );
 }

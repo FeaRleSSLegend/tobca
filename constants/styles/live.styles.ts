@@ -12,12 +12,16 @@ export const liveStyles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.md,
     borderRadius: theme.radius.md,
+    overflow: 'hidden',
   },
   badgePill: {
     alignSelf: 'flex-start',
     paddingHorizontal: theme.spacing.md,
     height: 20,
-    backgroundColor: theme.colors.slateLight,
+    // Was a flat slate fill — now a translucent dark scrim sitting on the
+    // gradient card, the same overlay treatment latestMessageDurationBadge
+    // already uses for a badge on top of a colored/photo surface.
+    backgroundColor: 'rgba(10,22,33,0.35)',
     borderRadius: theme.radius.sm,
     flexDirection: 'row',
     alignItems: 'center',
@@ -41,6 +45,10 @@ export const liveStyles = StyleSheet.create({
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
+    // Solid white, matching CurrentMessageCard's play button and the real
+    // site's actual button — a gradient circle on a gradient card would
+    // have no visible edge.
+    backgroundColor: theme.colors.white,
   },
   addCalendarWrapper: {
     alignSelf: 'flex-start',
@@ -54,6 +62,19 @@ export const liveStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
+    // Same reasoning as playButton above — solid white instead of a second
+    // gradient, so the button reads as a distinct, tappable element instead
+    // of disappearing into the card behind it.
+    backgroundColor: theme.colors.white,
+  },
+  // Local override for the one spot sharedStyles.overlineText's pink
+  // doesn't work — everywhere else it's pink-on-white, here it's sitting on
+  // a card that starts pink itself.
+  overlineOnGradient: {
+    fontSize: theme.fontSize.bodyLg,
+    color: theme.colors.white,
+    fontWeight: theme.fontWeight.semibold,
+    textTransform: 'uppercase',
   },
 
   // This Week's Services strip
@@ -82,69 +103,6 @@ export const liveStyles = StyleSheet.create({
   },
   serviceNameToday: {
     color: 'rgba(255,255,255,0.7)',
-  },
-
-  // Today's Reading
-  readingTeaser: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
-    borderRadius: theme.radius.md,
-    overflow: 'hidden',
-  },
-  readingTeaserLeft: {
-    flex: 1,
-    padding: theme.spacing.md,
-  },
-  readingTeaserEyebrow: {
-    fontSize: theme.fontSize.caption,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.slate,
-    textTransform: 'uppercase',
-    marginBottom: theme.spacing.xs,
-  },
-  readingTeaserVerse: {
-    fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
-    fontStyle: 'italic',
-    lineHeight: 19,
-    marginBottom: theme.spacing.sm,
-  },
-  // Extracted from an inline object — also fixes the "link looks
-  // underweighted" note: more top margin so it reads as its own tappable
-  // row instead of a trailing clause of the verse above it.
-  readingTeaserCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs, // small tap-target buffer
-  },
-  readingTeaserCtaText: {
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.slate,
-    fontWeight: theme.fontWeight.bold,
-  },
-  readingTeaserStreak: {
-    width: 70,
-    backgroundColor: theme.colors.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  streakNum: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 24,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.white,
-  },
-  streakLabel: {
-    fontSize: 9.5,
-    fontWeight: theme.fontWeight.bold,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
-    marginTop: 2,
   },
 
   // Latest Messages

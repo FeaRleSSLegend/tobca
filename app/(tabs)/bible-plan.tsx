@@ -5,6 +5,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
+import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TodayCard } from '../../components/bible/TodayCard';
 import { StreakSummary } from '../../components/bible/StreakSummary';
 import { StreakModal } from '../../components/bible/StreakModal';
@@ -134,7 +135,7 @@ export default function PlanScreen() {
   ];
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={sharedStyles.container}>
+    <ScreenWithWatermark style={sharedStyles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={sharedStyles.headerRow}>
           <Text style={styles.pageTitle}>Reading Plan</Text>
@@ -178,7 +179,7 @@ export default function PlanScreen() {
         week={weekProgress}
         todayNumber={todayNumber}
       />
-    </SafeAreaView>
+    </ScreenWithWatermark>
   );
 }
 

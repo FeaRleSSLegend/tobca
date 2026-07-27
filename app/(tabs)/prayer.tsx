@@ -1,5 +1,4 @@
 import { View, Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
@@ -10,12 +9,13 @@ import { HScroll } from '../../components/ui/HScroll';
 import { DocCard } from '../../components/ui/DocCard';
 import { AudioPlayer } from '../../components/ui/AudioPlayer';
 import { currentFocus, prayerResources, archivedFocuses } from '../../data/prayer';
+import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 
 export default function PrayerScreen() {
     const [isPlaying, setIsPlaying] = useState(false);
 
     return (
-        <SafeAreaView edges={['top', 'left', 'right']} style={sharedStyles.container}>
+        <ScreenWithWatermark style={sharedStyles.container}>
             <ScrollView contentContainerStyle={prayerStyles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={sharedStyles.headerRow}>
                     <Text style={{ fontSize: theme.fontSize.heroTitle, fontFamily: theme.fontFamily.display }}>
@@ -69,6 +69,6 @@ export default function PrayerScreen() {
                 isPlaying={isPlaying}
                 onPlayPause={() => setIsPlaying(!isPlaying)}
             />
-        </SafeAreaView>
+        </ScreenWithWatermark>
     );
 }

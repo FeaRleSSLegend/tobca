@@ -1,5 +1,4 @@
 import { View, Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
@@ -12,13 +11,14 @@ import { HScroll } from '../../components/ui/HScroll';
 import { PosterCard } from '../../components/ui/PosterCard';
 import { GridCard } from '../../components/ui/GridCard';
 import { currentlyStreaming, seriesList, recentlyAdded } from '../../data/content';
+import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 
 export default function LibraryScreen() {
     const filters = Object.values(filterLabels);
     const [activeFilter, setActiveFilter] = useState('All');
 
     return (
-        <SafeAreaView edges={['top', 'left', 'right']} style={sharedStyles.container}>
+        <ScreenWithWatermark style={sharedStyles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={sharedStyles.headerRow}>
                     <Text style={{ fontSize: theme.fontSize.heroTitle, fontFamily: theme.fontFamily.display }}>
@@ -77,6 +77,6 @@ export default function LibraryScreen() {
                     ))}
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </ScreenWithWatermark>
     );
 }
