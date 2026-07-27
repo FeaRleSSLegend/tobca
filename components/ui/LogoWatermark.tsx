@@ -1,12 +1,7 @@
-import { View, Image, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet, ViewStyle } from 'react-native';
 
-// The real logo (assets/brand-logo.png) — a genuine transparent-background
-// export, unlike the icon-template placeholder this used to point at.
-// Rendered in its own natural colors rather than tinted flat navy: at this
-// opacity it barely reads as anything but texture, but keeping the actual
-// pink-to-purple swoosh (instead of collapsing it to one flat tone) is what
-// makes it read as "our logo, faded" rather than a generic gray watermark —
-// closer to what was actually asked for.
+// Real logo (assets/brand-logo.png), rendered faint as a fixed background
+// watermark behind every screen's scrollable content.
 export const LogoWatermark = () => (
   <View style={styles.wrap} pointerEvents="none">
     <Image
@@ -19,21 +14,29 @@ export const LogoWatermark = () => (
 
 const styles = StyleSheet.create({
   wrap: {
-    ...StyleSheet.absoluteFillObject,
+    // Written as literal keys (not a spread of StyleSheet.absoluteFillObject)
+    // so TS can't widen `position` to `string` and flag it — this is what
+    // was causing the squiggly. Functionally identical to absoluteFillObject.
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-  },
+    // Forces stacking behind flow siblings even if something upstream
+    // ever sets an explicit zIndex on a sibling.
+    zIndex: -1,
+  } satisfies ViewStyle,
   mark: {
     // Logo's native ratio is 768x273 (~2.81:1) — sized to that instead of
-    // forcing it into a square box, so "contain" isn't doing any distorting
-    // or unnecessary letterboxing.
+    // forcing it into a square box.
     width: 340,
     height: 340 / (768 / 273),
-    // A wordmark has fine linework (thin swoosh strokes, letterforms) that
-    // needs a touch more opacity than a bold solid shape would to still
-    // register as texture at all — 0.04 made this basically invisible in
-    // testing, 0.06 is the lowest value where it still reads as "there."
+    // Fine linework needs a touch more opacity than a bold shape to still
+    // register as texture — 0.04 was basically invisible in testing, 0.06
+    // is the lowest value that still reads as "there."
     opacity: 0.06,
-  },
+  } satisfies ViewStyle,
 });
