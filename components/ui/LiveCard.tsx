@@ -7,6 +7,7 @@ import { getNextService, services } from '../../data/services';
 
 interface LiveCardProps {
   isLive?: boolean;
+  title?: string;
 }
 
 const { service: nextService, countdownLabel } = getNextService();
@@ -24,7 +25,7 @@ const { service: nextService, countdownLabel } = getNextService();
 // The status pills (YouTube Live / LIVE NOW) switched from a flat slate
 // fill to a translucent dark scrim, the same overlay treatment already
 // used for duration badges on colored/photo thumbnails elsewhere.
-export const LiveCard = ({isLive}: LiveCardProps) => {
+export const LiveCard = ({isLive, title}: LiveCardProps) => {
   return isLive ? (
     <LinearGradient
       colors={theme.gradient.colors}
@@ -53,10 +54,10 @@ export const LiveCard = ({isLive}: LiveCardProps) => {
       </View>
 
       <Text style={{ fontSize: theme.fontSize.display, fontFamily: theme.fontFamily.display, color: theme.colors.white }}>
-        Sunday Service
+        {title ?? 'Sunday Service'}
       </Text>
       <Text style={{ fontSize: theme.fontSize.caption, color: 'rgba(255,255,255,0.8)' }}>
-        Second Service · Pst. Abu Jibril
+        Streaming now
       </Text>
     </LinearGradient>
   ) : (

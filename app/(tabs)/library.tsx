@@ -10,12 +10,19 @@ import { CurrentMessage } from '../../components/ui/CurrentMessageCard';
 import { HScroll } from '../../components/ui/HScroll';
 import { PosterCard } from '../../components/ui/PosterCard';
 import { GridCard } from '../../components/ui/GridCard';
-import { currentlyStreaming, seriesList, recentlyAdded } from '../../data/content';
+import { getCurrentlyStreaming, getSeriesList, getRecentlyAdded } from '../../data/content';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
+import { useMessages } from '../../hooks/useMessages';
+import { useRouter } from 'expo-router';
 
 export default function LibraryScreen() {
     const filters = Object.values(filterLabels);
     const [activeFilter, setActiveFilter] = useState('All');
+    const router = useRouter();
+    const { messages } = useMessages();
+    const currentlyStreaming = getCurrentlyStreaming(messages);
+    const seriesList = getSeriesList(messages);
+    const recentlyAdded = getRecentlyAdded(messages);
 
     return (
         <ScreenWithWatermark style={sharedStyles.container}>
@@ -54,7 +61,7 @@ export default function LibraryScreen() {
                     neither of those get an outer label either. The card's
                     own "Current Message" eyebrow already says what this is;
                     a SectionLabel above it was a second label for one idea. */}
-                <CurrentMessage message={currentlyStreaming} />
+                {currentlyStreaming && <CurrentMessage message={currentlyStreaming} />}
 
                 <SectionLabel label="Series" actionText='See All' />
                 <HScroll>
@@ -63,7 +70,7 @@ export default function LibraryScreen() {
                     ))}
                 </HScroll>
 
-                <SectionLabel label="Recently Added" actionText='See All' />
+                <SectionLabel label="Recently Added" actionText='See All' onActionPress={() => router.push({ pathname: '/see-all', params: { section: 'recentlyAdded', title: 'Recently Added' } })} />
                 <View style={LibraryStyles.gridContainer}>
                     {recentlyAdded.map((msg) => (
                         <View key={msg.id} style={LibraryStyles.gridItem}>
@@ -72,6 +79,7 @@ export default function LibraryScreen() {
                                 duration={msg.duration}
                                 speaker={msg.speaker}
                                 type={msg.type}
+                                thumbnail={msg.thumbnail}
                             />
                         </View>
                     ))}

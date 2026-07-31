@@ -14,11 +14,14 @@ import { theme } from '../constants/theme';
 import { searchStyles } from '../constants/styles/search.styles';
 import { MessageCard } from '../components/ui/MessageCard';
 import { ScreenWithWatermark } from '../components/ui/ScreenWithWatermark';
-import { messages, recentlyAdded } from '../data/content';
+import { getRecentlyAdded } from '../data/content';
+import { useMessages } from '../hooks/useMessages';
 
 export default function SearchScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const { messages } = useMessages();
+  const recentlyAdded = getRecentlyAdded(messages);
 
   const results = query.trim().length > 0
     ? messages.filter((m) => m.title.toLowerCase().includes(query.trim().toLowerCase()))
@@ -70,6 +73,7 @@ export default function SearchScreen() {
                   series={msg.series}
                   type={msg.type}
                   publishedAt={msg.publishedAt}
+                  thumbnail={msg.thumbnail}
                 />
               ))}
             </View>
@@ -86,6 +90,7 @@ export default function SearchScreen() {
                 series={msg.series}
                 type={msg.type}
                 publishedAt={msg.publishedAt}
+                thumbnail={msg.thumbnail}
               />
             ))}
           </View>

@@ -1,4 +1,4 @@
-import {View, Text, Pressable} from 'react-native'
+import {View, Text, Pressable, Image, StyleSheet} from 'react-native'
 import { liveStyles } from '../../constants/styles/live.styles'
 import { theme } from '../../constants/theme'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,6 +12,7 @@ interface MessageCardProps {
     series?: string,
     type?: string,
     publishedAt?: string,
+    thumbnail?: string,
     onPress?: () => void,
 }
 
@@ -27,11 +28,19 @@ const typeIcon: Record<string, keyof typeof Ionicons.glyphMap> = {
     video: 'videocam',
 };
 
-export const MessageCard = ({title, speaker, duration, series, type, publishedAt, onPress}: MessageCardProps) => {
+export const MessageCard = ({title, speaker, duration, series, type, publishedAt, thumbnail, onPress}: MessageCardProps) => {
     const icon = (type && typeIcon[type]) || 'play';
     return(
-        <Pressable onPress={onPress} style={liveStyles.latestMessageRow}>
+        <Pressable
+          onPress={onPress}
+          style={liveStyles.latestMessageRow}
+          accessibilityRole="button"
+          accessibilityLabel={`${title}, ${speaker}${duration ? `, ${duration}` : ''}`}
+        >
               <View style={liveStyles.latestMessageThumb}>
+                {thumbnail && (
+                  <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                )}
                 <View style={liveStyles.latestMessagePlayCircle}>
                   <Ionicons name={icon} size={13} color="#FFFFFF" style={icon === 'play' ? { marginLeft: 2 } : undefined} />
                 </View>

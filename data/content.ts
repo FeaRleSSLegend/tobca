@@ -18,6 +18,7 @@ export interface Message {
   series?: string;
   type: MessageType;
   publishedAt: string; // ISO date
+  thumbnail?: string; // YouTube thumbnail URL — undefined for mock entries, real for fetched ones
 }
 
 export const messages: Message[] = [
@@ -169,6 +170,38 @@ export const seriesList = Array.from(
 export const recentlyAdded = [...messages]
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, 4); // Show 4 most recent
+
+// --- Pure helpers below: same derivations as above, but operating on
+// whatever array is passed in rather than the static `messages` mock.
+// Screens now on real data (see hooks/useMessages.ts) call these with the
+// live-fetched array instead of relying on the static exports above,
+// which stay in place as a fallback if the fetch fails or hasn't
+// resolved yet.
+
+export function getLatestMessages(list: Message[], count = 2): Message[] {
+  return [...list]
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    .slice(0, count);
+}
+
+export function getRecentlyAdded(list: Message[], count = 4): Message[] {
+  return [...list]
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    .slice(0, count);
+}
+
+export function getSeriesList(list: Message[]) {
+  return Array.from(
+    new Set(list.filter((m) => m.type === 'series' && m.series).map((m) => m.series))
+  ).map((name) => ({
+    name: name as string,
+    count: list.filter((m) => m.series === name).length,
+  }));
+}
+
+export function getCurrentlyStreaming(list: Message[]): Message | undefined {
+  return list[0];
+}
 
 
 

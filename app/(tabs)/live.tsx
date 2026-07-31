@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { theme } from "../../constants/theme";
 import { sharedStyles } from "../../constants/styles/sharedStyles";
-import { latestMessages } from "../../data/content";
+import { getLatestMessages } from "../../data/content";
 import { services } from "../../data/services";
 import { verseOfDay } from "../../data/verseOfDay";
 import { SectionLabel } from "../../components/ui/SectionLabel";
@@ -10,6 +10,9 @@ import { ServicePill } from "../../components/ui/ServicePill";
 import { MessageCard } from "../../components/ui/MessageCard";
 import { VerseOfDayCard } from "../../components/ui/VerseOfDayCard";
 import { ScreenWithWatermark } from "../../components/ui/ScreenWithWatermark";
+import { useLiveStatus } from "../../hooks/useLiveStatus";
+import { useMessages } from "../../hooks/useMessages";
+import { useRouter } from "expo-router";
 
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -19,6 +22,10 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 export default function LiveScreen() {
   const todayName = DAY_NAMES[new Date().getDay()];
+  const router = useRouter();
+  const liveStatus = useLiveStatus();
+  const { messages } = useMessages();
+  const latestMessages = getLatestMessages(messages);
 
   return (
     <ScreenWithWatermark style={sharedStyles.container}>
@@ -44,7 +51,7 @@ export default function LiveScreen() {
         {/* Live vs Next-Service card — leads the screen since this is the
             one thing on it that's actually time-sensitive; a "next service"
             countdown loses its point if it's not the first thing you see. */}
-        <LiveCard isLive={false}/>
+        <LiveCard isLive={liveStatus.isLive} title={liveStatus.title}/>
 
         {/* Verse of the Day — the second loud moment on this screen, but a
             different register (photographic, devotional) from LiveCard's
@@ -84,7 +91,7 @@ export default function LiveScreen() {
             need its own smaller copy of it. */}
 
         {/* Latest Messages */}
-        <SectionLabel label="Latest Messages" actionText="See All"/>
+        <SectionLabel label="Latest Messages" actionText="See All" onActionPress={() => router.push({ pathname: '/see-all', params: { section: 'latest', title: 'Latest Messages' } })}/>
 
         <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.md }}>
           {latestMessages.map((m) => (
@@ -95,7 +102,8 @@ export default function LiveScreen() {
             speaker={m.speaker}
             duration={m.duration}
             series={m.series}
-            publishedAt={m.publishedAt}/>
+            publishedAt={m.publishedAt}
+            thumbnail={m.thumbnail}/>
           ))}
         </View>
       </ScrollView>

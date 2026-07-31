@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -9,6 +10,7 @@ interface GridCardProps {
   duration: string;
   speaker?: string;
   type?: MessageType;
+  thumbnail?: string;
   onPress?: () => void;
 }
 
@@ -28,23 +30,37 @@ const typeIcon: Record<MessageType, keyof typeof Ionicons.glyphMap> = {
   video: 'videocam',
 };
 
-export const GridCard = ({
+export const GridCard = React.memo(({
   title,
   duration,
   speaker,
   type = 'sermon',
+  thumbnail,
   onPress,
 }: GridCardProps) => {
   return (
-    <Pressable onPress={onPress} style={styles.card}>
+    <Pressable
+      onPress={onPress}
+      style={styles.card}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}${speaker ? `, ${speaker}` : ''}, ${duration}`}
+    >
       <View style={styles.thumbnail}>
-        <LinearGradient
-          colors={[theme.colors.navy, theme.colors.slateLight]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <Ionicons name={typeIcon[type]} size={20} color={theme.colors.white} style={{ zIndex: 1 }} />
+        {thumbnail ? (
+          <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        ) : (
+          <LinearGradient
+            colors={[theme.colors.navy, theme.colors.slateLight]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        {/* Icon still shows over a real thumbnail — same play/type signal,
+            now as an overlay badge instead of the only thing in the tile. */}
+        <View style={thumbnail ? styles.iconBadge : undefined}>
+          <Ionicons name={typeIcon[type]} size={thumbnail ? 14 : 20} color={theme.colors.white} style={{ zIndex: 1 }} />
+        </View>
       </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={2}>
@@ -59,7 +75,7 @@ export const GridCard = ({
       </View>
     </Pressable>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -75,6 +91,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.slate,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBadge: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)', // translucent dark scrim, same treatment as duration badges elsewhere
+    borderRadius: theme.radius.full,
+    padding: 4,
   },
   body: {
     padding: theme.spacing.sm,
