@@ -11,6 +11,15 @@ const CARD_WIDTH = (screenWidth - H_PADDING - GAP * (COLUMNS - 1)) / COLUMNS;
 
 interface CardGridProps {
   data: Message[];
+  // When the parent screen's own container already applies 16px of
+  // horizontal padding (e.g. library.tsx's filtered view, which sits
+  // inside sharedStyles.container), pass true here so this doesn't add
+  // its own 16px on top and double the inset to 32px. see-all.tsx and
+  // the playlist screen use bare containers with no padding of their
+  // own, so they leave this false (the default) and let CardGrid supply
+  // it. Either way the total inset stays 16px — CARD_WIDTH below assumes
+  // that constant regardless of which side is providing it.
+  noOuterPadding?: boolean;
 }
 
 /**
@@ -26,14 +35,14 @@ interface CardGridProps {
  * infinite-scroll via onEndReached (YouTube's own API already supports
  * paging through pageToken in services/youtube.ts) — not numbered pages.
  */
-export function CardGrid({ data }: CardGridProps) {
+export function CardGrid({ data, noOuterPadding }: CardGridProps) {
   return (
     <FlatList
       data={data}
       keyExtractor={(item) => item.id}
       numColumns={COLUMNS}
       columnWrapperStyle={styles.row}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, noOuterPadding && styles.noPadding]}
       showsVerticalScrollIndicator={false}
       // Perf props per the performance-patterns reference — this list can
       // grow well past what fits on screen once real data is in.
@@ -63,6 +72,9 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
+  },
+  noPadding: {
+    paddingHorizontal: 0,
   },
   row: {
     gap: GAP,

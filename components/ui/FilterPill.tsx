@@ -41,6 +41,11 @@ const style = StyleSheet.create({
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.sm,
         alignItems: 'center',
+        // Without this, Pressable inside a horizontal ScrollView stretches
+        // to fill the scroll container's full height — turning a pill into
+        // the giant rectangle seen in the "All" active state. alignSelf
+        // tells it to size to its own content instead.
+        alignSelf: 'flex-start',
     }
 });
 

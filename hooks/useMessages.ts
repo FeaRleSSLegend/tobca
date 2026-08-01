@@ -37,6 +37,7 @@ export function useMessages(): UseMessagesResult {
           title: v.title,
           speaker: 'OliveBrook Church',
           duration: v.duration,
+          durationSeconds: v.durationSeconds,
           videoId: v.videoId,
           type: 'sermon',
           publishedAt: v.publishedAt,

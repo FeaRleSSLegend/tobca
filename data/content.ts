@@ -14,6 +14,7 @@ export interface Message {
   title: string;
   speaker: string;
   duration: string;
+  durationSeconds?: number; // only present on real fetched videos; mock entries are never classified as clips
   videoId: string;
   series?: string;
   type: MessageType;

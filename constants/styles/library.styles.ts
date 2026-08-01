@@ -41,6 +41,18 @@ export const LibraryStyles = StyleSheet.create({
   // documents ("if Library ever needs one of these...").
   filterRow: {
     gap: theme.spacing.md,
+    // Default is 'stretch', which lets pills grow to fill the ScrollView's
+    // height. This plus alignSelf: 'flex-start' on FilterPill itself gives
+    // the fix two layers — either one alone works but both together makes
+    // it robust against any one style being overridden.
+    alignItems: 'center',
+  },
+  filteredCountLabel: {
+    fontSize: theme.fontSize.caption,
+    fontFamily: theme.fontFamily.body,
+    color: theme.colors.graySecondary,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.xs,
   },
   gridContainer: {
       flexDirection: 'row',

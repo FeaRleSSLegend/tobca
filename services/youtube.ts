@@ -6,28 +6,45 @@ const CHANNEL_ID = 'UC2iX9RmSZ6uAjFqi7putEaA';
 // uploads playlist ID without spending an extra API call to look it up.
 const UPLOADS_PLAYLIST_ID = 'UU' + CHANNEL_ID.slice(2);
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function requireApiKey() {
+  if (!API_KEY) {
+    throw new Error(
+      'EXPO_PUBLIC_YOUTUBE_API_KEY is not set. Add it to your .env file and to EAS (eas env:set).'
+    );
+  }
+}
 
 export interface YouTubeVideo {
   videoId: string;
   title: string;
   publishedAt: string; // YYYY-MM-DD
   thumbnail: string;
-  duration: string; // e.g. "42 min"
+  duration: string; // formatted, e.g. "42 min" — for display
+  durationSeconds: number; // raw seconds — for classification (e.g. detecting short clips)
 }
 
-function isoDurationToLabel(iso: string): string {
+function isoDurationToSeconds(iso: string): number {
   const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!match) return '';
+  if (!match) return 0;
   const h = parseInt(match[1] || '0', 10);
   const m = parseInt(match[2] || '0', 10);
+  const s = parseInt(match[3] || '0', 10);
+  return h * 3600 + m * 60 + s;
+}
+
+function secondsToLabel(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
   return h > 0 ? `${h} hr ${m} min` : `${m} min`;
 }
 
-async function fetchUploadsPage(pageToken?: string) {
+async function fetchPlaylistPage(playlistId: string, pageToken?: string) {
   const url = new URL(`${BASE_URL}/playlistItems`);
   url.searchParams.set('part', 'snippet');
-  url.searchParams.set('playlistId', UPLOADS_PLAYLIST_ID);
-  url.searchParams.set('maxResults', '25');
+  url.searchParams.set('playlistId', playlistId);
+  url.searchParams.set('maxResults', '50');
   url.searchParams.set('key', API_KEY!);
   if (pageToken) url.searchParams.set('pageToken', pageToken);
 
@@ -37,62 +54,128 @@ async function fetchUploadsPage(pageToken?: string) {
 }
 
 /**
- * Pulls every video off the channel's uploads playlist (1 quota unit per
- * page of 25 — cheap), then a single videos.list call to get durations for
- * all of them (1 unit, batched up to 50 IDs per call). Cached to
- * AsyncStorage for an hour since the sermon list doesn't change minute to
- * minute — no reason to re-fetch on every screen visit.
+ * Shared by fetchChannelUploads and fetchPlaylistItems — both are "list the
+ * videos in a playlist" (the uploads playlist is just YouTube's built-in
+ * playlist of everything a channel has posted), so they share the same
+ * paging + duration-lookup logic instead of duplicating it.
  */
-export async function fetchChannelUploads(): Promise<YouTubeVideo[]> {
-  if (!API_KEY) {
-    throw new Error(
-      'EXPO_PUBLIC_YOUTUBE_API_KEY is not set. Add it to your .env file and to EAS (eas env:create).'
-    );
-  }
+async function fetchPlaylistVideos(playlistId: string, cacheKey: string, cap = 500): Promise<YouTubeVideo[]> {
+  requireApiKey();
 
-  const cacheKey = 'yt:uploads';
   const cached = await AsyncStorage.getItem(cacheKey);
   if (cached) {
     const { videos, fetchedAt } = JSON.parse(cached);
-    if (Date.now() - fetchedAt < 60 * 60 * 1000) {
-      return videos;
-    }
+    if (Date.now() - fetchedAt < CACHE_TTL_MS) return videos;
   }
 
   let items: any[] = [];
   let pageToken: string | undefined;
   do {
-    const page = await fetchUploadsPage(pageToken);
+    const page = await fetchPlaylistPage(playlistId, pageToken);
     items = items.concat(page.items);
     pageToken = page.nextPageToken;
-  } while (pageToken && items.length < 100); // cap at 100 videos for now
+  } while (pageToken && items.length < cap);
 
   const videoIds = items.map((i) => i.snippet.resourceId.videoId);
-  const durationMap: Record<string, string> = {};
+  const durationMap: Record<string, number> = {};
 
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50);
     const url = new URL(`${BASE_URL}/videos`);
     url.searchParams.set('part', 'contentDetails');
     url.searchParams.set('id', batch.join(','));
-    url.searchParams.set('key', API_KEY);
+    url.searchParams.set('key', API_KEY!);
     const res = await fetch(url.toString());
     const json = await res.json();
     for (const v of json.items ?? []) {
-      durationMap[v.id] = isoDurationToLabel(v.contentDetails.duration);
+      durationMap[v.id] = isoDurationToSeconds(v.contentDetails.duration);
     }
   }
 
-  const videos: YouTubeVideo[] = items.map((i) => ({
-    videoId: i.snippet.resourceId.videoId,
-    title: i.snippet.title,
-    publishedAt: i.snippet.publishedAt.slice(0, 10),
-    thumbnail: i.snippet.thumbnails?.medium?.url ?? '',
-    duration: durationMap[i.snippet.resourceId.videoId] ?? '',
-  }));
+  const videos: YouTubeVideo[] = items
+    // Playlist items can reference a video that was deleted/privated —
+    // resourceId still shows up but there's no duration for it. Skip those
+    // rather than showing a broken "0 min" card for something unplayable.
+    .filter((i) => durationMap[i.snippet.resourceId.videoId] !== undefined)
+    .map((i) => {
+      const durationSeconds = durationMap[i.snippet.resourceId.videoId];
+      return {
+        videoId: i.snippet.resourceId.videoId,
+        title: i.snippet.title,
+        publishedAt: i.snippet.publishedAt.slice(0, 10),
+        thumbnail: i.snippet.thumbnails?.medium?.url ?? '',
+        duration: secondsToLabel(durationSeconds),
+        durationSeconds,
+      };
+    });
 
   await AsyncStorage.setItem(cacheKey, JSON.stringify({ videos, fetchedAt: Date.now() }));
   return videos;
+}
+
+/**
+ * Pulls every video off the channel's uploads playlist. 1 quota unit per
+ * page of 50 (cheap), plus 1 unit per 50 IDs for durations. Capped at 500
+ * videos for now — plenty of headroom for classification (see
+ * utils/contentGrouping.ts) to have enough history to detect recurring
+ * services and series confidently; raise the cap later if the channel
+ * outgrows it.
+ */
+export async function fetchChannelUploads(): Promise<YouTubeVideo[]> {
+  return fetchPlaylistVideos(UPLOADS_PLAYLIST_ID, 'yt:uploads', 500);
+}
+
+export interface YouTubePlaylist {
+  id: string;
+  title: string;
+  itemCount: number;
+  thumbnail: string;
+}
+
+/**
+ * Real curated playlists from the channel (e.g. "Pastor Abu's Sermons",
+ * "Take 5 with PY") — these are the authoritative source for a
+ * collection when the channel has bothered to make one, more reliable
+ * than guessing from titles. 1 quota unit.
+ */
+export async function fetchChannelPlaylists(): Promise<YouTubePlaylist[]> {
+  requireApiKey();
+
+  const cacheKey = 'yt:playlists';
+  const cached = await AsyncStorage.getItem(cacheKey);
+  if (cached) {
+    const { playlists, fetchedAt } = JSON.parse(cached);
+    if (Date.now() - fetchedAt < CACHE_TTL_MS) return playlists;
+  }
+
+  const url = new URL(`${BASE_URL}/playlists`);
+  url.searchParams.set('part', 'snippet,contentDetails');
+  url.searchParams.set('channelId', CHANNEL_ID);
+  url.searchParams.set('maxResults', '50');
+  url.searchParams.set('key', API_KEY!);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`YouTube playlists failed: ${res.status}`);
+  const json = await res.json();
+
+  const playlists: YouTubePlaylist[] = (json.items ?? [])
+    // Empty playlists (0 items) aren't worth a circle on Library — usually
+    // leftover drafts, not something a visitor should tap into.
+    .filter((p: any) => p.contentDetails.itemCount > 0)
+    .map((p: any) => ({
+      id: p.id,
+      title: p.snippet.title,
+      itemCount: p.contentDetails.itemCount,
+      thumbnail: p.snippet.thumbnails?.medium?.url ?? '',
+    }));
+
+  await AsyncStorage.setItem(cacheKey, JSON.stringify({ playlists, fetchedAt: Date.now() }));
+  return playlists;
+}
+
+/** Videos inside one specific playlist — used when a user taps into a playlist. */
+export async function fetchPlaylistItems(playlistId: string): Promise<YouTubeVideo[]> {
+  return fetchPlaylistVideos(playlistId, `yt:playlist:${playlistId}`);
 }
 
 /**
@@ -105,18 +188,14 @@ export async function fetchChannelUploads(): Promise<YouTubeVideo[]> {
 export async function checkChannelLive(): Promise<
   { isLive: true; videoId: string; title: string } | { isLive: false }
 > {
-  if (!API_KEY) {
-    throw new Error(
-      'EXPO_PUBLIC_YOUTUBE_API_KEY is not set. Add it to your .env file and to EAS (eas env:create).'
-    );
-  }
+  requireApiKey();
 
   const url = new URL(`${BASE_URL}/search`);
   url.searchParams.set('part', 'snippet');
   url.searchParams.set('channelId', CHANNEL_ID);
   url.searchParams.set('eventType', 'live');
   url.searchParams.set('type', 'video');
-  url.searchParams.set('key', API_KEY);
+  url.searchParams.set('key', API_KEY!);
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`YouTube search failed: ${res.status}`);
