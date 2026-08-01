@@ -24,10 +24,13 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
             // doesn't get visually heavier just to satisfy touch-target math.
             hitSlop={8}
         >
-            <Text style={{
-                color: isActive ? theme.colors.white : theme.colors.graySecondary,
-                fontWeight: theme.fontWeight.medium
-            }}>
+            <Text
+                numberOfLines={1}
+                style={{
+                    color: isActive ? theme.colors.white : theme.colors.graySecondary,
+                    fontWeight: theme.fontWeight.medium
+                }}
+            >
                 {label}
             </Text>
         </Pressable>
@@ -46,6 +49,10 @@ const style = StyleSheet.create({
         // the giant rectangle seen in the "All" active state. alignSelf
         // tells it to size to its own content instead.
         alignSelf: 'flex-start',
+        // Guards against the row's flex layout squeezing a pill narrower
+        // than its label — which is what let "Sunday Service" wrap onto a
+        // second line and, with it, drag the whole row's height up.
+        flexShrink: 0,
     }
 });
 

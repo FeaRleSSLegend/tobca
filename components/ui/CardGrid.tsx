@@ -41,6 +41,13 @@ export function CardGrid({ data, noOuterPadding }: CardGridProps) {
       data={data}
       keyExtractor={(item) => item.id}
       numColumns={COLUMNS}
+      // FlatList needs this set explicitly — a wrapping View with flex:1
+      // isn't enough for FlatList to size itself correctly (unlike a plain
+      // View, it doesn't just inherit the parent's bounded height). Without
+      // this it can end up ambiguously sized, which is what caused the big
+      // gap before the grid when this render inside library.tsx's focused
+      // single-category view.
+      style={{ flex: 1 }}
       columnWrapperStyle={styles.row}
       contentContainerStyle={[styles.content, noOuterPadding && styles.noPadding]}
       showsVerticalScrollIndicator={false}

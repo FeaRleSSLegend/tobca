@@ -34,6 +34,19 @@ export const LibraryStyles = StyleSheet.create({
   },
   filterView: {
     padding: theme.spacing.sm,
+    // Locks the row's own height so it's identical no matter which pill is
+    // active. alignSelf/alignItems (below) already stop individual pills
+    // from stretching, but that only controls the *pills'* cross-axis size
+    // — it doesn't stop the ScrollView itself from being re-measured on
+    // every activeFilter change, since its height was never pinned to
+    // anything. Computed from FilterPill's own metrics: pill is border(1)×2
+    // + paddingVertical(spacing.sm=8)×2 + ~17pt line height ≈ 35pt tall,
+    // plus this container's own spacing.sm×2 = 16pt of vertical padding.
+    height: 52,
+    // Belt-and-suspenders: even with wrapping now prevented at the source
+    // (FilterPill's numberOfLines={1}), this guarantees the row can never
+    // visually grow past 52pt again, however that might happen in future.
+    overflow: 'hidden',
   },
   // Was an inline `{ gap: theme.spacing.md }` object literal passed
   // straight to contentContainerStyle in library.tsx — moved here so this
