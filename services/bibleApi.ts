@@ -8,6 +8,12 @@ const BASE_URL = 'https://api.youversion.com';
 export interface Verse {
   number: number;
   text: string;
+  // Which chapter/book this verse belongs to — carried through from the
+  // parsed segment so the reader can draw chapter boundaries. Optional
+  // because passages cached under the old shape won't have them (see the
+  // cache-key version bump below, which retires those anyway).
+  chapter?: number;
+  book?: string;
 }
 
 /**
@@ -55,11 +61,20 @@ async function fetchSegmentVerses(bibleId: number, segment: PassageSegment): Pro
     verseNumbers.map(v => fetchSingleVerse(bibleId, segment.usfm, segment.chapter, v))
   );
 
-  return verseNumbers.map((number, i) => ({ number, text: texts[i] }));
+  return verseNumbers.map((number, i) => ({
+    number,
+    text: texts[i],
+    chapter: segment.chapter,
+    book: segment.book,
+  }));
 }
 
 function cacheKey(translation: TranslationCode, reference: string): string {
-  return `yvp:passage:${translation}:${reference}`;
+  // v2: verses now carry chapter/book. Bumping the prefix retires every
+  // entry cached under the old shape — one refetch per passage, after
+  // which everything is cached again under the new key. Cheaper and
+  // safer than trying to migrate old entries in place.
+  return `yvp:passage:v2:${translation}:${reference}`;
 }
 
 /**

@@ -32,6 +32,7 @@ import { seeAllStyles } from '../constants/styles/seeAll.styles';
 import { CardGrid } from '../components/ui/CardGrid';
 import { CollectionShell } from '../components/ui/CollectionShell';
 import { MessageCard } from '../components/ui/MessageCard';
+import { ServiceRow } from '../components/ui/ServiceRow';
 import { GroupCard } from '../components/ui/GroupCard';
 import { PlaylistCircle } from '../components/ui/PlaylistCircle';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -57,27 +58,30 @@ import {
 // Section header inside a SectionList / grouped grid ("This Week",
 // "June 2026", "Ongoing"…). Not sticky: with search + pills above the list,
 // a sticky header would eat vertical space on exactly the screens that
-// scroll longest.
-const GroupHeader = ({ label }: { label: string }) => (
-  <Text style={seeAllStyles.groupHeader} accessibilityRole="header">
-    {label}
-  </Text>
+// scroll longest. The trailing count answers "how deep is this bucket"
+// before scrolling into it — cheap orientation for month groups that can
+// hold anything from 1 to 12 services.
+const GroupHeader = ({ label, count }: { label: string; count?: number }) => (
+  <View style={seeAllStyles.groupHeaderRow}>
+    <Text style={seeAllStyles.groupHeader} accessibilityRole="header">
+      {label}
+    </Text>
+    {count !== undefined && <Text style={seeAllStyles.groupHeaderCount}>{count}</Text>}
+  </View>
 );
 
 const messageRow = (m: Message, onPress?: () => void) => (
-  <View style={seeAllStyles.listRowWrap}>
-    <MessageCard
-      id={m.id}
-      title={m.title}
-      speaker={m.speaker}
-      duration={m.duration}
-      series={m.series}
-      type={m.type}
-      publishedAt={shortDate(m.publishedAt)}
-      thumbnail={m.thumbnail}
-      onPress={onPress}
-    />
-  </View>
+  <MessageCard
+    id={m.id}
+    title={m.title}
+    speaker={m.speaker}
+    duration={m.duration}
+    series={m.series}
+    type={m.type}
+    publishedAt={shortDate(m.publishedAt)}
+    thumbnail={m.thumbnail}
+    onPress={onPress}
+  />
 );
 
 const listPerfProps = {
@@ -228,6 +232,7 @@ function MessageListCollection({
   emptyIcon,
   emptyTitle,
   emptySubtitle,
+  renderRow,
 }: {
   title: string;
   description?: string;
@@ -240,6 +245,9 @@ function MessageListCollection({
   emptyIcon: keyof typeof Ionicons.glyphMap;
   emptyTitle: string;
   emptySubtitle: string;
+  // Per-collection row override — Services swaps in the calendar-block
+  // ServiceRow; everything else defaults to the thumbnail MessageCard.
+  renderRow?: (m: Message) => React.ReactElement;
 }) {
   const [query, setQuery] = useState('');
   const [pill, setPill] = useState('All');
@@ -251,7 +259,7 @@ function MessageListCollection({
     // Search results come back flat — date-grouping a handful of matches
     // just adds headers between them for no orientation benefit.
     const grouped: MessageSection[] = q
-      ? visible.length > 0 ? [{ title: `${visible.length} result${visible.length === 1 ? '' : 's'}`, data: visible }] : []
+      ? visible.length > 0 ? [{ title: 'Results', data: visible }] : []
       : groupSections(visible);
     return { sections: grouped, visibleCount: visible.length };
   }, [list, query, pill, filterItems, groupSections]);
@@ -276,8 +284,14 @@ function MessageListCollection({
           contentContainerStyle={seeAllStyles.listContent}
           stickySectionHeadersEnabled={false}
           {...listPerfProps}
-          renderSectionHeader={({ section }) => <GroupHeader label={section.title} />}
-          renderItem={({ item }) => messageRow(item)}
+          renderSectionHeader={({ section }) => (
+            <GroupHeader label={section.title} count={section.data.length} />
+          )}
+          renderItem={({ item }) => (
+            <View style={seeAllStyles.listRowWrap}>
+              {renderRow ? renderRow(item) : messageRow(item)}
+            </View>
+          )}
         />
       ) : loading ? (
         <SkeletonList />
@@ -481,6 +495,7 @@ function MessagesRouter({ section, filter, title }: {
         emptyIcon="calendar"
         emptyTitle="No services yet"
         emptySubtitle="Recordings will appear here after each service."
+        renderRow={(m) => <ServiceRow message={m} serviceLabel={m.series} />}
       />
     );
   }
@@ -514,8 +529,8 @@ function MessagesRouter({ section, filter, title }: {
       groupSections={groupByRecency}
       loading={loading}
       emptyIcon="time"
-      emptyTitle="Nothing added yet"
-      emptySubtitle="New uploads from the channel will land here."
+      emptyTitle="Nothing new recently"
+      emptySubtitle="Uploads from the last two months will land here."
     />
   );
 }

@@ -182,13 +182,33 @@ export async function fetchPlaylistItems(playlistId: string): Promise<YouTubeVid
  * Checks whether the channel is live right now. Uses search.list, which
  * costs 100 quota units per call (vs 1 for most YouTube API calls) — the
  * free daily quota is 10,000 units, so this can only run ~100x/day.
- * Callers should NOT poll this continuously; only call it near a scheduled
- * service window (see hooks/useLiveStatus.ts, which already handles this).
+ *
+ * This is now the PRIMARY live signal for the whole app (the schedule in
+ * data/services.ts is only a fallback when this can't answer — see
+ * hooks/useLiveStatus.ts), so it's called more often than before. The
+ * maxAgeMs cache below is what makes that affordable: callers pass how
+ * stale an answer they can tolerate (tight during service windows, loose
+ * outside them), and anything fresher than that is served from
+ * AsyncStorage without spending the 100 units.
  */
-export async function checkChannelLive(): Promise<
-  { isLive: true; videoId: string; title: string } | { isLive: false }
-> {
+const LIVE_CACHE_KEY = 'yt:liveStatus';
+
+export type LiveCheckResult =
+  | { isLive: true; videoId: string; title: string }
+  | { isLive: false };
+
+export async function checkChannelLive(maxAgeMs = 5 * 60 * 1000): Promise<LiveCheckResult> {
   requireApiKey();
+
+  try {
+    const cached = await AsyncStorage.getItem(LIVE_CACHE_KEY);
+    if (cached) {
+      const { result, fetchedAt } = JSON.parse(cached);
+      if (Date.now() - fetchedAt < maxAgeMs) return result;
+    }
+  } catch {
+    // Cache read failing just means a fresh fetch — never fatal.
+  }
 
   const url = new URL(`${BASE_URL}/search`);
   url.searchParams.set('part', 'snippet');
@@ -201,9 +221,11 @@ export async function checkChannelLive(): Promise<
   if (!res.ok) throw new Error(`YouTube search failed: ${res.status}`);
   const json = await res.json();
 
-  if (json.items && json.items.length > 0) {
-    const item = json.items[0];
-    return { isLive: true, videoId: item.id.videoId, title: item.snippet.title };
-  }
-  return { isLive: false };
+  const result: LiveCheckResult =
+    json.items && json.items.length > 0
+      ? { isLive: true, videoId: json.items[0].id.videoId, title: json.items[0].snippet.title }
+      : { isLive: false };
+
+  await AsyncStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({ result, fetchedAt: Date.now() }));
+  return result;
 }

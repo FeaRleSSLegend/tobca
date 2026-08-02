@@ -1,31 +1,37 @@
-import {Text, View, Pressable} from 'react-native'
-import {theme} from '../../constants/theme';
+import { Text, View, Pressable } from 'react-native'
+import { theme } from '../../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { liveStyles } from '../../constants/styles/live.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { getNextService, services } from '../../data/services';
+import { getNextService } from '../../data/services';
 
 interface LiveCardProps {
   isLive?: boolean;
   title?: string;
+  // 'youtube' = confirmed live; 'schedule' = assumed from service times
+  // because YouTube couldn't be reached. The caption tells the truth
+  // about which one it is instead of claiming "streaming now" on a guess.
+  source?: 'youtube' | 'schedule';
 }
 
-const { service: nextService, countdownLabel } = getNextService();
+// The first thing anyone sees on the app — pink/purple gradient hero,
+// matching how boldly the real site treats its own hero moment.
+//
+// Refinement pass on the LIVE state: the old layout said "live" three
+// times (a "YouTube Live" pill, a bare play circle floating mid-card, and
+// a second "LIVE NOW" pill) — three elements, one fact, no clear action.
+// Collapsed to one statement of each thing: one LIVE badge, the title as
+// the biggest element (it's the actual information), one honest caption,
+// and a labeled full-width "Watch now" button. A button with a word wins
+// over a bare icon circle for the card's single primary action — the icon
+// alone made "what happens if I tap this?" a guess.
+export const LiveCard = ({ isLive, title, source = 'youtube' }: LiveCardProps) => {
+  // Recomputed per render, NOT at module load — as a module-level const
+  // this was evaluated once when the JS bundle first ran, so the countdown
+  // ("in 2 days 3 hrs") silently froze at whatever was true at app launch
+  // and the card could keep advertising a service that already happened.
+  const { service: nextService, countdownLabel } = getNextService();
 
-// This is the first thing anyone sees on the app — same move as
-// CurrentMessageCard and FocusCard: flat navy panel -> the pink/purple
-// gradient, matching how boldly the real site treats its own hero. Two
-// things that used to sit ON TOP of a navy card needed to change once the
-// card itself became the gradient, or they'd have vanished into it:
-//   - the Play button was gradient-filled; now a white circle + pink icon,
-//     same as the real site's actual play button and Library's card.
-//   - "Add to Calendar" was gradient-filled too; a gradient button on a
-//     gradient card has ~no visible edge, so it's now solid white with
-//     navy text, mirroring the site's own white CTA boxes.
-// The status pills (YouTube Live / LIVE NOW) switched from a flat slate
-// fill to a translucent dark scrim, the same overlay treatment already
-// used for duration badges on colored/photo thumbnails elsewhere.
-export const LiveCard = ({isLive, title}: LiveCardProps) => {
   return isLive ? (
     <LinearGradient
       colors={theme.gradient.colors}
@@ -35,30 +41,28 @@ export const LiveCard = ({isLive, title}: LiveCardProps) => {
     >
       <View style={liveStyles.badgePill}>
         <View style={liveStyles.pulseDot} />
-        <Text style={{ fontSize: theme.fontSize.caption, color: theme.colors.white, fontWeight: theme.fontWeight.medium }}>
-          YouTube Live
+        <Text style={liveStyles.badgeText}>LIVE</Text>
+      </View>
+
+      <View style={liveStyles.liveTitleBlock}>
+        <Text style={liveStyles.heroTitle} numberOfLines={2}>
+          {title ?? 'Sunday Service'}
+        </Text>
+        <Text style={liveStyles.heroCaption}>
+          {source === 'youtube' ? 'Streaming live on YouTube' : 'Service in progress'}
         </Text>
       </View>
 
-      <Pressable style={liveStyles.playButtonWrapper}>
-        <View style={liveStyles.playButton}>
-          <Ionicons name="play" size={26} color={theme.colors.pink} style={{ marginLeft: 3 }} />
+      <Pressable
+        style={liveStyles.primaryBtnWrapper}
+        accessibilityRole="button"
+        accessibilityLabel="Watch the live stream"
+      >
+        <View style={liveStyles.primaryBtn}>
+          <Ionicons name="play" size={16} color={theme.colors.pink} style={{ marginLeft: 1 }} />
+          <Text style={liveStyles.primaryBtnText}>Watch now</Text>
         </View>
       </Pressable>
-
-      <View style={[liveStyles.badgePill, { marginTop: theme.spacing.xxxl }]}>
-        <View style={liveStyles.pulseDot} />
-        <Text style={{ fontSize: theme.fontSize.body, color: theme.colors.white, fontWeight: theme.fontWeight.bold }}>
-          LIVE NOW
-        </Text>
-      </View>
-
-      <Text style={{ fontSize: theme.fontSize.display, fontFamily: theme.fontFamily.display, color: theme.colors.white }}>
-        {title ?? 'Sunday Service'}
-      </Text>
-      <Text style={{ fontSize: theme.fontSize.caption, color: 'rgba(255,255,255,0.8)' }}>
-        Streaming now
-      </Text>
     </LinearGradient>
   ) : (
     <LinearGradient
@@ -73,19 +77,25 @@ export const LiveCard = ({isLive, title}: LiveCardProps) => {
           override instead of changing the shared style. */}
       <Text style={liveStyles.overlineOnGradient}>NEXT SERVICE</Text>
 
-      <Text style={{ fontSize: theme.fontSize.display, fontFamily: theme.fontFamily.display, color: theme.colors.white }}>
-        {`${nextService.day}, ${nextService.time}`}
-      </Text>
-      <Text style={{ fontSize: theme.fontSize.caption, color: 'rgba(255,255,255,0.8)' }}>
-        {`${nextService.name} · ${countdownLabel}`}
-      </Text>
+      <View style={liveStyles.liveTitleBlock}>
+        <Text style={liveStyles.heroTitle}>
+          {`${nextService.day}, ${nextService.time}`}
+        </Text>
+        <Text style={liveStyles.heroCaption}>
+          {`${nextService.name} · ${countdownLabel}`}
+        </Text>
+      </View>
 
-      <Pressable style={liveStyles.addCalendarWrapper}>
-        <View style={liveStyles.addCalendarButton}>
-          <Text style={{ fontSize: theme.fontSize.body, color: theme.colors.navy, fontWeight: theme.fontWeight.bold }}>
+      <Pressable
+        style={liveStyles.primaryBtnWrapper}
+        accessibilityRole="button"
+        accessibilityLabel={`Add ${nextService.name} to calendar`}
+      >
+        <View style={liveStyles.primaryBtn}>
+          <Ionicons name="calendar-outline" size={15} color={theme.colors.navy} />
+          <Text style={[liveStyles.primaryBtnText, { color: theme.colors.navy }]}>
             Add to Calendar
           </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.navy} style={{ marginTop: 1.5 }} />
         </View>
       </Pressable>
     </LinearGradient>

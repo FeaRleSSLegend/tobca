@@ -17,7 +17,7 @@ export const liveStyles = StyleSheet.create({
   badgePill: {
     alignSelf: 'flex-start',
     paddingHorizontal: theme.spacing.md,
-    height: 20,
+    height: 22,
     // Was a flat slate fill — now a translucent dark scrim sitting on the
     // gradient card, the same overlay treatment latestMessageDurationBadge
     // already uses for a badge on top of a colored/photo surface.
@@ -26,6 +26,12 @@ export const liveStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  badgeText: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.white,
+    fontFamily: theme.fontFamily.bodyBold,
+    letterSpacing: 1,
+  },
   pulseDot: {
     width: 8,
     height: 8,
@@ -33,39 +39,47 @@ export const liveStyles = StyleSheet.create({
     borderRadius: theme.radius.full,
     marginRight: theme.spacing.sm,
   },
-  playButtonWrapper: {
-    alignSelf: 'center',
+  // Title + caption grouped tight, with the group itself carrying the
+  // breathing room from the badge above — hierarchy through one gap in
+  // the right place instead of margins scattered across four elements.
+  liveTitleBlock: {
+    marginTop: theme.spacing.sm,
+    gap: 3,
+  },
+  heroTitle: {
+    fontSize: theme.fontSize.display,
+    fontFamily: theme.fontFamily.display,
+    color: theme.colors.white,
+  },
+  heroCaption: {
+    fontSize: theme.fontSize.body,
+    fontFamily: theme.fontFamily.body,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  // One primary-button recipe for BOTH card states ("Watch now" live,
+  // "Add to Calendar" upcoming) — solid white, matching the site's own
+  // CTA treatment and CurrentMessageCard's play button; a gradient button
+  // on a gradient card has no visible edge. Full-width with a label
+  // because the card has exactly one action and it should say what it is.
+  primaryBtnWrapper: {
     marginTop: theme.spacing.md,
     borderRadius: theme.radius.full,
     overflow: 'hidden',
   },
-  playButton: {
-    width: 60,
-    height: 60,
-    borderRadius: theme.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Solid white, matching CurrentMessageCard's play button and the real
-    // site's actual button — a gradient circle on a gradient card would
-    // have no visible edge.
-    backgroundColor: theme.colors.white,
-  },
-  addCalendarWrapper: {
-    alignSelf: 'flex-start',
-    marginTop: theme.spacing.sm,
-    borderRadius: theme.radius.full,
-    overflow: 'hidden',
-  },
-  addCalendarButton: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
+  primaryBtn: {
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: theme.spacing.sm,
-    // Same reasoning as playButton above — solid white instead of a second
-    // gradient, so the button reads as a distinct, tappable element instead
-    // of disappearing into the card behind it.
     backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  primaryBtnText: {
+    fontSize: theme.fontSize.body,
+    fontFamily: theme.fontFamily.bodyBold,
+    color: theme.colors.pink,
   },
   // Local override for the one spot sharedStyles.overlineText's pink
   // doesn't work — everywhere else it's pink-on-white, here it's sitting on

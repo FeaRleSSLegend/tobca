@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -8,22 +8,47 @@ interface CurrentMessageProps {
   message: Message;
 }
 
-// The site's own "Current Message" block is the boldest thing on their
-// homepage — a full pink panel, huge white play button, one caption line.
-// This card was a flat navy panel with two stacked white-on-navy eyebrows
-// ("Current Message" + "Now streaming") doing the same job twice. Matched
-// to the real thing instead: gradient panel, one caption, one big white
-// play button with a colored icon — the site's actual play button is white
-// with a pink triangle, not a small tinted circle.
+// Library's hero card. Refinement pass: with real YouTube data flowing,
+// every message now HAS artwork — so the card uses the actual thumbnail
+// as its background instead of covering it with a flat brand gradient
+// that made every week's hero look identical. A bottom scrim (transparent
+// → near-black navy) keeps the text at readable contrast wherever the
+// photo is busy; the brand gradient stays as the fallback for the mock
+// entries that have no thumbnail. Same information, one more real signal,
+// zero added elements — the scan order is unchanged: eyebrow → title →
+// meta, play button in the corner.
 export const CurrentMessage = ({ message }: CurrentMessageProps) => {
   return (
-    <LinearGradient
-      colors={theme.gradient.colors}
-      start={theme.gradient.start}
-      end={theme.gradient.end}
-      style={styles.card}
-    >
-      <Pressable style={styles.playButton} hitSlop={4}>
+    <View style={styles.card}>
+      {message.thumbnail ? (
+        <>
+          <Image
+            source={{ uri: message.thumbnail }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['rgba(10,22,33,0.05)', 'rgba(10,22,33,0.85)']}
+            start={{ x: 0, y: 0.25 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </>
+      ) : (
+        <LinearGradient
+          colors={theme.gradient.colors}
+          start={theme.gradient.start}
+          end={theme.gradient.end}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+
+      <Pressable
+        style={styles.playButton}
+        hitSlop={4}
+        accessibilityRole="button"
+        accessibilityLabel={`Play ${message.title}`}
+      >
         <Ionicons name="play" size={18} color={theme.colors.pink} style={{ marginLeft: 2 }} />
       </Pressable>
 
@@ -36,18 +61,19 @@ export const CurrentMessage = ({ message }: CurrentMessageProps) => {
           {message.speaker} · {message.duration}
         </Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    height: 150,
+    height: 160,
     borderRadius: theme.radius.md,
     padding: theme.spacing.lg,
     justifyContent: 'flex-end',
     overflow: 'hidden',
     marginTop: theme.spacing.xxl,
+    backgroundColor: theme.colors.navy, // paints the frame while the image loads
   },
   playButton: {
     position: 'absolute',
@@ -63,14 +89,14 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.white,
+    color: 'rgba(255,255,255,0.85)',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     marginBottom: theme.spacing.xs,
   },
   title: {
     fontFamily: theme.fontFamily.display,
-    fontSize: theme.fontSize.cardTitle,
+    fontSize: theme.fontSize.sectionHeading,
     color: theme.colors.white,
     marginBottom: 4,
   },

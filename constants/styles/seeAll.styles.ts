@@ -72,13 +72,25 @@ export const seeAllStyles = StyleSheet.create({
   // "This Week" / "June 2026" / "Ongoing" group headers inside a list —
   // same uppercase-slate recipe as sharedStyles.sectionTitle, one size
   // down since these sit inside a collection rather than heading one.
+  // Count sits at the trailing edge, quiet gray, so the label stays the
+  // thing that reads first.
+  groupHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.sm,
+  },
   groupHeader: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodySemibold,
     color: theme.colors.slate,
     textTransform: 'uppercase',
-    marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.sm,
+  },
+  groupHeaderCount: {
+    fontSize: theme.fontSize.caption,
+    fontFamily: theme.fontFamily.body,
+    color: theme.colors.grayIcon,
   },
   listRowWrap: {
     marginBottom: theme.spacing.sm,

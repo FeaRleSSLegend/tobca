@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { theme } from '../../constants/theme';
@@ -12,15 +13,17 @@ import { StreakModal } from '../../components/bible/StreakModal';
 import { ReadingCarousel, ReadingCarouselItem } from '../../components/bible/ReadingCarousel';
 import { 
   getTodayReading, 
+  getTomorrowReading,
   getProgress, 
   markDayAsRead,
   getCompletionPercentage,
   getWeekProgress,
+  getEffectiveStreak,
   isReadingUnlocked,
   ReadingProgress 
 } from '../../utils/biblePlan.utils';
 import { DayPlan } from '../../data/biblePlan';
-import { TranslationCode } from '../../services/bibleVersions';
+import { TranslationCode, getSavedTranslation } from '../../services/bibleVersions';
 import { getVersesForReference, Verse } from '../../services/bibleApi';
 
 export default function PlanScreen() {
@@ -44,6 +47,17 @@ export default function PlanScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // The translation is chosen once on the Bible Version screen and applies
+  // app-wide — re-read on every focus so a change made from the reader is
+  // reflected here without an app restart.
+  useFocusEffect(
+    useCallback(() => {
+      getSavedTranslation().then((saved) => {
+        setTranslation((current) => (saved !== current ? saved : current));
+      });
+    }, [])
+  );
 
   useEffect(() => {
     if (!todayReading) return;
@@ -126,6 +140,11 @@ export default function PlanScreen() {
   const percentage = progress ? getCompletionPercentage(progress.completedDays) : 0;
   const weekProgress = getWeekProgress(progress?.completedDays || []);
   const todayNumber = new Date().getDate();
+  // Displayed streak is DERIVED, not the raw stored value — the stored
+  // number goes stale after missed days (it only updates on a mark), and
+  // showing a dead streak as alive is worse than showing the truth.
+  const effectiveStreak = progress ? getEffectiveStreak(progress) : 0;
+  const tomorrow = getTomorrowReading();
 
   const readings: ReadingCarouselItem[] = [
     { key: 'oldTestament', label: 'Old Testament', reference: todayReading.oldTestament, verses: otVerses },
@@ -152,7 +171,7 @@ export default function PlanScreen() {
         />
 
         <StreakSummary
-          streak={progress?.currentStreak || 0}
+          streak={effectiveStreak}
           percentage={percentage}
           onPress={() => setStreakModalVisible(true)}
         />
@@ -166,13 +185,25 @@ export default function PlanScreen() {
 
         <ReadingCarousel readings={readings} onPressCard={openReading} />
 
+        {/* Tomorrow, at a glance — lets tonight's reader see what's ahead
+            (and roughly how heavy it is) without paging the plan forward.
+            One quiet line, not a card: it's a preview, not a task. */}
+        {tomorrow && (
+          <View style={styles.tomorrowRow}>
+            <Ionicons name="arrow-forward-circle-outline" size={16} color={theme.colors.grayIcon} />
+            <Text style={styles.tomorrowText} numberOfLines={1}>
+              Tomorrow · {tomorrow.oldTestament.split(',')[0].split(':')[0]} · {tomorrow.newTestament.split(',')[0].split(':')[0]}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.bottomPadding} />
       </ScrollView>
 
       <StreakModal
         visible={streakModalVisible}
         onClose={() => setStreakModalVisible(false)}
-        streak={progress?.currentStreak || 0}
+        streak={effectiveStreak}
         longestStreak={progress?.longestStreak || 0}
         completedCount={progress?.completedDays.length || 0}
         percentage={percentage}
@@ -209,5 +240,18 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: theme.spacing.xxxl,
+  },
+  tomorrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xs,
+  },
+  tomorrowText: {
+    flex: 1,
+    fontFamily: theme.fontFamily.body,
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.graySecondary,
   },
 });

@@ -12,19 +12,28 @@ export function daysSince(iso: string): number {
   return (Date.now() - new Date(iso).getTime()) / DAY_MS;
 }
 
-// A series counts as "Ongoing" if its newest episode landed within this
-// window. 60 days (not 7 or 14) on purpose: series here are preaching
-// programs that can pause for a month around special services (PAMS,
-// Crossover season) and still be very much alive — a tight window would
-// bounce them between Ongoing and Completed every few weeks. Same
-// starting-value caveat as the classification thresholds in
-// contentGrouping.ts: tune against the real dataset once more content
-// accumulates.
-export const ONGOING_WINDOW_DAYS = 60;
+// A series counts as "Ongoing" if its newest episode is recent RELATIVE
+// TO ITS OWN RELEASE CADENCE — the old flat 60-day window is what let
+// completed series sit in "Ongoing" for two months after wrapping. A
+// weekly series that's been silent for 5 weeks has clearly ended (its gap
+// is 5× normal); a monthly program 5 weeks quiet is right on schedule. So
+// the window is 2× the group's own average gap, clamped: floor 21 days
+// (so a brand-new burst of uploads doesn't flap out of Ongoing over one
+// quiet fortnight), ceiling 90 (so a slow annual thing can't claim to be
+// ongoing forever).
+const ONGOING_FLOOR_DAYS = 21;
+const ONGOING_CEILING_DAYS = 90;
 
 export function isOngoing(group: ContentGroup): boolean {
   const newest = group.items[0]; // items are kept newest-first by classifyMessages
-  return newest ? daysSince(newest.publishedAt) <= ONGOING_WINDOW_DAYS : false;
+  if (!newest) return false;
+  const dates = group.items
+    .map((i) => new Date(i.publishedAt).getTime())
+    .sort((a, b) => a - b);
+  const spanDays = (dates[dates.length - 1] - dates[0]) / DAY_MS;
+  const avgGapDays = group.items.length > 1 ? spanDays / (group.items.length - 1) : 30;
+  const windowDays = Math.min(ONGOING_CEILING_DAYS, Math.max(ONGOING_FLOOR_DAYS, avgGapDays * 2));
+  return daysSince(newest.publishedAt) <= windowDays;
 }
 
 // "June 2026" — month buckets for the Services collection.

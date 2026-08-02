@@ -185,8 +185,15 @@ export function getLatestMessages(list: Message[], count = 2): Message[] {
     .slice(0, count);
 }
 
-export function getRecentlyAdded(list: Message[], count = 4): Message[] {
+// Recently Added shows only genuinely recent uploads — anything older
+// than ~2 months isn't "recent" to a person, it's just the archive, and
+// the Series/Services collections are where the archive lives.
+const RECENT_MAX_AGE_DAYS = 62;
+
+export function getRecentlyAdded(list: Message[], count = 4, maxAgeDays = RECENT_MAX_AGE_DAYS): Message[] {
+  const cutoff = Date.now() - maxAgeDays * 86_400_000;
   return [...list]
+    .filter((m) => new Date(m.publishedAt).getTime() >= cutoff)
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, count);
 }

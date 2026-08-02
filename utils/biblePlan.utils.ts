@@ -42,6 +42,37 @@ export function getTodayReading(): DayPlan | null {
   return biblePlan.find(p => p.date === dateString) || null;
 }
 
+// Tomorrow's plan entry — powers the "coming up" preview on the Plan tab,
+// so someone can see what's ahead (and how long it looks) tonight instead
+// of discovering it tomorrow morning.
+export function getTomorrowReading(): DayPlan | null {
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  const dateString = `${t.toLocaleString('default', { month: 'long' })} ${t.getDate()}`;
+  return biblePlan.find(p => p.date === dateString) || null;
+}
+
+/**
+ * The streak number that should actually be DISPLAYED. The stored
+ * currentStreak only updates when a day gets marked — so after missing
+ * three days, the UI kept proudly showing the old "12 day streak" until
+ * the next mark suddenly reset it to 1, which is both dishonest while
+ * it's stale and needlessly deflating at the exact moment someone comes
+ * back. This derives the truth at read time: if the last read day is
+ * today or yesterday the streak is alive; otherwise it's shown as 0 now
+ * (and the stored value gets corrected on the next mark as before).
+ */
+export function getEffectiveStreak(progress: ReadingProgress): number {
+  if (!progress.lastReadDate || progress.currentStreak === 0) return 0;
+  const today = new Date().toDateString();
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  const yesterday = y.toDateString();
+  return progress.lastReadDate === today || progress.lastReadDate === yesterday
+    ? progress.currentStreak
+    : 0;
+}
+
 export function getDayByDate(dateString: string): DayPlan | null {
   return biblePlan.find(p => p.date === dateString) || null;
 }
@@ -74,10 +105,17 @@ export async function markDayAsRead(dateString: string): Promise<void> {
     const progress = await getProgress();
     if (!progress.completedDays.includes(dateString)) {
       progress.completedDays.push(dateString);
-      
-      // Update streak
-      const today = new Date().toDateString();
-      if (progress.lastReadDate !== today) {
+
+      // Streak only moves when TODAY'S reading is the one being marked —
+      // completing an old missed day still counts toward overall progress
+      // (completedDays / percentage), but claiming it extended a streak of
+      // consecutive days would make the streak number mean nothing.
+      const now = new Date();
+      const todayPlanDate = `${now.toLocaleString('default', { month: 'long' })} ${now.getDate()}`;
+      const isMarkingToday = dateString === todayPlanDate;
+
+      const today = now.toDateString();
+      if (isMarkingToday && progress.lastReadDate !== today) {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayString = yesterday.toDateString();
@@ -121,11 +159,13 @@ export function getWeekProgress(completedDays: string[]): { day: string; status:
     const dayNum = date.getDate();
     const dateString = `${month} ${dayNum}`;
     
+    // Completed wins over the "today" highlight — today's dot flipping to
+    // the done state the moment it's marked is the immediate feedback the
+    // strip exists to give; the old order overwrote it back to neutral.
     let status: 'completed' | 'today' | 'pending' = 'pending';
     if (completedDays.includes(dateString)) {
       status = 'completed';
-    }
-    if (isToday) {
+    } else if (isToday) {
       status = 'today';
     }
     
