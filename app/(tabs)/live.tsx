@@ -64,8 +64,13 @@ export default function LiveScreen() {
             screen is deliberately tighter/quieter than the two cards above. */}
         <View style={{ height: theme.spacing.xl }} />
 
-        {/* This Week's Services */}
-        <SectionLabel label="This Week's Services" actionText="View All"/>
+        {/* This Week's Services — the schedule strip below shows upcoming
+            slots; the chevron leads to the Services COLLECTION (past
+            recordings by month), which is the closest real destination
+            until a dedicated schedule screen exists. Better than the dead
+            "View All" this was before — a visible action that does nothing
+            reads as broken. */}
+        <SectionLabel label="This Week's Services" onPress={() => router.push({ pathname: '/see-all', params: { section: 'services', title: 'Services' } })}/>
 
         <ScrollView
           horizontal
@@ -91,7 +96,11 @@ export default function LiveScreen() {
             need its own smaller copy of it. */}
 
         {/* Latest Messages */}
-        <SectionLabel label="Latest Messages" actionText="See All" onActionPress={() => router.push({ pathname: '/see-all', params: { section: 'latest', title: 'Latest Messages' } })}/>
+        {/* Same chevron-row pattern as Library's hub headers — one
+            interaction language for "this section continues elsewhere"
+            across both tabs, instead of chevrons on one screen and
+            "See All" links on the other. */}
+        <SectionLabel label="Latest Messages" onPress={() => router.push({ pathname: '/see-all', params: { section: 'latest', title: 'Latest Messages' } })}/>
 
         <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.md }}>
           {latestMessages.map((m) => (

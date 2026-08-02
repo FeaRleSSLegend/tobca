@@ -1,6 +1,9 @@
-// app/seeAll.styles.ts
-// Styles for the reusable See All screen — same per-screen file convention
-// as search.styles.ts / live.styles.ts / library.styles.ts.
+// seeAll.styles.ts
+// Styles for the shared collection-screen template (app/see-all.tsx) —
+// same per-screen file convention as search.styles.ts / live.styles.ts /
+// library.styles.ts. Every collection variant (Series, Services, Recently
+// Added, Playlists, drill-ins) draws from this one file, which is what
+// keeps their chrome pixel-identical across variants.
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
 
@@ -23,10 +26,73 @@ export const seeAllStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleWrap: {
+    flex: 1,
+  },
   title: {
     fontSize: theme.fontSize.bodyLg,
     fontFamily: theme.fontFamily.bodyBold,
     color: theme.colors.navy,
+  },
+  // Small live count under the title ("24 messages") — orientation the
+  // old screen only surfaced for filtered views, now on every collection.
+  subtitle: {
+    fontSize: theme.fontSize.caption,
+    fontFamily: theme.fontFamily.body,
+    color: theme.colors.graySecondary,
+    marginTop: 1,
+  },
+  // One-line context under the header — only rendered when a collection
+  // actually passes one; screens where the title says it all skip it.
+  description: {
+    fontSize: theme.fontSize.body,
+    fontFamily: theme.fontFamily.body,
+    color: theme.colors.graySecondary,
+    paddingHorizontal: theme.layout.screenPadding,
+    paddingTop: theme.spacing.md,
+  },
+  // Same height-pinning fix as LibraryStyles.filterView — locks the pill
+  // row's height so toggling the active pill never re-measures the row.
+  pillsView: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.layout.screenPadding,
+    height: 52,
+    overflow: 'hidden',
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  pillsRow: {
+    gap: theme.spacing.md,
+    alignItems: 'center',
+  },
+  listContent: {
+    paddingHorizontal: theme.layout.screenPadding,
+    paddingBottom: theme.spacing.xxxl,
+  },
+  // "This Week" / "June 2026" / "Ongoing" group headers inside a list —
+  // same uppercase-slate recipe as sharedStyles.sectionTitle, one size
+  // down since these sit inside a collection rather than heading one.
+  groupHeader: {
+    fontSize: theme.fontSize.body,
+    fontFamily: theme.fontFamily.bodySemibold,
+    color: theme.colors.slate,
+    textTransform: 'uppercase',
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.sm,
+  },
+  listRowWrap: {
+    marginBottom: theme.spacing.sm,
+  },
+  // One row of the Series 2-col tile grid.
+  tileRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+  },
+  // One row of the Playlists 3-col circle grid.
+  circleRow: {
+    justifyContent: 'space-between',
+    marginTop: theme.spacing.lg,
   },
   gridWrap: {
     flex: 1,

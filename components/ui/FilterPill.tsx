@@ -23,6 +23,13 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
             // hitSlop instead of growing the pill itself, so a row of these
             // doesn't get visually heavier just to satisfy touch-target math.
             hitSlop={8}
+            accessibilityRole="button"
+            // Active state was previously conveyed by color alone (navy fill
+            // vs white) — invisible to a screen reader. selected:true is what
+            // makes VoiceOver/TalkBack announce "Ongoing, selected" instead
+            // of just "Ongoing".
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={label}
         >
             <Text
                 numberOfLines={1}

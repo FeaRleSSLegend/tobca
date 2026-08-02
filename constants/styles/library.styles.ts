@@ -32,50 +32,16 @@ export const LibraryStyles = StyleSheet.create({
     fontFamily: theme.fontFamily.body,
     color: theme.colors.grayIcon,
   },
-  filterView: {
-    padding: theme.spacing.sm,
-    // Locks the row's own height so it's identical no matter which pill is
-    // active. alignSelf/alignItems (below) already stop individual pills
-    // from stretching, but that only controls the *pills'* cross-axis size
-    // — it doesn't stop the ScrollView itself from being re-measured on
-    // every activeFilter change, since its height was never pinned to
-    // anything. Computed from FilterPill's own metrics: pill is border(1)×2
-    // + paddingVertical(spacing.sm=8)×2 + ~17pt line height ≈ 35pt tall,
-    // plus this container's own spacing.sm×2 = 16pt of vertical padding.
-    height: 52,
-    // Belt-and-suspenders: even with wrapping now prevented at the source
-    // (FilterPill's numberOfLines={1}), this guarantees the row can never
-    // visually grow past 52pt again, however that might happen in future.
-    overflow: 'hidden',
+  // Fixed-width wrapper for a GridCard riding in a horizontal preview row
+  // — GridCard sizes itself flex-first for 2/3-col grids, so inside an
+  // HScroll it needs an explicit width. 148 ≈ one-and-a-bit visible past
+  // two full cards on a 390pt screen, the "there's more to scroll" cue.
+  hScrollCard: {
+    width: 148,
   },
-  // Was an inline `{ gap: theme.spacing.md }` object literal passed
-  // straight to contentContainerStyle in library.tsx — moved here so this
-  // screen's layout values live in one place, same convention live.styles.ts
-  // documents ("if Library ever needs one of these...").
-  filterRow: {
-    gap: theme.spacing.md,
-    // Default is 'stretch', which lets pills grow to fill the ScrollView's
-    // height. This plus alignSelf: 'flex-start' on FilterPill itself gives
-    // the fix two layers — either one alone works but both together makes
-    // it robust against any one style being overridden.
-    alignItems: 'center',
-  },
-  filteredCountLabel: {
-    fontSize: theme.fontSize.caption,
-    fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.xs,
-  },
-  gridContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      // Was a bare 10 — not on the 4/8/12/16/20/24/32 spacing scale.
-      gap: theme.spacing.sm,
-      marginBottom: theme.spacing.lg,
-      marginTop: theme.spacing.sm,
-  },
-  gridItem: {
-      width: '48%', // 2 columns with gap
-  },
+  // NOTE: filterView / filterRow / filteredCountLabel / gridContainer /
+  // gridItem were removed in the discovery-hub redesign — the pill row and
+  // in-place filtered grid they styled moved to the collection screens
+  // (see seeAll.styles.ts pillsView/pillsRow, which carry over the same
+  // height-pinning fix documented on the old filterView).
 });

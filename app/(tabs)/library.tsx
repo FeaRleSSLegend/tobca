@@ -1,10 +1,9 @@
 import { View, Text, ScrollView } from 'react-native';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { SearchBar } from '../../components/ui/SearchBar';
-import { FilterPill } from '../../components/ui/FilterPill';
 import { LibraryStyles } from '../../constants/styles/library.styles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
 import { CurrentMessage } from '../../components/ui/CurrentMessageCard';
@@ -12,17 +11,36 @@ import { HScroll } from '../../components/ui/HScroll';
 import { PosterCard } from '../../components/ui/PosterCard';
 import { GridCard } from '../../components/ui/GridCard';
 import { PlaylistCircle } from '../../components/ui/PlaylistCircle';
-import { CardGrid } from '../../components/ui/CardGrid';
 import { getCurrentlyStreaming, getRecentlyAdded } from '../../data/content';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { useMessages } from '../../hooks/useMessages';
 import { usePlaylists } from '../../hooks/usePlaylists';
 import { classifyMessages } from '../../utils/contentGrouping';
 
-const MAX_FILTER_PILLS = 6; // "All" + up to 5 real categories — enough to be useful without needing 2 rows
+// Hub previews are teasers, not the collection — a filled row signals
+// "there's more behind the header" and the dedicated screen (see-all.tsx)
+// is where the full set lives. 6 fills the row past one screen-width on
+// every current phone, which is all a teaser needs to do.
+const PREVIEW_COUNT = 6;
 
+/**
+ * Library is now a DISCOVERY HUB, not a browse-everything surface — the
+ * redesign splits its old double job in two:
+ *
+ *   hub (this screen)  — scannable previews, every section capped,
+ *                        every header tappable ("›") into its collection
+ *   see-all.tsx        — the actual browsing: scoped search, filter
+ *                        pills, grouping, full lists
+ *
+ * That split is why two whole features left this file: the filter-pill
+ * row and the in-place filtered grid both moved to the collection screens
+ * where they have room to work (the pills there are per-collection and
+ * meaningful — Ongoing/Completed, service types — instead of one global
+ * row trying to serve four kinds of content at once). The header search
+ * bar stays: it routes to the global /search screen, which is a different
+ * job (search everything) than a collection's scoped search.
+ */
 export default function LibraryScreen() {
-    const [activeFilter, setActiveFilter] = useState('All');
     const router = useRouter();
     const { messages } = useMessages();
     const { playlists } = usePlaylists();
@@ -38,38 +56,13 @@ export default function LibraryScreen() {
         [messages, clipIds]
     );
 
-    // Pills are generated from what was actually found and de-duplicated
-    // by label — recurringServices/series are already unique-by-label
-    // after classifyMessages' own merge pass, but this guards against a
-    // recurring-service and a series ever landing on the same label too.
-    const filters = useMemo(() => {
-        const labels = ['All'];
-        const seen = new Set(labels);
-        for (const g of recurringServices) {
-            if (labels.length >= MAX_FILTER_PILLS || seen.has(g.label)) continue;
-            seen.add(g.label);
-            labels.push(g.label);
-        }
-        for (const g of series) {
-            if (labels.length >= MAX_FILTER_PILLS || seen.has(g.label)) continue;
-            seen.add(g.label);
-            labels.push(g.label);
-        }
-        if (clips.length > 0 && labels.length < MAX_FILTER_PILLS && !seen.has('Clips')) labels.push('Clips');
-        return labels;
-    }, [recurringServices, series, clips]);
-
-    // Selecting a pill other than "All" replaces the whole browse layout
-    // with a focused grid of just that category — rather than bolting
-    // another section onto the bottom of the same screen, which is what
-    // made it look like a mystery "Sunday Service" section had appeared
-    // out of nowhere.
-    const activeGroupItems = useMemo(() => {
-        if (activeFilter === 'All') return null;
-        if (activeFilter === 'Clips') return clips;
-        const match = [...recurringServices, ...series].find((g) => g.label === activeFilter);
-        return match ? match.items : [];
-    }, [activeFilter, clips, recurringServices, series]);
+    const openCollection = (section: string, title: string) =>
+        router.push({ pathname: '/see-all', params: { section, title } });
+    // Tapping a poster skips the collection screen and goes straight into
+    // that one group's contents — the poster IS the choice, so routing
+    // through the full Series list first would just add a hop.
+    const openGroup = (label: string) =>
+        router.push({ pathname: '/see-all', params: { filter: label, title: label } });
 
     return (
         <ScreenWithWatermark style={sharedStyles.container}>
@@ -86,109 +79,89 @@ export default function LibraryScreen() {
 
             <SearchBar />
 
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={LibraryStyles.filterView}
-                contentContainerStyle={LibraryStyles.filterRow}
-            >
-                {filters.map((f) => (
-                    <FilterPill
-                        key={f}
-                        label={f}
-                        isActive={activeFilter === f}
-                        onPress={() => setActiveFilter(f)}
-                    />
-                ))}
-            </ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
+                {/* No SectionLabel here on purpose — this is Library's hero
+                    card, same role as LiveCard/VerseOfDayCard on Home, and
+                    neither of those get an outer label either. */}
+                {currentlyStreaming && <CurrentMessage message={currentlyStreaming} />}
 
-            {activeGroupItems === null ? (
-                <ScrollView showsVerticalScrollIndicator={false}>
-                    {/* No SectionLabel here on purpose — this is Library's hero
-                        card, same role as LiveCard/VerseOfDayCard on Home, and
-                        neither of those get an outer label either. */}
-                    {currentlyStreaming && <CurrentMessage message={currentlyStreaming} />}
-
-                    {series.length > 0 && (
-                        <>
-                            <SectionLabel label="Series" />
-                            <HScroll>
-                                {series.map((s) => (
-                                    <PosterCard
-                                        key={s.key}
-                                        title={s.label}
-                                        subtitle={`${s.count} messages`}
-                                        thumbnail={s.thumbnail}
-                                        onPress={() => setActiveFilter(s.label)}
-                                    />
-                                ))}
-                            </HScroll>
-                        </>
-                    )}
-
-                    {recurringServices.length > 0 && (
-                        <>
-                            <SectionLabel label="Services" />
-                            <HScroll>
-                                {recurringServices.map((s) => (
-                                    <PosterCard
-                                        key={s.key}
-                                        title={s.label}
-                                        subtitle={`${s.count} messages`}
-                                        thumbnail={s.thumbnail}
-                                        onPress={() => setActiveFilter(s.label)}
-                                    />
-                                ))}
-                            </HScroll>
-                        </>
-                    )}
-
-                    {playlists.length > 0 && (
-                        <>
-                            <SectionLabel label="Playlists" />
-                            <HScroll>
-                                {playlists.map((p) => (
-                                    <PlaylistCircle
-                                        key={p.id}
-                                        title={p.title}
-                                        count={p.itemCount}
-                                        thumbnail={p.thumbnail}
-                                        onPress={() => router.push({ pathname: '/playlist/[id]', params: { id: p.id, title: p.title } })}
-                                    />
-                                ))}
-                            </HScroll>
-                        </>
-                    )}
-
-                    <SectionLabel label="Recently Added" actionText="See All" onActionPress={() => {
-                        router.push({ pathname: '/see-all', params: { section: 'recentlyAdded', title: 'Recently Added' } });
-                    }} />
-                    <View style={LibraryStyles.gridContainer}>
-                        {recentlyAdded.slice(0, 6).map((msg) => (
-                            <View key={msg.id} style={LibraryStyles.gridItem}>
-                                <GridCard
-                                    title={msg.title}
-                                    duration={msg.duration}
-                                    speaker={msg.speaker}
-                                    type={msg.type}
-                                    thumbnail={msg.thumbnail}
+                {series.length > 0 && (
+                    <>
+                        <SectionLabel label="Series" onPress={() => openCollection('series', 'Series')} />
+                        <HScroll>
+                            {series.slice(0, PREVIEW_COUNT).map((s) => (
+                                <PosterCard
+                                    key={s.key}
+                                    title={s.label}
+                                    subtitle={`${s.count} messages`}
+                                    thumbnail={s.thumbnail}
+                                    onPress={() => openGroup(s.label)}
                                 />
-                            </View>
-                        ))}
-                    </View>
-                </ScrollView>
-            ) : (
-                // Focused single-category view. Tapping a pill again (or
-                // "All") switches back — the pills row above stays visible
-                // the whole time so that's always one tap away, no back
-                // button needed for something this shallow.
-                <View style={{ flex: 1 }}>
-                    <Text style={LibraryStyles.filteredCountLabel}>
-                        {activeGroupItems.length} video{activeGroupItems.length === 1 ? '' : 's'}
-                    </Text>
-                    <CardGrid data={activeGroupItems} noOuterPadding />
-                </View>
-            )}
+                            ))}
+                        </HScroll>
+                    </>
+                )}
+
+                {recurringServices.length > 0 && (
+                    <>
+                        <SectionLabel label="Services" onPress={() => openCollection('services', 'Services')} />
+                        <HScroll>
+                            {recurringServices.slice(0, PREVIEW_COUNT).map((s) => (
+                                <PosterCard
+                                    key={s.key}
+                                    title={s.label}
+                                    subtitle={`${s.count} messages`}
+                                    thumbnail={s.thumbnail}
+                                    onPress={() => openGroup(s.label)}
+                                />
+                            ))}
+                        </HScroll>
+                    </>
+                )}
+
+                {playlists.length > 0 && (
+                    <>
+                        <SectionLabel label="Playlists" onPress={() => openCollection('playlists', 'Playlists')} />
+                        <HScroll>
+                            {playlists.slice(0, PREVIEW_COUNT).map((p) => (
+                                <PlaylistCircle
+                                    key={p.id}
+                                    title={p.title}
+                                    count={p.itemCount}
+                                    thumbnail={p.thumbnail}
+                                    onPress={() => router.push({ pathname: '/playlist/[id]', params: { id: p.id, title: p.title } })}
+                                />
+                            ))}
+                        </HScroll>
+                    </>
+                )}
+
+                {recentlyAdded.length > 0 && (
+                    <>
+                        <SectionLabel label="Recently Added" onPress={() => openCollection('recentlyAdded', 'Recently Added')} />
+                        {/* Horizontal like every other hub row — the old 2-col
+                            grid here was the one section browsing in place,
+                            which made the hub feel bottomless. Fixed-width
+                            wrapper because GridCard sizes itself flex-first
+                            for grid rows; inside an HScroll it needs an
+                            explicit width instead. */}
+                        <HScroll>
+                            {recentlyAdded.slice(0, PREVIEW_COUNT).map((msg) => (
+                                <View key={msg.id} style={LibraryStyles.hScrollCard}>
+                                    <GridCard
+                                        title={msg.title}
+                                        duration={msg.duration}
+                                        speaker={msg.speaker}
+                                        type={msg.type}
+                                        thumbnail={msg.thumbnail}
+                                    />
+                                </View>
+                            ))}
+                        </HScroll>
+                    </>
+                )}
+                <View style={{ height: theme.spacing.xxxl }} />
+            </ScrollView>
         </ScreenWithWatermark>
     );
 }
