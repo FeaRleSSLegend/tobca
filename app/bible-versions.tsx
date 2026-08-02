@@ -21,6 +21,8 @@ import {
   getSavedTranslation,
   saveTranslation,
 } from '../services/bibleVersions';
+import { prefetchReferences } from '../services/bibleApi';
+import { getTodayReading } from '../utils/biblePlan.utils';
 
 export default function BibleVersionsScreen() {
   const router = useRouter();
@@ -33,6 +35,19 @@ export default function BibleVersionsScreen() {
   const choose = async (code: TranslationCode) => {
     setSelected(code);
     await saveTranslation(code);
+    // Start pulling today's readings for the new version IMMEDIATELY —
+    // fire-and-forget, so by the time the user lands back in the reader
+    // the switched text is usually already cached and renders with no
+    // loading screen. (The Platform API has no offline-download endpoint
+    // like YouVersion's own app uses, so instant switching is manufactured
+    // by prefetching what's about to be read — see prefetchReferences.)
+    const today = getTodayReading();
+    if (today) {
+      prefetchReferences(
+        [today.oldTestament, today.newTestament, today.psalm, today.proverb],
+        code
+      );
+    }
     // Back to the reader immediately — picking a version IS the task; a
     // lingering screen after the choice would just add a manual back-tap.
     router.back();

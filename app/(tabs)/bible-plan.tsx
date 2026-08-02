@@ -23,6 +23,7 @@ import {
   ReadingProgress 
 } from '../../utils/biblePlan.utils';
 import { DayPlan } from '../../data/biblePlan';
+import { compactReference } from '../../utils/referenceParser';
 import { TranslationCode, getSavedTranslation } from '../../services/bibleVersions';
 import { getVersesForReference, Verse } from '../../services/bibleApi';
 
@@ -43,6 +44,9 @@ export default function PlanScreen() {
   const [ntVerses, setNtVerses] = useState<Verse[]>([]);
   const [psalmVerses, setPsalmVerses] = useState<Verse[]>([]);
   const [proverbVerses, setProverbVerses] = useState<Verse[]>([]);
+  // Which previews FAILED (vs merely still loading) — drives per-card
+  // fallbacks in the carousel instead of four cards stuck on "Loading…".
+  const [previewFailed, setPreviewFailed] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadData();
@@ -63,21 +67,41 @@ export default function PlanScreen() {
     if (!todayReading) return;
 
     let cancelled = false;
+    setPreviewFailed({});
 
-    Promise.all([
+    // allSettled, NOT Promise.all — .all rejects wholesale, so ONE
+    // reference the API stumbled on (a licensing gap in the selected
+    // translation, a transient 500) took all four previews down with it
+    // even though the other three had loaded fine. Each preview now
+    // succeeds or fails independently: fulfilled results render, a
+    // rejected one flags only its own card.
+    Promise.allSettled([
       getVersesForReference(todayReading.oldTestament, translation),
       getVersesForReference(todayReading.newTestament, translation),
       getVersesForReference(todayReading.psalm, translation),
       getVersesForReference(todayReading.proverb, translation),
-    ])
-      .then(([ot, nt, psalm, proverb]) => {
-        if (cancelled) return;
-        setOtVerses(ot);
-        setNtVerses(nt);
-        setPsalmVerses(psalm);
-        setProverbVerses(proverb);
-      })
-      .catch(err => console.error('Failed to load verses:', err));
+    ]).then(([ot, nt, psalm, proverb]) => {
+      if (cancelled) return;
+      const failed: Record<string, boolean> = {};
+      const apply = (
+        result: PromiseSettledResult<Verse[]>,
+        key: string,
+        set: (v: Verse[]) => void
+      ) => {
+        if (result.status === 'fulfilled') {
+          set(result.value);
+        } else {
+          console.warn(`Preview failed for ${key}:`, result.reason);
+          set([]);
+          failed[key] = true;
+        }
+      };
+      apply(ot, 'oldTestament', setOtVerses);
+      apply(nt, 'newTestament', setNtVerses);
+      apply(psalm, 'psalm', setPsalmVerses);
+      apply(proverb, 'proverb', setProverbVerses);
+      setPreviewFailed(failed);
+    });
 
     return () => {
       cancelled = true;
@@ -147,10 +171,10 @@ export default function PlanScreen() {
   const tomorrow = getTomorrowReading();
 
   const readings: ReadingCarouselItem[] = [
-    { key: 'oldTestament', label: 'Old Testament', reference: todayReading.oldTestament, verses: otVerses },
-    { key: 'newTestament', label: 'New Testament', reference: todayReading.newTestament, verses: ntVerses },
-    { key: 'psalm', label: 'Psalm', reference: todayReading.psalm, verses: psalmVerses },
-    { key: 'proverb', label: 'Proverb', reference: todayReading.proverb, verses: proverbVerses },
+    { key: 'oldTestament', label: 'Old Testament', reference: todayReading.oldTestament, verses: otVerses, failed: previewFailed.oldTestament },
+    { key: 'newTestament', label: 'New Testament', reference: todayReading.newTestament, verses: ntVerses, failed: previewFailed.newTestament },
+    { key: 'psalm', label: 'Psalm', reference: todayReading.psalm, verses: psalmVerses, failed: previewFailed.psalm },
+    { key: 'proverb', label: 'Proverb', reference: todayReading.proverb, verses: proverbVerses, failed: previewFailed.proverb },
   ];
 
   return (
@@ -192,7 +216,7 @@ export default function PlanScreen() {
           <View style={styles.tomorrowRow}>
             <Ionicons name="arrow-forward-circle-outline" size={16} color={theme.colors.grayIcon} />
             <Text style={styles.tomorrowText} numberOfLines={1}>
-              Tomorrow · {tomorrow.oldTestament.split(',')[0].split(':')[0]} · {tomorrow.newTestament.split(',')[0].split(':')[0]}
+              Tomorrow · {compactReference(tomorrow.oldTestament)} · {compactReference(tomorrow.newTestament)}
             </Text>
           </View>
         )}

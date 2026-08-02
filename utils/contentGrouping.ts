@@ -49,14 +49,25 @@ const SIMILARITY_THRESHOLD = 0.45; // Jaccard overlap needed to join an existing
 // too, since a human typing titles won't hit ⇧\ twice every single time.
 const TITLE_SEPARATOR = /\s*\|\|\s*|\s+\|\s+/;
 
+// Known recurring services by name. This list is the FIRST line of
+// classification — a title matching one of these is a service recording by
+// definition, no statistics needed. (When TOBC Wuse 2's channel gets
+// merged in, run classification per channel and prefix labels with the
+// branch before merging — two branches' "Sunday Service" are different
+// events and must not collapse into one bucket.)
 const KNOWN_SERVICE_PATTERNS: { pattern: RegExp; label: string }[] = [
   { pattern: /sunday.*service|first service|second service/i, label: 'Sunday Service' },
   { pattern: /wednesday.*service|mid-?week service|teaching service/i, label: 'Wednesday Service' },
   { pattern: /saturday.*prayer|prayer meeting/i, label: 'Saturday Prayer' },
   { pattern: /praise.*miracle service|\bpams\b/i, label: 'Praise & Miracle Service' },
-  { pattern: /incense/i, label: 'Incense' },
+  // The monthly worship program is BRANDED "One Hour of Intense Worship"
+  // in titles but known in-house as Incense — the old /incense/ pattern
+  // never matched a single real title, which is exactly how it leaked
+  // into Series as an 11-part "teaching series".
+  { pattern: /one hour of intense worship|intense worship|\bincense\b/i, label: 'One Hour Worship (Incense)' },
   { pattern: /communion service/i, label: 'Communion Service' },
   { pattern: /crossover service/i, label: 'Crossover Service' },
+  { pattern: /thanksgiving service/i, label: 'Thanksgiving Service' },
 ];
 
 const STOPWORDS = new Set([
@@ -106,14 +117,27 @@ function toTitleCase(key: string): string {
   return key.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Segments that are metadata, not theme: a speaker credit ("Pst. Abu
+// Jibril") or a bare date ("02AUG2026"). Real titles use up to three
+// separated segments — "Theme || Pst. Name || Date" or "Service || Pst.
+// Name || Date" — and picking "the first segment that isn't a service"
+// as the theme would happily pick the pastor's name and cluster every
+// upload into a phantom "Pst. Abu Jibril" series.
+const SPEAKER_PART = /^(pst|pastor|rev|dr|min|bro|sis)\.?\s/i;
+const DATE_ONLY_PART = new RegExp(
+  `^(\\d{1,2}\\s*(${MONTHS})[a-z]*\\s*\\d{2,4}|\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]\\d{2,4})$`,
+  'i'
+);
+
 /**
  * Splits a raw title into its theme half and (if identifiable) the known
  * service it belongs to. Examples of what comes out:
  *
  *   "The Manifold Grace of God || Sunday (1st Service) 29JUL2026"
  *      → theme "The Manifold Grace of God", service "Sunday Service"
- *   "Sunday Service 29JUL2026"
- *      → theme null (nothing but the service), service "Sunday Service"
+ *   "August Praise and Miracle Service || Pst. Abu Jibril || 02AUG2026"
+ *      → theme null (the other segments are a speaker and a date),
+ *        service "Praise & Miracle Service"
  *   "How To Thrive In Difficult Times"
  *      → theme = whole title, service null
  */
@@ -122,9 +146,12 @@ function splitTitle(title: string): { theme: string | null; serviceLabel: string
   const parts = title.split(TITLE_SEPARATOR).map((p) => p.trim()).filter(Boolean);
 
   if (parts.length >= 2) {
-    // Theme is the segment that does NOT match a service pattern —
-    // usually the left one, but don't assume the channel never flips it.
-    const themePart = parts.find((p) => !KNOWN_SERVICE_PATTERNS.some((k) => k.pattern.test(p)));
+    const themePart = parts.find(
+      (p) =>
+        !KNOWN_SERVICE_PATTERNS.some((k) => k.pattern.test(p)) &&
+        !SPEAKER_PART.test(p) &&
+        !DATE_ONLY_PART.test(p)
+    );
     return { theme: themePart ?? null, serviceLabel: known?.label ?? null };
   }
 
@@ -152,7 +179,33 @@ export interface ClassifiedContent {
 interface Cluster {
   tokens: Set<string>;
   representativeKey: string;
+  // Raw (pre-normalize) theme strings of every member — the display label
+  // comes from the SHORTEST of these, which naturally drops per-episode
+  // suffixes: "Managing Conflicts In Marriage (Masters & Disasters)" and
+  // plain "Managing Conflicts In Marriage" cluster together, and the
+  // short one is the series name. Also keeps the channel's own
+  // capitalization instead of a mechanical Title Case of normalized
+  // tokens (which had already eaten the punctuation).
+  rawThemes: string[];
   items: Message[];
+}
+
+function clusterLabel(c: Cluster): string {
+  // Same installment-marker strip as normalizeTitle, applied to the RAW
+  // strings — "Faith The Most Powerful Force On Earth Part 1" labels as
+  // the series, not as its first episode. Dangling separators left behind
+  // by the strip get trimmed too.
+  const cleaned = c.rawThemes
+    .map((t) =>
+      t
+        .replace(/\b(?:day|part|episode)\s*\d+\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/[\s\-–:|,]+$/g, '')
+        .trim()
+    )
+    .filter(Boolean);
+  const shortest = cleaned.sort((a, b) => a.length - b.length)[0];
+  return shortest || toTitleCase(c.representativeKey);
 }
 
 function sortNewestFirst(items: Message[]): Message[] {
@@ -198,7 +251,7 @@ export function classifyMessages(messages: Message[]): ClassifiedContent {
   // matches don't need fuzzy clustering — the pattern IS the group.
   const serviceBuckets = new Map<string, Message[]>();
   // Pass 2 input: (message, themeText) pairs for series clustering.
-  const themed: { m: Message; norm: string }[] = [];
+  const themed: { m: Message; norm: string; raw: string }[] = [];
 
   for (const m of rest) {
     const { theme, serviceLabel } = splitTitle(m.title);
@@ -209,7 +262,7 @@ export function classifyMessages(messages: Message[]): ClassifiedContent {
     }
     if (theme) {
       const norm = normalizeTitle(theme);
-      if (norm) themed.push({ m, norm });
+      if (norm) themed.push({ m, norm, raw: theme });
     }
   }
 
@@ -221,7 +274,7 @@ export function classifyMessages(messages: Message[]): ClassifiedContent {
   // unrelated themes can no longer glue together via a shared
   // "sunday service" suffix.
   const clusters: Cluster[] = [];
-  for (const { m, norm } of themed) {
+  for (const { m, norm, raw } of themed) {
     const tokens = tokenize(norm);
     if (tokens.size === 0) continue;
 
@@ -237,9 +290,10 @@ export function classifyMessages(messages: Message[]): ClassifiedContent {
 
     if (bestCluster && bestScore >= SIMILARITY_THRESHOLD) {
       bestCluster.items.push(m);
+      bestCluster.rawThemes.push(raw);
       for (const t of tokens) bestCluster.tokens.add(t);
     } else {
-      clusters.push({ tokens, representativeKey: norm, items: [m] });
+      clusters.push({ tokens, representativeKey: norm, rawThemes: [raw], items: [m] });
     }
   }
 
@@ -272,18 +326,36 @@ export function classifyMessages(messages: Message[]): ClassifiedContent {
 
     const sorted = sortNewestFirst(c.items);
 
+    // Series vs recurring program, by the SHAPE of the release pattern —
+    // not by weekday, since real series land Sunday→Sunday→Wednesday→
+    // Saturday depending on what's on that week. Two facts separate them:
+    //   - a teaching series is an intensive run: episodes in close
+    //     succession (days apart, often two in one day for 1st/2nd
+    //     service), over a bounded stretch;
+    //   - a recurring program is a standing fixture: it keeps appearing
+    //     across a long span at a sparse, roughly periodic cadence
+    //     (monthly worship night, quarterly special).
+    // So: recurring only when the run is LONG (90+ days) AND the typical
+    // gap is sparse (14+ days) AND there are enough occurrences to call
+    // it a fixture. Median gap, not mean, because same-day double
+    // services put 0-day gaps in the data and a mean would let a couple
+    // of those disguise a monthly cadence as a weekly one.
     const dates = c.items.map((i) => new Date(i.publishedAt).getTime()).sort((a, b) => a - b);
     const spanDays = (dates[dates.length - 1] - dates[0]) / 86_400_000;
-    const avgGapDays = c.items.length > 1 ? spanDays / (c.items.length - 1) : 0;
+    const gaps: number[] = [];
+    for (let i = 1; i < dates.length; i++) {
+      const g = (dates[i] - dates[i - 1]) / 86_400_000;
+      if (g >= 1) gaps.push(g); // skip same-day pairs (1st/2nd service)
+    }
+    gaps.sort((a, b) => a - b);
+    const medianGap = gaps.length > 0 ? gaps[Math.floor(gaps.length / 2)] : 0;
 
-    // A standing slot recurs steadily over a long stretch — this catches a
-    // real recurring service that isn't in the known-name list above.
-    const looksRecurring = spanDays > 60 && c.items.length >= 4 && avgGapDays >= 5 && avgGapDays <= 40;
+    const isRecurringProgram = c.items.length >= 4 && spanDays >= 90 && medianGap >= 14;
 
     const group: ContentGroup = {
       key: c.representativeKey,
-      label: toTitleCase(c.representativeKey),
-      type: looksRecurring ? 'recurringService' : 'series',
+      label: clusterLabel(c),
+      type: isRecurringProgram ? 'recurringService' : 'series',
       items: sorted,
       count: c.items.length,
       thumbnail: sorted[0].thumbnail,

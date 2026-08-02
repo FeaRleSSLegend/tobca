@@ -12,17 +12,20 @@ export function daysSince(iso: string): number {
   return (Date.now() - new Date(iso).getTime()) / DAY_MS;
 }
 
-// A series counts as "Ongoing" if its newest episode is recent RELATIVE
-// TO ITS OWN RELEASE CADENCE — the old flat 60-day window is what let
-// completed series sit in "Ongoing" for two months after wrapping. A
-// weekly series that's been silent for 5 weeks has clearly ended (its gap
-// is 5× normal); a monthly program 5 weeks quiet is right on schedule. So
-// the window is 2× the group's own average gap, clamped: floor 21 days
-// (so a brand-new burst of uploads doesn't flap out of Ongoing over one
-// quiet fortnight), ceiling 90 (so a slow annual thing can't claim to be
-// ongoing forever).
-const ONGOING_FLOOR_DAYS = 21;
-const ONGOING_CEILING_DAYS = 90;
+// A series counts as "Ongoing" only while the silence since its last
+// episode is still NORMAL for that series. Series here are intensive
+// runs — episodes land days apart (often two the same Sunday) — so a
+// series that's been quiet for 3× its typical gap has, in practice,
+// concluded. That multiple runs off the MEDIAN of the non-zero gaps
+// (median, not mean: same-day 1st/2nd-service pairs put 0-day gaps in
+// the data, and a mean would let those drag a weekly cadence down to
+// "daily"). Clamped to a 10-day floor (nothing flaps out of Ongoing over
+// one quiet week mid-run) and a 45-day ceiling (nothing claims to be
+// ongoing after a month and a half of nothing). The previous 21-day
+// floor was precisely the bug that kept concluded burst-series like
+// Managing Conflicts in Marriage sitting in Ongoing for three weeks.
+const ONGOING_FLOOR_DAYS = 10;
+const ONGOING_CEILING_DAYS = 45;
 
 export function isOngoing(group: ContentGroup): boolean {
   const newest = group.items[0]; // items are kept newest-first by classifyMessages
@@ -30,9 +33,14 @@ export function isOngoing(group: ContentGroup): boolean {
   const dates = group.items
     .map((i) => new Date(i.publishedAt).getTime())
     .sort((a, b) => a - b);
-  const spanDays = (dates[dates.length - 1] - dates[0]) / DAY_MS;
-  const avgGapDays = group.items.length > 1 ? spanDays / (group.items.length - 1) : 30;
-  const windowDays = Math.min(ONGOING_CEILING_DAYS, Math.max(ONGOING_FLOOR_DAYS, avgGapDays * 2));
+  const gaps: number[] = [];
+  for (let i = 1; i < dates.length; i++) {
+    const g = (dates[i] - dates[i - 1]) / DAY_MS;
+    if (g >= 1) gaps.push(g);
+  }
+  gaps.sort((a, b) => a - b);
+  const medianGap = gaps.length > 0 ? gaps[Math.floor(gaps.length / 2)] : 7;
+  const windowDays = Math.min(ONGOING_CEILING_DAYS, Math.max(ONGOING_FLOOR_DAYS, medianGap * 3));
   return daysSince(newest.publishedAt) <= windowDays;
 }
 

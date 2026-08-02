@@ -18,7 +18,7 @@
 //  - VERSION SWITCHING: the translation pill opens the Bible Version
 //    screen; the choice persists and this screen re-reads it on focus.
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,25 +26,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../constants/theme';
 import { TranslationCode, getSavedTranslation } from '../services/bibleVersions';
 import { getVersesForReference, Verse } from '../services/bibleApi';
-import { parseReadingReference } from '../utils/referenceParser';
+import { compactReference } from '../utils/referenceParser';
 import { markReadingUnlocked, getDayByDate } from '../utils/biblePlan.utils';
 import { BibleQuickNav, QuickNavItem } from '../components/bible/BibleQuickNav';
 
 const scrollKey = (date: string, readingKey: string) => `@bible_scroll_${date}_${readingKey}`;
-
-// "Job 39:1-30, 40:1-24, 41:1-34" → "Job 39-41". Falls back to the raw
-// reference for anything the parser can't read (never worse than before).
-function compactReference(reference: string): string {
-  const segments = parseReadingReference(reference);
-  if (segments.length === 0) return reference;
-  const books = new Set(segments.map((s) => s.book));
-  if (books.size > 1) return reference; // cross-book reference — keep it explicit
-  const chapters = segments.map((s) => s.chapter);
-  const min = Math.min(...chapters);
-  const max = Math.max(...chapters);
-  const book = segments[0].book;
-  return min === max ? `${book} ${min}` : `${book} ${min}-${max}`;
-}
 
 const QUICK_NAV_ITEMS: QuickNavItem[] = [
   { key: 'oldTestament', label: 'OT' },
@@ -81,14 +67,17 @@ export default function ReadingScreen() {
 
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [fontSize, setFontSize] = useState(17);
   const [navVisible, setNavVisible] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   const scrollRef = useRef<ScrollView>(null);
   const hasFiredUnlock = useRef(false);
   const saveOffsetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restoredRef = useRef(false);
   const lastOffsetY = useRef(0);
+  const lastFetchedReference = useRef<string | null>(null);
 
   const dayPlan = date ? getDayByDate(date) : null;
 
@@ -105,19 +94,38 @@ export default function ReadingScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    // Stale-while-switching: when only the TRANSLATION changed, the old
+    // text stays on screen (with a small switching indicator) until the
+    // new version arrives — usually instantly, since the version screen
+    // prefetched it. Blanking to a full-screen "Loading…" is reserved for
+    // an actual passage change, where the old text would be the WRONG
+    // text rather than the same passage in yesterday's wording.
+    if (lastFetchedReference.current !== reference) {
+      setVerses([]);
+    }
     setLoading(true);
+    setLoadError(false);
     getVersesForReference(reference, translation)
       .then(result => {
-        if (!cancelled) setVerses(result);
+        if (cancelled) return;
+        lastFetchedReference.current = reference;
+        setVerses(result);
       })
-      .catch(err => console.error('Failed to load reading:', err))
+      .catch(err => {
+        console.error('Failed to load reading:', err);
+        // Only a TOTAL failure reaches here now — getVersesForReference
+        // returns partial results rather than throwing when SOME of the
+        // passage loaded. So this genuinely means nothing loaded, which
+        // earns a real retryable error state instead of a blank page.
+        if (!cancelled) setLoadError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [reference, translation]);
+  }, [reference, translation, retryCount]);
 
   // Restore scroll position once per reading — re-armed when the quick
   // nav switches to a different reading, so each of the four keeps its
@@ -228,8 +236,36 @@ export default function ReadingScreen() {
           <Text style={styles.eyebrow}>{label?.toUpperCase()}</Text>
           <Text style={styles.title}>{compactReference(reference)}</Text>
 
-          {loading ? (
+          {/* Visible only during a translation switch with old text still
+              on screen — a one-line whisper, not a loading screen. */}
+          {loading && verses.length > 0 && (
+            <View style={styles.switchingRow}>
+              <ActivityIndicator size="small" color={theme.colors.graySecondary} />
+              <Text style={styles.switchingText}>Switching to {translation?.toUpperCase()}</Text>
+            </View>
+          )}
+
+          {loading && verses.length === 0 ? (
             <Text style={styles.loadingText}>Loading…</Text>
+          ) : loadError && verses.length === 0 ? (
+            <View style={styles.errorBlock}>
+              <Ionicons name="cloud-offline-outline" size={28} color={theme.colors.grayIcon} />
+              <Text style={styles.errorTitle}>Couldn't load this passage</Text>
+              <Text style={styles.errorSubtitle}>Check your connection and try again.</Text>
+              <Pressable
+                onPress={() => setRetryCount((c) => c + 1)}
+                style={styles.retryBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Retry loading passage"
+              >
+                <Text style={styles.retryText}>Try again</Text>
+              </Pressable>
+            </View>
+          ) : verses.length === 0 ? (
+            // Loaded successfully but empty — e.g. a one-verse reference
+            // that's itself a textual variant. Vanishingly rare, but a
+            // stray blank screen with only a title is worse than a word.
+            <Text style={styles.loadingText}>No verses to display for this passage.</Text>
           ) : (
             verses.map((verse, index) => {
               const chapterKey = `${verse.book ?? ''}|${verse.chapter ?? ''}`;
@@ -241,7 +277,11 @@ export default function ReadingScreen() {
                     <View style={[styles.chapterDivider, index === 0 && styles.chapterDividerFirst]}>
                       <View style={styles.chapterRule} />
                       <Text style={styles.chapterLabel}>
-                        {`Chapter ${verse.chapter}`}
+                        {/* Book name travels WITH every chapter marker — a
+                            reader mid-scroll in a Job-then-Psalms passage
+                            has no other way to know which book "Chapter 2"
+                            belongs to without scrolling back to the top. */}
+                        {verse.book ? `${verse.book} · Chapter ${verse.chapter}` : `Chapter ${verse.chapter}`}
                       </Text>
                       <View style={styles.chapterRule} />
                     </View>
@@ -342,6 +382,48 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: theme.fontFamily.body,
     color: theme.colors.graySecondary,
+  },
+  switchingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  switchingText: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.graySecondary,
+  },
+  errorBlock: {
+    alignItems: 'center',
+    paddingTop: theme.spacing.xxxl,
+    gap: theme.spacing.sm,
+  },
+  errorTitle: {
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: theme.fontSize.bodyLg,
+    color: theme.colors.navy,
+    marginTop: theme.spacing.xs,
+  },
+  errorSubtitle: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.graySecondary,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    marginTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.navy,
+  },
+  retryText: {
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.navy,
   },
   // Centered label between two hairlines — the classic book treatment for
   // a chapter break: unmistakable as a boundary, but quiet enough (small

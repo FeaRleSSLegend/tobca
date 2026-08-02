@@ -279,7 +279,7 @@ function MessageListCollection({
       {visibleCount > 0 ? (
         <SectionList
           sections={sections}
-          keyExtractor={(m) => m.id}
+          keyExtractor={(m, index) => `${m.id}:${index}`}
           style={{ flex: 1 }}
           contentContainerStyle={seeAllStyles.listContent}
           stickySectionHeadersEnabled={false}
@@ -473,14 +473,28 @@ function MessagesRouter({ section, filter, title }: {
   }
 
   if (section === 'services') {
-    // The list is individual recordings flattened out of the classified
-    // service groups (so one row = one service you can watch), with pills
-    // generated from whatever groups classification actually found —
-    // hardcoding "Sunday Service / Wednesday Service" here would drift
-    // from reality the moment the channel adds or renames one.
-    const flat = classified.recurringServices
-      .flatMap((g) => g.items.map((m) => ({ ...m, series: g.label })))
-      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+    // One row per RECORDING. A recording can match more than one service
+    // pattern (a Praise & Miracle Service held on a Sunday lands in both
+    // the "Sunday Service" and "Praise & Miracle Service" buckets by
+    // design), so flattening the buckets naively emits that video's id
+    // twice — which is exactly the duplicate-key warning. Dedupe by id
+    // here, collapsing a recording's multiple service labels into one row
+    // that remembers all of them, so it still shows under every relevant
+    // filter pill without ever rendering twice.
+    const byId = new Map<string, Message & { serviceLabels: string[] }>();
+    for (const g of classified.recurringServices) {
+      for (const m of g.items) {
+        const existing = byId.get(m.id);
+        if (existing) {
+          if (!existing.serviceLabels.includes(g.label)) existing.serviceLabels.push(g.label);
+        } else {
+          byId.set(m.id, { ...m, series: g.label, serviceLabels: [g.label] });
+        }
+      }
+    }
+    const flat = Array.from(byId.values()).sort(
+      (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
     const pills = ['All', ...classified.recurringServices.map((g) => g.label)];
     return (
       <MessageListCollection
@@ -489,7 +503,11 @@ function MessagesRouter({ section, filter, title }: {
         searchPlaceholder="Search services"
         list={flat}
         pills={pills}
-        filterItems={(list, pill) => (pill === 'All' ? list : list.filter((m) => m.series === pill))}
+        filterItems={(list, pill) =>
+          pill === 'All'
+            ? list
+            : list.filter((m) => (m as Message & { serviceLabels?: string[] }).serviceLabels?.includes(pill) ?? m.series === pill)
+        }
         groupSections={groupByMonth}
         loading={loading}
         emptyIcon="calendar"

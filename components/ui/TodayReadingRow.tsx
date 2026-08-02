@@ -1,112 +1,171 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
+import { compactReference, estimateReadingMinutes } from '../../utils/referenceParser';
 
 interface TodayReadingRowProps {
   day: number;
-  // First reference of the day, e.g. "Genesis 1:1-31, 2:1-25" — shown at
-  // chapter level so the row stays one line.
-  oldTestament: string;
+  // All four of the day's references, in reading order — the card shows
+  // the whole day's shape, not just where it starts.
+  references: string[];
   isDone: boolean;
   onPress: () => void;
 }
 
-// Home's bridge into the Bible Plan. A Bible app's home screen that never
-// mentions today's reading is missing its most obvious daily action — but
-// the FULL reading card was deliberately cut from Home before (it
-// duplicated the whole Plan tab), so this is the slim version: one row,
-// one line of orientation, one tap through. Deliberately NOT a streak
-// display or a second progress UI — the Plan tab owns those; this only
-// answers "have I read today, and where do I go to do it."
-export const TodayReadingRow = ({ day, oldTestament, isDone, onPress }: TodayReadingRowProps) => {
-  // "Genesis 1:1-31, 2:1-25" → "Genesis 1-2": chapter-level is enough to
-  // orient ("oh, we're in Genesis") without verse noise on a one-liner.
-  const compact = compactChapters(oldTestament);
+// Home's bridge into the Bible Plan — redesigned from the flat icon-row
+// version. What changed and why:
+//   - "starts at Job 1-42" is gone. It was metadata restating the plan
+//     (and its compaction was outright wrong on multi-book readings). The
+//     line that replaced it answers the two questions someone deciding
+//     whether to read NOW actually has: what's today's reading (all four
+//     passages, compact) and how long will it take ("about 12 min" —
+//     estimated from verse counts, no fetching). Time-to-read is the
+//     single most persuasive fact for "can I fit this in before work."
+//   - Subtle color: a 3pt brand-gradient keel along the left edge and a
+//     gradient icon tile. Enough to lift the card out of the utility
+//     register without competing with the two hero cards above it —
+//     completing flips both to the success green, so the card itself
+//     reports state at a glance.
+//   - Clear action: an explicit pink "Read" affordance (matching the plan
+//     carousel's own Read link) instead of an ambiguous bare chevron.
+// Still deliberately NOT a streak display — the Plan tab owns that.
+export const TodayReadingRow = ({ day, references, isDone, onPress }: TodayReadingRowProps) => {
+  const passages = references.map(compactReference).join(' · ');
+  const minutes = estimateReadingMinutes(references);
 
   return (
     <Pressable
       onPress={onPress}
-      style={styles.row}
+      style={styles.card}
       accessibilityRole="button"
       accessibilityLabel={
         isDone
           ? `Today's reading, day ${day}, completed`
-          : `Today's reading, day ${day}, starts at ${compact}`
+          : `Today's reading, day ${day}, about ${minutes} minutes: ${passages}`
       }
     >
-      <View style={[styles.iconCircle, isDone && styles.iconCircleDone]}>
-        <Ionicons
-          name={isDone ? 'checkmark' : 'book-outline'}
-          size={18}
-          color={isDone ? theme.colors.white : theme.colors.navy}
-        />
-      </View>
+      <LinearGradient
+        colors={isDone ? [theme.colors.success, theme.colors.success] : theme.gradient.colors}
+        start={theme.gradient.start}
+        end={theme.gradient.end}
+        style={styles.keel}
+      />
+
+      {isDone ? (
+        <View style={[styles.iconTile, styles.iconTileDone]}>
+          <Ionicons name="checkmark" size={20} color={theme.colors.white} />
+        </View>
+      ) : (
+        <LinearGradient
+          colors={theme.gradient.colors}
+          start={theme.gradient.start}
+          end={theme.gradient.end}
+          style={styles.iconTile}
+        >
+          <Ionicons name="book" size={18} color={theme.colors.white} />
+        </LinearGradient>
+      )}
 
       <View style={styles.body}>
-        <Text style={styles.title}>Today's Reading</Text>
-        <Text style={styles.meta} numberOfLines={1}>
-          {isDone ? `Day ${day} complete` : `Day ${day} · starts at ${compact}`}
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Today's Reading</Text>
+          <Text style={styles.dayTag}>Day {day}</Text>
+        </View>
+        <Text style={styles.passages} numberOfLines={1}>{passages}</Text>
+        <Text style={styles.meta}>
+          {isDone ? 'Completed for today' : `4 passages · about ${minutes} min`}
         </Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+      <View style={styles.action}>
+        {isDone ? (
+          <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+        ) : (
+          <>
+            <Text style={styles.actionText}>Read</Text>
+            <Ionicons name="chevron-forward" size={15} color={theme.colors.pink} />
+          </>
+        )}
+      </View>
     </Pressable>
   );
 };
 
-function compactChapters(reference: string): string {
-  const parts = reference.split(',').map((p) => p.trim());
-  const first = parts[0]?.match(/^(.*?)\s+(\d+):/);
-  if (!first) return reference;
-  const book = first[1];
-  const chapters = parts
-    .map((p) => {
-      const m = p.match(/(\d+):/);
-      return m ? Number(m[1]) : null;
-    })
-    .filter((n): n is number => n !== null);
-  if (chapters.length === 0) return reference;
-  const min = Math.min(...chapters);
-  const max = Math.max(...chapters);
-  return min === max ? `${book} ${min}` : `${book} ${min}-${max}`;
-}
-
 const styles = StyleSheet.create({
-  row: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
     backgroundColor: theme.colors.white,
     borderColor: theme.colors.grayBorder,
     borderWidth: 1,
-    padding: theme.spacing.md,
     borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    paddingLeft: theme.spacing.md + 5, // clear the keel
     marginTop: theme.spacing.xl,
-    minHeight: 60,
+    overflow: 'hidden',
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.bg,
+  keel: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+  },
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconCircleDone: {
+  iconTileDone: {
     backgroundColor: theme.colors.success,
   },
   body: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
   title: {
-    fontFamily: theme.fontFamily.bodySemibold,
-    fontSize: theme.fontSize.bodyLg,
+    fontFamily: theme.fontFamily.display,
+    fontSize: theme.fontSize.body,
     color: theme.colors.navy,
+  },
+  dayTag: {
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: 10,
+    color: theme.colors.graySecondary,
+    backgroundColor: theme.colors.bg,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 1,
+    borderRadius: theme.radius.full,
+    overflow: 'hidden',
+  },
+  passages: {
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.slate,
+    marginTop: 2,
   },
   meta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     color: theme.colors.graySecondary,
     marginTop: 1,
+  },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  actionText: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.pink,
   },
 });

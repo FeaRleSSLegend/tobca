@@ -98,7 +98,12 @@ export default function LiveScreen() {
         {todayReading && (
           <TodayReadingRow
             day={todayReading.day}
-            oldTestament={todayReading.oldTestament}
+            references={[
+              todayReading.oldTestament,
+              todayReading.newTestament,
+              todayReading.psalm,
+              todayReading.proverb,
+            ]}
             isDone={readingDone}
             onPress={() => router.push('/bible-plan')}
           />

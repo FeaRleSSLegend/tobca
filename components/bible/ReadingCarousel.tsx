@@ -9,6 +9,10 @@ export interface ReadingCarouselItem {
   label: string;
   reference: string;
   verses: Verse[];
+  // True when THIS preview's fetch failed — the card shows a fallback
+  // instead of sitting on "Loading…" forever, and the Read link still
+  // works (opening the full passage retries the fetch on its own).
+  failed?: boolean;
 }
 
 interface ReadingCarouselProps {
@@ -26,9 +30,10 @@ const CARD_PEEK = 32;
 const CARD_WIDTH = SCREEN_WIDTH - theme.layout.screenPadding * 2 - CARD_PEEK;
 const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
 
-function previewText(verses: Verse[]): string {
-  if (verses.length === 0) return 'Loading…';
-  return verses.slice(0, 2).map(v => v.text).join(' ');
+function previewText(item: ReadingCarouselItem): string {
+  if (item.failed) return 'Preview unavailable right now. Tap Read to open the full passage.';
+  if (item.verses.length === 0) return 'Loading…';
+  return item.verses.slice(0, 2).map(v => v.text).join(' ');
 }
 
 export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps) => {
@@ -66,7 +71,7 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
             <Text style={styles.label}>{item.label.toUpperCase()}</Text>
             <Text style={styles.reference}>{item.reference}</Text>
             <Text style={styles.preview} numberOfLines={4}>
-              {previewText(item.verses)}
+              {previewText(item)}
             </Text>
             <View style={styles.footer}>
               <Text style={styles.readMore}>Read</Text>

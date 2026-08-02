@@ -27,12 +27,24 @@ export interface Verse {
  * function that would need to change.
  */
 
+/**
+ * Fetches one verse's text. Returns null for a verse that legitimately
+ * DOESN'T EXIST in this translation (HTTP 404) — that's not an error, it's
+ * a fact about the text. The canonical example is Romans 16:24: modern
+ * critical translations (NIV, ESV, ASV, CSB…) omit it because it's absent
+ * from the earliest manuscripts, so the API correctly 404s that single
+ * verse. A missing verse must never take down the passage around it, so
+ * the caller skips nulls and renders the rest. Every OTHER failure
+ * (network down, bad key, quota, 5xx) still throws — those are real
+ * problems the passage genuinely couldn't load, and the reader's error
+ * handling should see them.
+ */
 async function fetchSingleVerse(
   bibleId: number,
   usfm: string,
   chapter: number,
   verse: number
-): Promise<string> {
+): Promise<string | null> {
   if (!APP_KEY) {
     throw new Error('EXPO_PUBLIC_YVP_APP_KEY is not set. Add it to your .env file.');
   }
@@ -43,6 +55,10 @@ async function fetchSingleVerse(
     headers: { 'X-YVP-App-Key': APP_KEY },
   });
 
+  if (res.status === 404) {
+    // Verse absent in this translation (textual variant) — skip, don't fail.
+    return null;
+  }
   if (!res.ok) {
     throw new Error(`Failed to fetch ${passageId}: ${res.status} ${res.statusText}`);
   }
@@ -61,12 +77,18 @@ async function fetchSegmentVerses(bibleId: number, segment: PassageSegment): Pro
     verseNumbers.map(v => fetchSingleVerse(bibleId, segment.usfm, segment.chapter, v))
   );
 
-  return verseNumbers.map((number, i) => ({
-    number,
-    text: texts[i],
-    chapter: segment.chapter,
-    book: segment.book,
-  }));
+  // Drop absent verses (null) and any that came back empty — the surviving
+  // verses keep their real numbers, so a gap where 16:24 would be simply
+  // shows verse 23 then 25, which is exactly how a printed modern Bible
+  // renders it.
+  const verses: Verse[] = [];
+  verseNumbers.forEach((number, i) => {
+    const text = texts[i];
+    if (text !== null && text !== '') {
+      verses.push({ number, text, chapter: segment.chapter, book: segment.book });
+    }
+  });
+  return verses;
 }
 
 function cacheKey(translation: TranslationCode, reference: string): string {
@@ -100,12 +122,40 @@ export async function getVersesForReference(
   }
 
   const bibleId = await getVersionId(translation);
-  const segmentResults = await Promise.all(
+
+  // Per-SEGMENT isolation, same principle as per-verse above. A reading
+  // like "Job 42, Psalm 1, 2" is three segments; if one hits a transient
+  // error while the others succeed, the reader should still show what
+  // loaded rather than a blank error screen. allSettled lets each segment
+  // resolve independently.
+  const settled = await Promise.allSettled(
     segments.map(seg => fetchSegmentVerses(bibleId, seg))
   );
-  const verses = segmentResults.flat();
 
-  await AsyncStorage.setItem(key, JSON.stringify(verses));
+  const verses = settled
+    .filter((r): r is PromiseFulfilledResult<Verse[]> => r.status === 'fulfilled')
+    .flatMap(r => r.value);
+
+  const anyFailed = settled.some(r => r.status === 'rejected');
+  const allFailed = verses.length === 0 && anyFailed;
+
+  // Only a TOTAL failure (nothing loaded at all) throws — that's a genuine
+  // "this passage couldn't load" the caller's error UI should handle. A
+  // partial load returns the verses it got.
+  if (allFailed) {
+    const firstError = settled.find(r => r.status === 'rejected') as PromiseRejectedResult;
+    throw firstError.reason instanceof Error
+      ? firstError.reason
+      : new Error(String(firstError.reason));
+  }
+
+  // Cache ONLY complete results — a partially-loaded passage must not be
+  // frozen into the cache, or the missing segments would never be retried.
+  // (Scripture is permanent, so a fully-loaded passage stays cached
+  // forever; a partial one refetches next time and can fill the gap.)
+  if (!anyFailed) {
+    await AsyncStorage.setItem(key, JSON.stringify(verses));
+  }
   return verses;
 }
 
@@ -116,4 +166,36 @@ export async function clearPassageCache(): Promise<void> {
   const keys = await AsyncStorage.getAllKeys();
   const passageKeys = keys.filter(k => k.startsWith('yvp:passage:'));
   await AsyncStorage.multiRemove(passageKeys);
+}
+
+/**
+ * Warms the passage cache for a set of references in a translation,
+ * quietly and sequentially. Fire-and-forget: never awaited by UI code,
+ * and a failed reference is skipped, not fatal.
+ *
+ * This is the app's stand-in for YouVersion's "download this translation"
+ * feature: their consumer app ships whole versions as offline bundles,
+ * but the Platform API we're on is request-based with no bulk-download
+ * endpoint — so instant switching has to be MANUFACTURED by making sure
+ * the passages someone is about to read are already cached before they
+ * ask for them. The version screen calls this the moment a translation
+ * is chosen; by the time the user has navigated back to the reader, the
+ * day's readings for the new version are usually already local (and once
+ * cached, they're cached forever — scripture doesn't change).
+ *
+ * Sequential on purpose: getVersesForReference already fans out one
+ * request per verse internally, so running references in series keeps
+ * the burst against YouVersion's API bounded instead of multiplying it.
+ */
+export function prefetchReferences(references: string[], translation: TranslationCode): void {
+  (async () => {
+    for (const ref of references) {
+      try {
+        await getVersesForReference(ref, translation);
+      } catch {
+        // Skip and move on — the reader has its own error handling if the
+        // user actually opens this one.
+      }
+    }
+  })();
 }
