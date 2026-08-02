@@ -2,6 +2,7 @@ import { FlatList, View, StyleSheet, Dimensions } from 'react-native';
 import { theme } from '../../constants/theme';
 import { Message } from '../../data/content';
 import { GridCard } from './GridCard';
+import { usePlayback } from '../../providers/PlaybackProvider';
 
 const COLUMNS = 3;
 const H_PADDING = theme.spacing.lg * 2;
@@ -36,6 +37,7 @@ interface CardGridProps {
  * paging through pageToken in services/youtube.ts) — not numbered pages.
  */
 export function CardGrid({ data, noOuterPadding }: CardGridProps) {
+  const { play } = usePlayback();
   return (
     <FlatList
       data={data}
@@ -65,9 +67,7 @@ export function CardGrid({ data, noOuterPadding }: CardGridProps) {
             speaker={item.speaker}
             type={item.type}
             thumbnail={item.thumbnail}
-            // No onPress yet — tapping through to actual playback isn't
-            // wired up anywhere in the app yet (Library's own grid has
-            // the same gap today), not something specific to this screen.
+            onPress={() => play(item)}
           />
         </View>
       )}

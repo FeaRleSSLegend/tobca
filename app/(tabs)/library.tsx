@@ -15,6 +15,7 @@ import { getCurrentlyStreaming, getRecentlyAdded } from '../../data/content';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { useMessages } from '../../hooks/useMessages';
 import { usePlaylists } from '../../hooks/usePlaylists';
+import { usePlayback } from '../../providers/PlaybackProvider';
 import { classifyMessages } from '../../utils/contentGrouping';
 
 // Hub previews are teasers, not the collection — a filled row signals
@@ -44,6 +45,7 @@ export default function LibraryScreen() {
     const router = useRouter();
     const { messages } = useMessages();
     const { playlists } = usePlaylists();
+    const { play } = usePlayback();
     const currentlyStreaming = getCurrentlyStreaming(messages);
 
     // Classification is just grouping over an array already in memory —
@@ -83,7 +85,7 @@ export default function LibraryScreen() {
                 {/* No SectionLabel here on purpose — this is Library's hero
                     card, same role as LiveCard/VerseOfDayCard on Home, and
                     neither of those get an outer label either. */}
-                {currentlyStreaming && <CurrentMessage message={currentlyStreaming} />}
+                {currentlyStreaming && <CurrentMessage message={currentlyStreaming} onPress={() => play(currentlyStreaming)} />}
 
                 {series.length > 0 && (
                     <>

@@ -14,7 +14,10 @@ import { TodayReadingRow } from "../../components/ui/TodayReadingRow";
 import { ScreenWithWatermark } from "../../components/ui/ScreenWithWatermark";
 import { useLiveStatus } from "../../hooks/useLiveStatus";
 import { useMessages } from "../../hooks/useMessages";
+import { usePlayback } from "../../providers/PlaybackProvider";
 import { getTodayReading, isDayCompleted } from "../../utils/biblePlan.utils";
+import { buildMessage } from "../../data/contentModel";
+import { PRIMARY_BRANCH_ID } from "../../data/branches";
 import { useFocusEffect, useRouter } from "expo-router";
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -45,6 +48,7 @@ export default function LiveScreen() {
   const router = useRouter();
   const liveStatus = useLiveStatus();
   const { messages } = useMessages();
+  const { play } = usePlayback();
   const latestMessages = getLatestMessages(messages);
 
   const todayReading = getTodayReading();
@@ -82,8 +86,35 @@ export default function LiveScreen() {
 
         {/* Live vs Next-Service card — leads the screen since this is the
             one thing on it that's actually time-sensitive; a "next service"
-            countdown loses its point if it's not the first thing you see. */}
-        <LiveCard isLive={liveStatus.isLive} title={liveStatus.title} source={liveStatus.source} />
+            countdown loses its point if it's not the first thing you see.
+            Watch now plays the confirmed live broadcast; it's only wired
+            when YouTube actually returned a live videoId (schedule-only
+            fallback has nothing concrete to open, so the button stays
+            inert there rather than lying). */}
+        <LiveCard
+          isLive={liveStatus.isLive}
+          title={liveStatus.title}
+          source={liveStatus.source}
+          onWatch={
+            liveStatus.videoId
+              ? () =>
+                  play(
+                    buildMessage({
+                      source: 'youtube',
+                      branchId: PRIMARY_BRANCH_ID,
+                      externalId: liveStatus.videoId!,
+                      title: liveStatus.title ?? 'Live Service',
+                      speaker: 'OliveBrook Church',
+                      publishedAt: new Date().toISOString().slice(0, 10),
+                      type: 'video',
+                      media: [
+                        { kind: 'video', source: 'youtube', externalId: liveStatus.videoId!, durationSeconds: 0 },
+                      ],
+                    })
+                  )
+              : undefined
+          }
+        />
 
         {/* Verse of the Day — the second loud moment on this screen, but a
             different register (photographic, devotional) from LiveCard's
@@ -151,7 +182,8 @@ export default function LiveScreen() {
             duration={m.duration}
             series={m.series}
             publishedAt={m.publishedAt}
-            thumbnail={m.thumbnail}/>
+            thumbnail={m.thumbnail}
+            onPress={() => play(m)}/>
           ))}
         </View>
       </ScrollView>

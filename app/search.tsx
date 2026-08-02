@@ -16,9 +16,11 @@ import { MessageCard } from '../components/ui/MessageCard';
 import { ScreenWithWatermark } from '../components/ui/ScreenWithWatermark';
 import { getRecentlyAdded } from '../data/content';
 import { useMessages } from '../hooks/useMessages';
+import { usePlayback } from '../providers/PlaybackProvider';
 
 export default function SearchScreen() {
   const router = useRouter();
+  const { play } = usePlayback();
   const [query, setQuery] = useState('');
   const { messages } = useMessages();
   const recentlyAdded = getRecentlyAdded(messages);
@@ -74,6 +76,7 @@ export default function SearchScreen() {
                   type={msg.type}
                   publishedAt={msg.publishedAt}
                   thumbnail={msg.thumbnail}
+                  onPress={() => play(msg)}
                 />
               ))}
             </View>
@@ -91,6 +94,7 @@ export default function SearchScreen() {
                 type={msg.type}
                 publishedAt={msg.publishedAt}
                 thumbnail={msg.thumbnail}
+                onPress={() => play(msg)}
               />
             ))}
           </View>

@@ -1,151 +1,87 @@
 // data/content.ts
-// Shaped exactly like a future GET /content API response would be.
-// videoId marked "REPLACE_ME_*" needs a real ID from youtube.com/@TheOliveBrookChurch —
-// two entries below use real IDs found via search, everything else is a stub
-// (fine — videoId isn't rendered anywhere, only used once real playback is wired up).
-// Series episode titles were literally "REPLACE_ME" and rendering that way on
-// screen (visible in the Recently Added grid) — given real placeholder titles
-// derived from their series + part number until the real ones are supplied.
+// Mock content, now built through the normalized content model
+// (data/contentModel.ts). Every entry is a source-tagged, branch-tagged
+// Message with a composite id and a media-variant array — identical in
+// shape to what a real source adapter produces, so screens see no
+// difference between mock and live data. The Message type itself lives in
+// contentModel.ts and is re-exported here so existing imports
+// (`from '../data/content'`) keep resolving unchanged.
 
-export type MessageType = 'sermon' | 'series' | 'audio' | 'video';
+import {
+  Message,
+  MessageType,
+  buildMessage,
+} from './contentModel';
+import { PRIMARY_BRANCH_ID } from './branches';
 
-export interface Message {
-  id: string;
+export type { Message, MessageType };
+export {
+  makeMessageId,
+  parseMessageId,
+  primaryVariant,
+  hasAudio,
+  hasVideo,
+  formatDuration,
+} from './contentModel';
+
+// Mock seed data. `ext` is the source-native id (a YouTube videoId, real
+// where known, REPLACE_ME_* stub otherwise). buildMessage turns each row
+// into a full normalized Message — composite id, media array, and the
+// backward-compat accessors — so nothing downstream hand-assembles a
+// Message literal.
+interface MockSeed {
+  ext: string;
   title: string;
   speaker: string;
-  duration: string;
-  durationSeconds?: number; // only present on real fetched videos; mock entries are never classified as clips
-  videoId: string;
-  series?: string;
+  minutes: number;
   type: MessageType;
-  publishedAt: string; // ISO date
-  thumbnail?: string; // YouTube thumbnail URL — undefined for mock entries, real for fetched ones
+  publishedAt: string;
+  series?: string;
+  thumbnail?: string;
 }
 
-export const messages: Message[] = [
-  {
-    id: '1',
-    title: 'How to Make Your Relationship & Marriage Work',
-    speaker: 'Pst. Abu Jibril',
-    duration: '42 min',
-    videoId: 'REPLACE_ME_1',
-    series: 'Relationships',
-    type: 'sermon',
-    publishedAt: '2026-06-28',
-  },
-  {
-    id: '2',
-    title: 'Commanding The Year 2024',
-    speaker: 'Pst. Abu Jibril',
-    duration: '38 min',
-    videoId: 'REPLACE_ME_2',
-    series: 'Commanding 2024',
-    type: 'sermon',
-    publishedAt: '2026-01-05',
-  },
-  {
-    id: '3',
-    title: 'How To Thrive In Difficult Times',
-    speaker: 'Pst. Yinka Jibril',
-    duration: '35 min',
-    videoId: 'REPLACE_ME_3',
-    series: 'Difficult Times',
-    type: 'sermon',
-    publishedAt: '2026-05-10',
-  },
-  {
-    id: '4',
-    title: 'Mercy Triggers Miracles',
-    speaker: 'Pst. Abu Jibril',
-    duration: '40 min',
-    videoId: 'REPLACE_ME_4',
-    series: 'Mercy Triggers',
-    type: 'sermon',
-    publishedAt: '2026-04-19',
-  },
-  {
-    id: '5',
-    title: 'Wealth Creation Summit — Day 1',
-    speaker: 'Guest Speaker',
-    duration: '51 min',
-    videoId: 'REPLACE_ME_5',
-    type: 'sermon',
-    publishedAt: '2026-03-14',
-  },
-  {
-    // Real video — a guest ministration actually uploaded on OliveBrook's channel.
-    // Good one to test the video player against real YouTube data.
-    id: 'real-1',
-    title: 'Making Grace Manifest',
-    speaker: 'Apostle Joshua Selman',
-    duration: '58 min',
-    videoId: 'OqWREz-etjE',
-    type: 'video',
-    publishedAt: '2023-04-05',
-  },
-  {
-    id: 's1-1', title: 'The Manifold Grace of God — Part 1', speaker: 'Pst. Abu Jibril', duration: '38 min',
-    videoId: 'REPLACE_ME_S1_1', series: 'The Manifold Grace of God', type: 'series',
-    publishedAt: '2026-02-01',
-  },
-  {
-    id: 's1-2', title: 'The Manifold Grace of God — Part 2', speaker: 'Pst. Abu Jibril', duration: '41 min',
-    videoId: 'REPLACE_ME_S1_2', series: 'The Manifold Grace of God', type: 'series',
-    publishedAt: '2026-02-08',
-  },
-  {
-    id: 's1-3', title: 'The Manifold Grace of God — Part 3', speaker: 'Pst. Abu Jibril', duration: '36 min',
-    videoId: 'REPLACE_ME_S1_3', series: 'The Manifold Grace of God', type: 'series',
-    publishedAt: '2026-02-15',
-  },
-  {
-    id: 's2-1', title: 'The Law of Manifestation — Part 1', speaker: 'Pst. Abu Jibril', duration: '44 min',
-    videoId: 'REPLACE_ME_S2_1', series: 'The Law of Manifestation', type: 'series',
-    publishedAt: '2026-03-01',
-  },
-  {
-    id: 's2-2', title: 'The Law of Manifestation — Part 2', speaker: 'Pst. Abu Jibril', duration: '39 min',
-    videoId: 'REPLACE_ME_S2_2', series: 'The Law of Manifestation', type: 'series',
-    publishedAt: '2026-03-08',
-  },
-  {
-    id: 's3-1', title: 'Moving from Prophecy to Manifestation — Part 1', speaker: 'Pst. Abu Jibril', duration: '45 min',
-    videoId: 'REPLACE_ME_S3_1', series: 'Moving from Prophecy to Manifestation', type: 'series',
-    publishedAt: '2026-04-05',
-  },
-  {
-    id: 's3-2', title: 'Moving from Prophecy to Manifestation — Part 2', speaker: 'Pst. Abu Jibril', duration: '40 min',
-    videoId: 'REPLACE_ME_S3_2', series: 'Moving from Prophecy to Manifestation', type: 'series',
-    publishedAt: '2026-04-12',
-  },
-  {
-    id: 's4-1', title: 'The Person & Work of the Holy Spirit — Part 1', speaker: 'Pst. Yinka Jibril', duration: '37 min',
-    videoId: 'REPLACE_ME_S4_1', series: 'The Person & Work of the Holy Spirit', type: 'series',
-    publishedAt: '2026-05-03',
-  },
-  {
-    id: 's4-2', title: 'The Person & Work of the Holy Spirit — Part 2', speaker: 'Pst. Yinka Jibril', duration: '42 min',
-    videoId: 'REPLACE_ME_S4_2', series: 'The Person & Work of the Holy Spirit', type: 'series',
-    publishedAt: '2026-05-10',
-  },
-  {
-    id: 's5-1', title: 'New Creation Realities — Part 1', speaker: 'Pst. Abu Jibril', duration: '43 min',
-    videoId: 'REPLACE_ME_S5_1', series: 'New Creation Realities', type: 'series',
-    publishedAt: '2026-06-07',
-  },
-  {
-    id: 's5-2', title: 'New Creation Realities — Part 2', speaker: 'Pst. Abu Jibril', duration: '38 min',
-    videoId: 'REPLACE_ME_S5_2', series: 'New Creation Realities', type: 'series',
-    publishedAt: '2026-06-14',
-  },
+const mockSeed: MockSeed[] = [
+  { ext: 'REPLACE_ME_1', title: 'How to Make Your Relationship & Marriage Work', speaker: 'Pst. Abu Jibril', minutes: 42, series: 'Relationships', type: 'sermon', publishedAt: '2026-06-28' },
+  { ext: 'REPLACE_ME_2', title: 'Commanding The Year 2024', speaker: 'Pst. Abu Jibril', minutes: 38, series: 'Commanding 2024', type: 'sermon', publishedAt: '2026-01-05' },
+  { ext: 'REPLACE_ME_3', title: 'How To Thrive In Difficult Times', speaker: 'Pst. Yinka Jibril', minutes: 35, series: 'Difficult Times', type: 'sermon', publishedAt: '2026-05-10' },
+  { ext: 'REPLACE_ME_4', title: 'Mercy Triggers Miracles', speaker: 'Pst. Abu Jibril', minutes: 40, series: 'Mercy Triggers', type: 'sermon', publishedAt: '2026-04-19' },
+  { ext: 'REPLACE_ME_5', title: 'Wealth Creation Summit — Day 1', speaker: 'Guest Speaker', minutes: 51, type: 'sermon', publishedAt: '2026-03-14' },
+  // Real video — a guest ministration actually on OliveBrook's channel.
+  // The one entry with a real, playable videoId — use it to test the player.
+  { ext: 'OqWREz-etjE', title: 'Making Grace Manifest', speaker: 'Apostle Joshua Selman', minutes: 58, type: 'video', publishedAt: '2023-04-05' },
+  { ext: 'REPLACE_ME_S1_1', title: 'The Manifold Grace of God — Part 1', speaker: 'Pst. Abu Jibril', minutes: 38, series: 'The Manifold Grace of God', type: 'series', publishedAt: '2026-02-01' },
+  { ext: 'REPLACE_ME_S1_2', title: 'The Manifold Grace of God — Part 2', speaker: 'Pst. Abu Jibril', minutes: 41, series: 'The Manifold Grace of God', type: 'series', publishedAt: '2026-02-08' },
+  { ext: 'REPLACE_ME_S1_3', title: 'The Manifold Grace of God — Part 3', speaker: 'Pst. Abu Jibril', minutes: 36, series: 'The Manifold Grace of God', type: 'series', publishedAt: '2026-02-15' },
+  { ext: 'REPLACE_ME_S2_1', title: 'The Law of Manifestation — Part 1', speaker: 'Pst. Abu Jibril', minutes: 44, series: 'The Law of Manifestation', type: 'series', publishedAt: '2026-03-01' },
+  { ext: 'REPLACE_ME_S2_2', title: 'The Law of Manifestation — Part 2', speaker: 'Pst. Abu Jibril', minutes: 39, series: 'The Law of Manifestation', type: 'series', publishedAt: '2026-03-08' },
+  { ext: 'REPLACE_ME_S3_1', title: 'Moving from Prophecy to Manifestation — Part 1', speaker: 'Pst. Abu Jibril', minutes: 45, series: 'Moving from Prophecy to Manifestation', type: 'series', publishedAt: '2026-04-05' },
+  { ext: 'REPLACE_ME_S3_2', title: 'Moving from Prophecy to Manifestation — Part 2', speaker: 'Pst. Abu Jibril', minutes: 40, series: 'Moving from Prophecy to Manifestation', type: 'series', publishedAt: '2026-04-12' },
+  { ext: 'REPLACE_ME_S4_1', title: 'The Person & Work of the Holy Spirit — Part 1', speaker: 'Pst. Yinka Jibril', minutes: 37, series: 'The Person & Work of the Holy Spirit', type: 'series', publishedAt: '2026-05-03' },
+  { ext: 'REPLACE_ME_S4_2', title: 'The Person & Work of the Holy Spirit — Part 2', speaker: 'Pst. Yinka Jibril', minutes: 42, series: 'The Person & Work of the Holy Spirit', type: 'series', publishedAt: '2026-05-10' },
+  { ext: 'REPLACE_ME_S5_1', title: 'New Creation Realities — Part 1', speaker: 'Pst. Abu Jibril', minutes: 43, series: 'New Creation Realities', type: 'series', publishedAt: '2026-06-07' },
+  { ext: 'REPLACE_ME_S5_2', title: 'New Creation Realities — Part 2', speaker: 'Pst. Abu Jibril', minutes: 38, series: 'New Creation Realities', type: 'series', publishedAt: '2026-06-14' },
 ];
+
+export const messages: Message[] = mockSeed.map((s) =>
+  buildMessage({
+    source: 'youtube',
+    branchId: PRIMARY_BRANCH_ID,
+    externalId: s.ext,
+    title: s.title,
+    speaker: s.speaker,
+    publishedAt: s.publishedAt,
+    type: s.type,
+    series: s.series,
+    thumbnail: s.thumbnail,
+    // Mock durations are known only as minutes; real fetched entries carry
+    // exact seconds. A whole-minute conversion is fine for mock data.
+    media: [{ kind: 'video', source: 'youtube', externalId: s.ext, durationSeconds: s.minutes * 60 }],
+  })
+);
 
 export const currentlyStreaming = messages[0];
 
-// Live state — for now this is a hand-set flag, matching the Live-screen
-// redesign decision (real state, not hardcoded "LIVE NOW" always).
-// Swap `isLive: true` manually to test both card states until real
-// schedule-based logic is wired in.
+// Live state — hand-set flag kept for any screen still referencing it.
 export const liveState = {
   isLive: true,
   title: 'Sunday Service',
@@ -153,13 +89,9 @@ export const liveState = {
 };
 
 export const latestMessages = [...messages]
-    .sort((a,b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0,2)
+  .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  .slice(0, 2);
 
-
-// Derived from messages with type: 'series' — groups by series name,
-// counts how many episodes exist for each. Add episodes to `messages`
-// and this list updates itself, no manual bookkeeping.
 export const seriesList = Array.from(
   new Set(messages.filter((m) => m.type === 'series' && m.series).map((m) => m.series))
 ).map((name) => ({
@@ -167,17 +99,11 @@ export const seriesList = Array.from(
   count: messages.filter((m) => m.series === name).length,
 }));
 
-// Add this after seriesList
 export const recentlyAdded = [...messages]
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, 4); // Show 4 most recent
+  .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  .slice(0, 4);
 
-// --- Pure helpers below: same derivations as above, but operating on
-// whatever array is passed in rather than the static `messages` mock.
-// Screens now on real data (see hooks/useMessages.ts) call these with the
-// live-fetched array instead of relying on the static exports above,
-// which stay in place as a fallback if the fetch fails or hasn't
-// resolved yet.
+// --- Pure helpers below operate on whatever array is passed in. ---
 
 export function getLatestMessages(list: Message[], count = 2): Message[] {
   return [...list]

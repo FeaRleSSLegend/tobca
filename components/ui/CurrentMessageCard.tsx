@@ -6,6 +6,7 @@ import { Message } from '../../data/content';
 
 interface CurrentMessageProps {
   message: Message;
+  onPress?: () => void;
 }
 
 // Library's hero card. Refinement pass: with real YouTube data flowing,
@@ -17,9 +18,14 @@ interface CurrentMessageProps {
 // entries that have no thumbnail. Same information, one more real signal,
 // zero added elements — the scan order is unchanged: eyebrow → title →
 // meta, play button in the corner.
-export const CurrentMessage = ({ message }: CurrentMessageProps) => {
+export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={styles.card}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Current message: ${message.title}, ${message.speaker}`}
+    >
       {message.thumbnail ? (
         <>
           <Image
@@ -43,14 +49,11 @@ export const CurrentMessage = ({ message }: CurrentMessageProps) => {
         />
       )}
 
-      <Pressable
-        style={styles.playButton}
-        hitSlop={4}
-        accessibilityRole="button"
-        accessibilityLabel={`Play ${message.title}`}
-      >
+      {/* Visual affordance only — the whole card is the tap target now, so
+          a nested Pressable here would just swallow the press. */}
+      <View style={styles.playButton}>
         <Ionicons name="play" size={18} color={theme.colors.pink} style={{ marginLeft: 2 }} />
-      </Pressable>
+      </View>
 
       <View>
         <Text style={styles.eyebrow}>Current Message</Text>
@@ -61,7 +64,7 @@ export const CurrentMessage = ({ message }: CurrentMessageProps) => {
           {message.speaker} · {message.duration}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 };
 

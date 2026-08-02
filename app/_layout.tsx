@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { PlaybackProvider } from '../providers/PlaybackProvider';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import {
@@ -53,7 +54,21 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <PlaybackProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          {/* (tabs) is declared FIRST and explicitly so it is unambiguously
+              the initial route. Without this, expo-router can elect the
+              only other explicitly-declared screen (player) as the initial
+              route, which made the app cold-start straight into the empty
+              modal player. */}
+          <Stack.Screen name="(tabs)" />
+          {/* The player is presented modally — it slides up over whatever
+              you were browsing and a down-chevron dismisses it, the media-
+              app convention that keeps playback feeling like a layer on top
+              of the app rather than a place you navigate away to. */}
+          <Stack.Screen name="player" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        </Stack>
+      </PlaybackProvider>
     </SafeAreaProvider>
   );
 }

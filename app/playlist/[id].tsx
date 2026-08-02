@@ -14,6 +14,8 @@ import { CollectionShell } from '../../components/ui/CollectionShell';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonGrid } from '../../components/ui/Skeletons';
 import { Message } from '../../data/content';
+import { buildMessage } from '../../data/contentModel';
+import { PRIMARY_BRANCH_ID } from '../../data/branches';
 import { fetchPlaylistItems } from '../../services/youtube';
 
 export default function PlaylistScreen() {
@@ -31,17 +33,21 @@ export default function PlaylistScreen() {
       .then((videos) => {
         if (cancelled) return;
         setItems(
-          videos.map((v) => ({
-            id: v.videoId,
-            title: v.title,
-            speaker: 'OliveBrook Church',
-            duration: v.duration,
-            durationSeconds: v.durationSeconds,
-            videoId: v.videoId,
-            type: 'sermon' as const,
-            publishedAt: v.publishedAt,
-            thumbnail: v.thumbnail,
-          }))
+          videos.map((v) =>
+            buildMessage({
+              source: 'youtube',
+              branchId: PRIMARY_BRANCH_ID,
+              externalId: v.videoId,
+              title: v.title,
+              speaker: 'OliveBrook Church',
+              publishedAt: v.publishedAt,
+              type: 'sermon',
+              thumbnail: v.thumbnail,
+              media: [
+                { kind: 'video', source: 'youtube', externalId: v.videoId, durationSeconds: v.durationSeconds },
+              ],
+            })
+          )
         );
       })
       .catch((e) => {

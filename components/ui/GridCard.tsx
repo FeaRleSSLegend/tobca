@@ -28,6 +28,7 @@ const typeIcon: Record<MessageType, keyof typeof Ionicons.glyphMap> = {
   series: 'albums',
   audio: 'headset',
   video: 'videocam',
+  service: 'calendar',
 };
 
 export const GridCard = React.memo(({

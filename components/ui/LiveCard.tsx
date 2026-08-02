@@ -12,6 +12,10 @@ interface LiveCardProps {
   // because YouTube couldn't be reached. The caption tells the truth
   // about which one it is instead of claiming "streaming now" on a guess.
   source?: 'youtube' | 'schedule';
+  // Tapping "Watch now" on a confirmed-live card. Undefined when there's
+  // no confirmed stream to open (schedule-only fallback), which is why the
+  // button is only wired in the youtube-source case.
+  onWatch?: () => void;
 }
 
 // The first thing anyone sees on the app — pink/purple gradient hero,
@@ -25,7 +29,7 @@ interface LiveCardProps {
 // and a labeled full-width "Watch now" button. A button with a word wins
 // over a bare icon circle for the card's single primary action — the icon
 // alone made "what happens if I tap this?" a guess.
-export const LiveCard = ({ isLive, title, source = 'youtube' }: LiveCardProps) => {
+export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCardProps) => {
   // Recomputed per render, NOT at module load — as a module-level const
   // this was evaluated once when the JS bundle first ran, so the countdown
   // ("in 2 days 3 hrs") silently froze at whatever was true at app launch
@@ -55,6 +59,8 @@ export const LiveCard = ({ isLive, title, source = 'youtube' }: LiveCardProps) =
 
       <Pressable
         style={liveStyles.primaryBtnWrapper}
+        onPress={onWatch}
+        disabled={!onWatch}
         accessibilityRole="button"
         accessibilityLabel="Watch the live stream"
       >

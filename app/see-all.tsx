@@ -31,6 +31,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { seeAllStyles } from '../constants/styles/seeAll.styles';
 import { CardGrid } from '../components/ui/CardGrid';
 import { CollectionShell } from '../components/ui/CollectionShell';
+import { usePlayback } from '../providers/PlaybackProvider';
 import { MessageCard } from '../components/ui/MessageCard';
 import { ServiceRow } from '../components/ui/ServiceRow';
 import { GroupCard } from '../components/ui/GroupCard';
@@ -247,8 +248,13 @@ function MessageListCollection({
   emptySubtitle: string;
   // Per-collection row override — Services swaps in the calendar-block
   // ServiceRow; everything else defaults to the thumbnail MessageCard.
-  renderRow?: (m: Message) => React.ReactElement;
+  // Per-collection row override — Services swaps in the calendar-block
+  // ServiceRow; everything else defaults to the thumbnail MessageCard.
+  // Receives an onPress that plays the row, so the override doesn't need
+  // its own playback wiring.
+  renderRow?: (m: Message, onPress: () => void) => React.ReactElement;
 }) {
+  const { play } = usePlayback();
   const [query, setQuery] = useState('');
   const [pill, setPill] = useState('All');
 
@@ -289,7 +295,7 @@ function MessageListCollection({
           )}
           renderItem={({ item }) => (
             <View style={seeAllStyles.listRowWrap}>
-              {renderRow ? renderRow(item) : messageRow(item)}
+              {renderRow ? renderRow(item, () => play(item)) : messageRow(item, () => play(item))}
             </View>
           )}
         />
@@ -513,7 +519,7 @@ function MessagesRouter({ section, filter, title }: {
         emptyIcon="calendar"
         emptyTitle="No services yet"
         emptySubtitle="Recordings will appear here after each service."
-        renderRow={(m) => <ServiceRow message={m} serviceLabel={m.series} />}
+        renderRow={(m, onPress) => <ServiceRow message={m} serviceLabel={m.series} onPress={onPress} />}
       />
     );
   }

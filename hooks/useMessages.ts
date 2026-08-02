@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { messages as mockMessages, Message } from '../data/content';
+import { buildMessage } from '../data/contentModel';
+import { PRIMARY_BRANCH_ID } from '../data/branches';
 import { fetchChannelUploads } from '../services/youtube';
 
 interface UseMessagesResult {
@@ -32,17 +34,23 @@ export function useMessages(): UseMessagesResult {
     fetchChannelUploads()
       .then((videos) => {
         if (cancelled || videos.length === 0) return;
-        const real: Message[] = videos.map((v) => ({
-          id: v.videoId,
-          title: v.title,
-          speaker: 'OliveBrook Church',
-          duration: v.duration,
-          durationSeconds: v.durationSeconds,
-          videoId: v.videoId,
-          type: 'sermon',
-          publishedAt: v.publishedAt,
-          thumbnail: v.thumbnail,
-        }));
+        const real: Message[] = videos.map((v) =>
+          buildMessage({
+            source: 'youtube',
+            branchId: PRIMARY_BRANCH_ID,
+            externalId: v.videoId,
+            title: v.title,
+            // YouTube's API exposes no speaker field; a consistent generic
+            // stands in until titles/descriptions are parsed for it.
+            speaker: 'OliveBrook Church',
+            publishedAt: v.publishedAt,
+            type: 'sermon',
+            thumbnail: v.thumbnail,
+            media: [
+              { kind: 'video', source: 'youtube', externalId: v.videoId, durationSeconds: v.durationSeconds },
+            ],
+          })
+        );
         setMessages(real);
         setIsRealData(true);
       })
