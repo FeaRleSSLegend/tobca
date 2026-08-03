@@ -1,4 +1,6 @@
-import {View, Text, Pressable, Image, StyleSheet} from 'react-native'
+import {View, Text, Pressable, StyleSheet} from 'react-native'
+import { SmartImage } from './SmartImage';
+import { PressableScale } from './motion';
 import { liveStyles } from '../../constants/styles/live.styles'
 import { theme } from '../../constants/theme'
 import { Ionicons } from '@expo/vector-icons'
@@ -31,7 +33,7 @@ const typeIcon: Record<string, keyof typeof Ionicons.glyphMap> = {
 export const MessageCard = ({title, speaker, duration, series, type, publishedAt, thumbnail, onPress}: MessageCardProps) => {
     const icon = (type && typeIcon[type]) || 'play';
     return(
-        <Pressable
+        <PressableScale
           onPress={onPress}
           style={liveStyles.latestMessageRow}
           accessibilityRole="button"
@@ -39,7 +41,7 @@ export const MessageCard = ({title, speaker, duration, series, type, publishedAt
         >
               <View style={liveStyles.latestMessageThumb}>
                 {thumbnail && (
-                  <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                  <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
                 )}
                 <View style={liveStyles.latestMessagePlayCircle}>
                   <Ionicons name={icon} size={13} color="#FFFFFF" style={icon === 'play' ? { marginLeft: 2 } : undefined} />
@@ -61,6 +63,6 @@ export const MessageCard = ({title, speaker, duration, series, type, publishedAt
               </View>
 
               <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
-            </Pressable>
+            </PressableScale>
     )
 }

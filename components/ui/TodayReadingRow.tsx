@@ -1,43 +1,45 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
 import { compactReference, estimateReadingMinutes } from '../../utils/referenceParser';
+import { PressableScale } from './motion';
 
 interface TodayReadingRowProps {
   day: number;
-  // All four of the day's references, in reading order — the card shows
-  // the whole day's shape, not just where it starts.
   references: string[];
   isDone: boolean;
+  // Overall plan completion 0..1, drawn as a progress ring around the day
+  // number — progress indication and identity in one element.
+  planProgress?: number;
   onPress: () => void;
 }
 
-// Home's bridge into the Bible Plan — redesigned from the flat icon-row
-// version. What changed and why:
-//   - "starts at Job 1-42" is gone. It was metadata restating the plan
-//     (and its compaction was outright wrong on multi-book readings). The
-//     line that replaced it answers the two questions someone deciding
-//     whether to read NOW actually has: what's today's reading (all four
-//     passages, compact) and how long will it take ("about 12 min" —
-//     estimated from verse counts, no fetching). Time-to-read is the
-//     single most persuasive fact for "can I fit this in before work."
-//   - Subtle color: a 3pt brand-gradient keel along the left edge and a
-//     gradient icon tile. Enough to lift the card out of the utility
-//     register without competing with the two hero cards above it —
-//     completing flips both to the success green, so the card itself
-//     reports state at a glance.
-//   - Clear action: an explicit pink "Read" affordance (matching the plan
-//     carousel's own Read link) instead of an ambiguous bare chevron.
-// Still deliberately NOT a streak display — the Plan tab owns that.
-export const TodayReadingRow = ({ day, references, isDone, onPress }: TodayReadingRowProps) => {
-  const passages = references.map(compactReference).join(' · ');
+// Home's Bible-reading card, redesigned to be one of the page's strongest
+// visual elements without shouting. Inspired by the editorial product-card
+// reference (image left, strong title, secondary line, compact action right)
+// but adapted to this app and kept more compact:
+//
+//   - EDITORIAL TYPE: the passage is set in the app's serif (Lora, the same
+//     face used inside the Bible reader) at a generous size — so the card
+//     previews the reading experience it leads to, and the serif brings the
+//     warmth the old sans-serif utility row lacked.
+//   - PROGRESS RING: the day number sits in a thin ring that fills with
+//     overall plan progress; on completion it becomes a solid warm check.
+//   - WARMTH THROUGH COLOR, NOT DECORATION: a single soft cream wash, one
+//     pink accent, success green reserved for the done state. No gradients,
+//     keel, or badges — the refinement is in type and space.
+//   - COMPLETION STATE: the card settles to a calm done treatment so
+//     finishing feels acknowledged and warm rather than merely toggled.
+export const TodayReadingRow = ({ day, references, isDone, planProgress = 0, onPress }: TodayReadingRowProps) => {
+  const passages = references.map(compactReference).join('  ·  ');
   const minutes = estimateReadingMinutes(references);
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={styles.card}
+      activeScale={0.985}
+      style={[styles.card, isDone && styles.cardDone]}
       accessibilityRole="button"
       accessibilityLabel={
         isDone
@@ -45,127 +47,163 @@ export const TodayReadingRow = ({ day, references, isDone, onPress }: TodayReadi
           : `Today's reading, day ${day}, about ${minutes} minutes: ${passages}`
       }
     >
-      <LinearGradient
-        colors={isDone ? [theme.colors.success, theme.colors.success] : theme.gradient.colors}
-        start={theme.gradient.start}
-        end={theme.gradient.end}
-        style={styles.keel}
-      />
-
-      {isDone ? (
-        <View style={[styles.iconTile, styles.iconTileDone]}>
-          <Ionicons name="checkmark" size={20} color={theme.colors.white} />
-        </View>
-      ) : (
-        <LinearGradient
-          colors={theme.gradient.colors}
-          start={theme.gradient.start}
-          end={theme.gradient.end}
-          style={styles.iconTile}
-        >
-          <Ionicons name="book" size={18} color={theme.colors.white} />
-        </LinearGradient>
-      )}
+      <DayDial day={day} progress={planProgress} isDone={isDone} />
 
       <View style={styles.body}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>Today's Reading</Text>
-          <Text style={styles.dayTag}>Day {day}</Text>
-        </View>
-        <Text style={styles.passages} numberOfLines={1}>{passages}</Text>
-        <Text style={styles.meta}>
-          {isDone ? 'Completed for today' : `4 passages · about ${minutes} min`}
-        </Text>
-      </View>
+        <Text style={styles.eyebrow}>{isDone ? 'TODAY · COMPLETE' : "TODAY'S READING"}</Text>
 
-      <View style={styles.action}>
-        {isDone ? (
-          <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
-        ) : (
-          <>
-            <Text style={styles.actionText}>Read</Text>
-            <Ionicons name="chevron-forward" size={15} color={theme.colors.pink} />
-          </>
-        )}
+        <Text style={[styles.passages, isDone && styles.passagesDone]} numberOfLines={2}>
+          {passages}
+        </Text>
+
+        <View style={styles.bottomLine}>
+          {isDone ? (
+            <Text style={styles.doneNote}>Well done. See you tomorrow.</Text>
+          ) : (
+            <>
+              <Ionicons name="time-outline" size={13} color={theme.colors.graySecondary} />
+              <Text style={styles.timeText}>about {minutes} min</Text>
+              <View style={styles.dot} />
+              <Text style={styles.readCta}>Read now</Text>
+              <Ionicons name="arrow-forward" size={13} color={theme.colors.pink} />
+            </>
+          )}
+        </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
+
+// Day number inside a progress ring (two stacked SVG circles: faint track +
+// foreground arc sized to plan progress). Done state becomes a filled check.
+function DayDial({ day, progress, isDone }: { day: number; progress: number; isDone: boolean }) {
+  const size = 52;
+  const stroke = 3;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(1, progress));
+  const dash = circumference * clamped;
+
+  if (isDone) {
+    return (
+      <View style={[styles.dial, styles.dialDone]}>
+        <Ionicons name="checkmark" size={24} color={theme.colors.white} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.dial}>
+      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={theme.colors.grayBorder} strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={theme.colors.pink}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circumference}`}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <View style={styles.dialInner}>
+        <Text style={styles.dayLabel}>DAY</Text>
+        <Text style={styles.dayNum}>{day}</Text>
+      </View>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
-    backgroundColor: theme.colors.white,
-    borderColor: theme.colors.grayBorder,
+    gap: theme.spacing.lg,
+    backgroundColor: '#FBF7F0',
+    borderColor: '#F0E9DD',
     borderWidth: 1,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    paddingLeft: theme.spacing.md + 5, // clear the keel
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
     marginTop: theme.spacing.xl,
-    overflow: 'hidden',
   },
-  keel: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
+  cardDone: {
+    backgroundColor: '#F1F9F5',
+    borderColor: '#DCEEE4',
   },
-  iconTile: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.sm,
+  dial: {
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconTileDone: {
+  dialDone: {
+    borderRadius: theme.radius.full,
     backgroundColor: theme.colors.success,
+  },
+  dialInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayLabel: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 8,
+    letterSpacing: 1,
+    color: theme.colors.grayIcon,
+    marginBottom: -2,
+  },
+  dayNum: {
+    fontFamily: theme.fontFamily.display,
+    fontSize: theme.fontSize.bodyLg,
+    color: theme.colors.navy,
+    lineHeight: 22,
   },
   body: {
     flex: 1,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  title: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
-  },
-  dayTag: {
-    fontFamily: theme.fontFamily.bodySemibold,
+  eyebrow: {
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 10,
-    color: theme.colors.graySecondary,
-    backgroundColor: theme.colors.bg,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 1,
-    borderRadius: theme.radius.full,
-    overflow: 'hidden',
+    letterSpacing: 1,
+    color: theme.colors.pink,
+    marginBottom: 5,
   },
   passages: {
-    fontFamily: theme.fontFamily.bodySemibold,
-    fontSize: theme.fontSize.body,
-    color: theme.colors.slate,
-    marginTop: 2,
+    fontFamily: theme.fontFamily.serifSemibold,
+    fontSize: 18,
+    lineHeight: 24,
+    color: theme.colors.navy,
   },
-  meta: {
+  passagesDone: {
+    color: theme.colors.graySecondary,
+  },
+  bottomLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
+  },
+  timeText: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     color: theme.colors.graySecondary,
-    marginTop: 1,
   },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: theme.colors.grayIcon,
+    marginHorizontal: 3,
   },
-  actionText: {
+  readCta: {
     fontFamily: theme.fontFamily.bodyBold,
-    fontSize: theme.fontSize.body,
+    fontSize: theme.fontSize.caption,
     color: theme.colors.pink,
+  },
+  doneNote: {
+    fontFamily: theme.fontFamily.serifItalic,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.success,
   },
 });

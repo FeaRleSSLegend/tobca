@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -31,7 +32,7 @@ export const GroupCard = React.memo(({ title, subtitle, thumbnail, onPress }: Gr
   >
     <View style={styles.thumb}>
       {thumbnail ? (
-        <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
       ) : (
         <LinearGradient
           colors={['rgba(248,0,104,0.35)', 'rgba(200,32,248,0.25)']}

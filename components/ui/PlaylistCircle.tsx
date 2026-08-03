@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { SmartImage } from './SmartImage';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
@@ -21,7 +22,7 @@ export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: 
   >
     <View style={styles.circle}>
       {thumbnail ? (
-        <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
       ) : (
         <Ionicons name="albums" size={28} color={theme.colors.white} />
       )}

@@ -11,11 +11,12 @@ import { ServicePill } from "../../components/ui/ServicePill";
 import { MessageCard } from "../../components/ui/MessageCard";
 import { VerseOfDayCard } from "../../components/ui/VerseOfDayCard";
 import { TodayReadingRow } from "../../components/ui/TodayReadingRow";
+import { FadeInUp, staggerDelay } from "../../components/ui/motion";
 import { ScreenWithWatermark } from "../../components/ui/ScreenWithWatermark";
 import { useLiveStatus } from "../../hooks/useLiveStatus";
 import { useMessages } from "../../hooks/useMessages";
 import { usePlayback } from "../../providers/PlaybackProvider";
-import { getTodayReading, isDayCompleted } from "../../utils/biblePlan.utils";
+import { getTodayReading, isDayCompleted, getProgress, getCompletionPercentage } from "../../utils/biblePlan.utils";
 import { buildMessage } from "../../data/contentModel";
 import { PRIMARY_BRANCH_ID } from "../../data/branches";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -53,6 +54,7 @@ export default function LiveScreen() {
 
   const todayReading = getTodayReading();
   const [readingDone, setReadingDone] = useState(false);
+  const [planProgress, setPlanProgress] = useState(0);
 
   // Re-checked on focus, not just mount — the whole point of the done
   // state is reflecting a reading finished over on the Plan tab moments ago.
@@ -60,6 +62,11 @@ export default function LiveScreen() {
     useCallback(() => {
       if (!todayReading) return;
       isDayCompleted(todayReading.date).then(setReadingDone);
+      // Overall plan progress feeds the card's day-ring — a quiet, always-
+      // present sense of "how far into the year's plan am I".
+      getProgress().then((p) =>
+        setPlanProgress(getCompletionPercentage(p.completedDays) / 100)
+      );
     }, [todayReading])
   );
 
@@ -136,6 +143,7 @@ export default function LiveScreen() {
               todayReading.proverb,
             ]}
             isDone={readingDone}
+            planProgress={planProgress}
             onPress={() => router.push('/bible-plan')}
           />
         )}
@@ -173,17 +181,18 @@ export default function LiveScreen() {
         <SectionLabel label="Latest Messages" onPress={() => router.push({ pathname: '/see-all', params: { section: 'latest', title: 'Latest Messages' } })}/>
 
         <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.md, marginBottom: theme.spacing.xxxl }}>
-          {latestMessages.map((m) => (
-            <MessageCard 
-            key={m.id}
-            id={m.id} 
-            title={m.title}
-            speaker={m.speaker}
-            duration={m.duration}
-            series={m.series}
-            publishedAt={m.publishedAt}
-            thumbnail={m.thumbnail}
-            onPress={() => play(m)}/>
+          {latestMessages.map((m, i) => (
+            <FadeInUp key={m.id} delay={staggerDelay(i)}>
+              <MessageCard 
+              id={m.id} 
+              title={m.title}
+              speaker={m.speaker}
+              duration={m.duration}
+              series={m.series}
+              publishedAt={m.publishedAt}
+              thumbnail={m.thumbnail}
+              onPress={() => play(m)}/>
+            </FadeInUp>
           ))}
         </View>
       </ScrollView>

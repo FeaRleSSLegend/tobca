@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -28,10 +29,9 @@ export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
     >
       {message.thumbnail ? (
         <>
-          <Image
-            source={{ uri: message.thumbnail }}
+          <SmartImage
+            uri={message.thumbnail}
             style={StyleSheet.absoluteFill}
-            resizeMode="cover"
           />
           <LinearGradient
             colors={['rgba(10,22,33,0.05)', 'rgba(10,22,33,0.85)']}

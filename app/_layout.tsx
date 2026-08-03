@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlaybackProvider } from '../providers/PlaybackProvider';
+import { PlayerHost } from '../components/player/PlayerHost';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import {
@@ -56,18 +57,17 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <PlaybackProvider>
         <Stack screenOptions={{ headerShown: false }}>
-          {/* (tabs) is declared FIRST and explicitly so it is unambiguously
-              the initial route. Without this, expo-router can elect the
-              only other explicitly-declared screen (player) as the initial
-              route, which made the app cold-start straight into the empty
-              modal player. */}
+          {/* (tabs) is the initial route. There is no longer a /player
+              route — playback lives in the persistent PlayerHost overlay
+              below, which is what lets it survive navigation and collapse
+              into a mini-bar instead of being a screen you leave. */}
           <Stack.Screen name="(tabs)" />
-          {/* The player is presented modally — it slides up over whatever
-              you were browsing and a down-chevron dismisses it, the media-
-              app convention that keeps playback feeling like a layer on top
-              of the app rather than a place you navigate away to. */}
-          <Stack.Screen name="player" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         </Stack>
+        {/* Rendered above the whole app. Invisible until something plays,
+            then it's either the full-screen player or the docked mini-bar.
+            One mounted YouTube instance, so audio/video never restarts when
+            you collapse it to keep browsing. */}
+        <PlayerHost />
       </PlaybackProvider>
     </SafeAreaProvider>
   );

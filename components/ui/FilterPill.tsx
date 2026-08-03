@@ -1,5 +1,6 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors, theme } from "../../constants/theme";
+import { PressableScale } from './motion';
 
 interface FilterPillProps {
     isActive: boolean;
@@ -9,7 +10,8 @@ interface FilterPillProps {
 
 export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
     return (
-        <Pressable
+        <PressableScale
+            activeScale={0.94}
             style={[
                 style.pillStyle,
                 {
@@ -40,7 +42,7 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
             >
                 {label}
             </Text>
-        </Pressable>
+        </PressableScale>
     );
 };
 

@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from './motion';
+import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -40,7 +42,7 @@ export const GridCard = React.memo(({
   onPress,
 }: GridCardProps) => {
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       style={styles.card}
       accessibilityRole="button"
@@ -48,7 +50,7 @@ export const GridCard = React.memo(({
     >
       <View style={styles.thumbnail}>
         {thumbnail ? (
-          <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
         ) : (
           <LinearGradient
             colors={[theme.colors.navy, theme.colors.slateLight]}
@@ -74,7 +76,7 @@ export const GridCard = React.memo(({
         )}
         <Text style={styles.duration}>{duration}</Text>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 });
 

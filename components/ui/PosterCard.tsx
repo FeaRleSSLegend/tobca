@@ -1,4 +1,5 @@
-import { Pressable, Text, View, StyleSheet, Image } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -15,7 +16,7 @@ export const PosterCard = ({ title, subtitle, thumbnail, onPress }: PosterCardPr
     <Pressable style={styles.wrapper} onPress={onPress}>
       <View style={styles.thumb}>
         {thumbnail ? (
-          <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
         ) : (
           <LinearGradient
             colors={['rgba(248,0,104,0.35)', 'rgba(200,32,248,0.25)']}

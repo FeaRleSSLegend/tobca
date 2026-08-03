@@ -1,20 +1,20 @@
 // providers/PlaybackProvider.tsx
-// One place that owns "what is playing and how". Every card, hero, and row
-// in the app plays content by calling play(message) from this context, so
-// there is exactly one code path into playback — no screen builds its own
-// player, and future features (Continue Watching resume, a global mini
-// player, audio/video switching) hook in here rather than in twelve call
-// sites.
+// Owns "what is playing, how, and in what surface". This is the single
+// source of truth the whole app plays through — every card calls play(),
+// and the persistent player host (components/player/PlayerHost) reads this
+// to render exactly one YouTube player instance that survives navigation.
 //
-// This iteration keeps the surface deliberately small: it holds the active
-// message and preferred mode, and opens the full-screen player route. It
-// does NOT yet implement a persistent mini-player or background audio —
-// those are later items, and the architecture doc is explicit about not
-// building ahead of need. But because play() is the sole entry point, add-
-// ing them later touches only this file.
+// The key architectural decision for the mini-player: a YouTube IFrame
+// player lives inside a WebView, and a WebView CANNOT be moved between
+// React trees or remounted without restarting playback. So the player is
+// NOT a route you navigate to and away from. Instead it is rendered ONCE,
+// high in the tree (PlayerHost, mounted in the root layout), and this
+// provider only flips an `expanded` flag. Expanding and collapsing animate
+// the SAME mounted player between full-screen and a docked mini-bar, so
+// audio/video never cuts out when you leave the full player to keep
+// browsing — the YouTube-style behavior requested.
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { router } from 'expo-router';
 import { Message, hasVideo, hasAudio } from '../data/contentModel';
 
 export type PlaybackMode = 'video' | 'audio';
@@ -22,12 +22,19 @@ export type PlaybackMode = 'video' | 'audio';
 interface PlaybackContextValue {
   activeMessage: Message | null;
   mode: PlaybackMode;
-  // Play a message. `preferAudio` is a hint (used later for the
-  // data-saving "audio on cellular" default); today it's honored only when
-  // the message actually has an audio variant.
+  // Full-screen (true) vs docked mini-bar (false). Playback continues in
+  // both; this only changes the surface.
+  expanded: boolean;
+  // Whether anything is loaded at all (mini-bar shows only when true).
+  hasActive: boolean;
+
   play: (message: Message, opts?: { preferAudio?: boolean }) => void;
   setMode: (mode: PlaybackMode) => void;
-  stop: () => void;
+  expand: () => void;
+  collapse: () => void;
+  // Fully tears down playback and hides the player entirely (the mini-bar's
+  // dismiss button).
+  close: () => void;
 }
 
 const PlaybackContext = createContext<PlaybackContextValue | null>(null);
@@ -35,12 +42,9 @@ const PlaybackContext = createContext<PlaybackContextValue | null>(null);
 export function PlaybackProvider({ children }: { children: React.ReactNode }) {
   const [activeMessage, setActiveMessage] = useState<Message | null>(null);
   const [mode, setMode] = useState<PlaybackMode>('video');
+  const [expanded, setExpanded] = useState(false);
 
   const play = useCallback((message: Message, opts?: { preferAudio?: boolean }) => {
-    // Pick the mode the message can actually satisfy: honor an audio
-    // preference only if there's an audio variant, otherwise fall to video,
-    // and vice versa. A message always has at least one variant, so one of
-    // these is always true.
     const resolvedMode: PlaybackMode =
       opts?.preferAudio && hasAudio(message)
         ? 'audio'
@@ -50,19 +54,31 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
     setActiveMessage(message);
     setMode(resolvedMode);
-    // The player is a modally-presented route (configured in app/_layout).
-    // Passing only the id keeps the URL clean and stable; the player reads
-    // the full message from this context, not from params.
-    router.push({ pathname: '/player', params: { id: message.id } });
+    // Playing always opens full-screen; the host animates up from wherever
+    // it was (nothing, or the mini-bar).
+    setExpanded(true);
   }, []);
 
-  const stop = useCallback(() => {
+  const expand = useCallback(() => setExpanded(true), []);
+  const collapse = useCallback(() => setExpanded(false), []);
+  const close = useCallback(() => {
+    setExpanded(false);
     setActiveMessage(null);
   }, []);
 
   const value = useMemo(
-    () => ({ activeMessage, mode, play, setMode, stop }),
-    [activeMessage, mode, play, stop]
+    () => ({
+      activeMessage,
+      mode,
+      expanded,
+      hasActive: activeMessage !== null,
+      play,
+      setMode,
+      expand,
+      collapse,
+      close,
+    }),
+    [activeMessage, mode, expanded, play, expand, collapse, close]
   );
 
   return <PlaybackContext.Provider value={value}>{children}</PlaybackContext.Provider>;

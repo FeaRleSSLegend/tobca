@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SmartImage } from './SmartImage';
 import { theme } from '../../constants/theme';
 import { Message } from '../../data/content';
 
@@ -38,7 +39,7 @@ export const ServiceRow = React.memo(({ message, serviceLabel, onPress }: Servic
     >
       <View style={styles.thumbWrap}>
         {message.thumbnail ? (
-          <Image source={{ uri: message.thumbnail }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <SmartImage uri={message.thumbnail} style={StyleSheet.absoluteFill} />
         ) : (
           <View style={styles.thumbFallback}>
             <Ionicons name="calendar" size={20} color={theme.colors.grayIcon} />
