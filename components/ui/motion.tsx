@@ -57,10 +57,12 @@ export const PressableScale = ({
     Animated.spring(scale, {
       toValue: to,
       useNativeDriver: true,
-      // Springs, not timings, so the release has a natural settle rather
-      // than a mechanical snap. Low tension + decent friction = calm.
-      speed: 40,
-      bounciness: 0,
+      // Softer than a default spring: lower speed and a hair of give makes
+      // the press read as a gentle settle rather than a hard snap. This is
+      // the single most-felt interaction, so calibrating it toward "calm"
+      // sets the tone for how the whole app feels.
+      speed: 20,
+      bounciness: 4,
     }).start();
 
   return (
@@ -102,7 +104,7 @@ export const FadeInUp = ({ children, style, delay = 0, offset = 8 }: FadeInUpPro
   useEffect(() => {
     Animated.timing(progress, {
       toValue: 1,
-      duration: 260,
+      duration: 340,
       delay,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,

@@ -156,6 +156,7 @@ export default function LibraryScreen() {
                                         speaker={msg.speaker}
                                         type={msg.type}
                                         thumbnail={msg.thumbnail}
+                                        onPress={() => play(msg)}
                                     />
                                 </View>
                             ))}

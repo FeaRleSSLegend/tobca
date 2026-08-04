@@ -1,17 +1,19 @@
 // components/player/PlayerHost.tsx
 // The one and only mounted player, rendered once at the root so playback
-// survives navigation. It animates between two surfaces:
-//   - EXPANDED: full-screen, with video on top and related content below.
-//   - COLLAPSED: a slim mini-bar docked above the tab bar that keeps
-//     playing while the user browses (YouTube-style).
-// The YouTube WebView itself is mounted exactly once and never moves in the
-// tree, so collapsing/expanding never restarts playback — it just resizes
-// and repositions the same live player.
+// survives navigation. It morphs between two surfaces:
+//   - EXPANDED: full-screen — header, video, scrollable content beneath.
+//   - COLLAPSED: a small FLOATING VIDEO WINDOW near the bottom (YouTube's
+//     mobile pattern) — just the video, freely draggable, tap to restore,
+//     a small close button. NOT a bar with text and controls.
+// The YouTube WebView is mounted exactly once and never moves in the tree,
+// so collapse/expand only resizes and repositions the same live player —
+// playback never restarts, and the collapsed window shows the real, still-
+// playing video.
 //
-// Motion: a single Animated value `t` (0 = collapsed, 1 = expanded) drives
-// every transition — the sheet's vertical position, the video's size, the
-// fade of the full-screen details, and the fade of the mini-bar. One value,
-// so the whole morph stays perfectly in sync and runs on the native driver.
+// Motion: one Animated value `t` (0 = collapsed, 1 = expanded) drives the
+// whole morph — the video's position and size, the header, and the details
+// fade — so every part stays in sync. A separate 2-axis `pan` value lets
+// the collapsed window be dragged around and flung to dismiss.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -25,6 +27,8 @@ import {
   ActivityIndicator,
   useWindowDimensions,
   BackHandler,
+  PanResponder,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
@@ -40,8 +44,11 @@ import { FadeInUp, PressableScale, staggerDelay } from '../ui/motion';
 import { SmartImage } from '../ui/SmartImage';
 
 const SAVE_INTERVAL_MS = 5000;
-const MINI_HEIGHT = 64;
-const TAB_BAR_HEIGHT = 84; // mini-bar docks just above the tab bar
+const TAB_BAR_HEIGHT = 84;
+
+// Collapsed floating-window size. ~46% of screen width, 16:9 — big enough
+// to actually watch, small enough to leave the app usable behind it.
+const MINI_MARGIN = 12;
 
 export function PlayerHost() {
   const { width, height } = useWindowDimensions();
@@ -57,6 +64,11 @@ export function PlayerHost() {
   const saveTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const restoredRef = useRef(false);
 
+  const closeRef = useRef(close);
+  useEffect(() => { closeRef.current = close; }, [close]);
+  const expandRef = useRef(expand);
+  useEffect(() => { expandRef.current = expand; }, [expand]);
+
   const message = activeMessage;
   const variant = message ? primaryVariant(message) : undefined;
   const videoId = message?.videoId || '';
@@ -64,38 +76,92 @@ export function PlayerHost() {
   const canPlayVideo = !!message && hasVideo(message) && !!videoId && !videoId.startsWith('REPLACE_ME');
   const isAudioMode = !!message && mode === 'audio' && hasAudio(message);
 
-  // t: 0 collapsed → 1 expanded. The single driver for the whole morph.
-  const t = useRef(new Animated.Value(0)).current;
+  // ---- Geometry ----
+  const fullVideoHeight = (width * 9) / 16;
+  const headerHeight = insets.top + 36;
+  const miniW = Math.round(width * 0.56);
+  const miniH = Math.round((miniW * 9) / 16);
+  // Resting position of the collapsed window: bottom-left, above the tab bar.
+  const miniRestX = MINI_MARGIN;
+  const miniRestY = height - TAB_BAR_HEIGHT - miniH - MINI_MARGIN;
 
+  // t: 0 collapsed → 1 expanded — the morph driver.
+  const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(t, {
       toValue: expanded ? 1 : 0,
-      duration: 320,
-      easing: Easing.out(Easing.cubic),
-      // Layout props (height/top) can't use the native driver, and this
-      // animation drives size/position, so it runs on the JS driver. It's a
-      // single short transform on a small tree, so it stays smooth.
+      duration: 340,
+      easing: Easing.inOut(Easing.cubic),
       useNativeDriver: false,
     }).start();
   }, [expanded, t]);
 
-  // Reset per-message playback flags when the message changes.
+  // pan: the collapsed window's free-drag offset from its resting spot.
+  // Reset to 0 whenever we expand (so it returns home next collapse).
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const panOffset = useRef({ x: 0, y: 0 });
   useEffect(() => {
-    if (!message) return;
-    restoredRef.current = false;
-    setReady(false);
-    setEnded(false);
-    setPlaying(true);
-  }, [message?.id]);
+    if (expanded) {
+      pan.setValue({ x: 0, y: 0 });
+      panOffset.current = { x: 0, y: 0 };
+    }
+  }, [expanded, pan]);
 
-  // Hardware back (Android): collapse the expanded player instead of
-  // leaving the screen, matching the mini-player affordance.
+  const dragBounds = useRef({ maxX: 0, maxY: 0 });
+  dragBounds.current = {
+    maxX: width - miniW - MINI_MARGIN * 2,
+    maxY: 0,
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      // Lower threshold (3px) so tracking latches almost immediately — the
+      // earlier 6px dead zone was part of what felt stiff.
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 3 || Math.abs(g.dy) > 3,
+      onPanResponderGrant: () => {
+        pan.setOffset(panOffset.current);
+        pan.setValue({ x: 0, y: 0 });
+      },
+      // JS driver: the window it's attached to animates layout props (its
+      // size) on the JS driver during expand/collapse, so the drag must
+      // match to share the same view. The fluid feel comes from the natural
+      // spring physics on release (below) and the low latch threshold, not
+      // from the driver.
+      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
+      onPanResponderRelease: (_e, g) => {
+        pan.flattenOffset();
+        // Fast horizontal fling, or dragged well off either edge → dismiss.
+        if (Math.abs(g.vx) > 0.8 || Math.abs(g.dx) > width * 0.35) {
+          Animated.timing(pan, {
+            toValue: { x: g.dx > 0 ? width : -width, y: panOffset.current.y + g.dy },
+            duration: 200,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+          }).start(() => closeRef.current());
+          return;
+        }
+        // Otherwise glide to a settle. A natural low-tension/high-friction
+        // spring carries the release velocity so it eases in rather than
+        // snapping — the "smooth momentum" that makes it feel effortless.
+        const nx = clamp(panOffset.current.x + g.dx, -miniRestX, dragBounds.current.maxX);
+        const ny = clamp(panOffset.current.y + g.dy, -(miniRestY - insets.top - 8), TAB_BAR_HEIGHT + miniH);
+        panOffset.current = { x: nx, y: ny };
+        Animated.spring(pan, {
+          toValue: { x: nx, y: ny },
+          useNativeDriver: false,
+          tension: 60,
+          friction: 12,
+          velocity: Math.max(Math.abs(g.vx), Math.abs(g.vy)),
+        }).start();
+      },
+    })
+  ).current;
+
+  useEffect(() => { if (!message) return; restoredRef.current = false; setReady(false); setEnded(false); setPlaying(true); }, [message?.id]);
+
   useEffect(() => {
     if (!expanded) return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      collapse();
-      return true;
-    });
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { collapse(); return true; });
     return () => sub.remove();
   }, [expanded, collapse]);
 
@@ -115,71 +181,68 @@ export function PlayerHost() {
       if (!playerRef.current || !ready) return;
       try {
         const current = await playerRef.current.getCurrentTime();
-        if (typeof current === 'number' && current > 0) {
-          savePosition(message.id, current, durationSeconds);
-        }
-      } catch {
-        // ignore teardown races
-      }
+        if (typeof current === 'number' && current > 0) savePosition(message.id, current, durationSeconds);
+      } catch { /* ignore teardown races */ }
     };
     if (playing) saveTimer.current = setInterval(persist, SAVE_INTERVAL_MS);
-    return () => {
-      if (saveTimer.current) clearInterval(saveTimer.current);
-      persist();
-    };
+    return () => { if (saveTimer.current) clearInterval(saveTimer.current); persist(); };
   }, [playing, ready, message?.id, durationSeconds, mode]);
 
   const onChangeState = useCallback((state: string) => {
-    if (state === 'ended') {
-      setEnded(true);
-      setPlaying(false);
-    } else if (state === 'playing') {
-      setEnded(false);
-      setPlaying(true);
-    } else if (state === 'paused') {
-      setPlaying(false);
-    }
+    if (state === 'ended') { setEnded(true); setPlaying(false); }
+    else if (state === 'playing') { setEnded(false); setPlaying(true); }
+    else if (state === 'paused') setPlaying(false);
   }, []);
 
-  const relatedSections = useMemo(
-    () => (message ? buildRelatedSections(message, messages) : []),
-    [message?.id, messages]
-  );
+  const onShare = useCallback(async () => {
+    if (!message) return;
+    const url = message.videoId && !message.videoId.startsWith('REPLACE_ME') ? `https://youtu.be/${message.videoId}` : undefined;
+    try { await Share.share({ message: url ? `${message.title}\n${url}` : message.title, ...(url ? { url } : {}) }); }
+    catch { /* dismissed */ }
+  }, [message?.id]);
+
+  const relatedSections = useMemo(() => (message ? buildRelatedSections(message, messages) : []), [message?.id, messages]);
   const upNext = relatedSections[0]?.items[0] ?? null;
 
   if (!hasActive || !message) return null;
 
-  // ---- Interpolations from the single driver ----
-  const fullVideoHeight = (width * 9) / 16;
-  const miniVideoWidth = 104;
+  // ---- Morph interpolations ----
+  // The video box goes from the floating mini rect (collapsed) to the full-
+  // width 16:9 below the header (expanded). Position is driven by t AND, when
+  // collapsed, offset by the free-drag pan value.
+  const videoLeft = t.interpolate({ inputRange: [0, 1], outputRange: [miniRestX, 0] });
+  const videoTop = t.interpolate({ inputRange: [0, 1], outputRange: [miniRestY, headerHeight] });
+  const videoW = t.interpolate({ inputRange: [0, 1], outputRange: [miniW, width] });
+  const videoH = t.interpolate({ inputRange: [0, 1], outputRange: [miniH, fullVideoHeight] });
+  // The YouTube surface is always laid out at full width (that's the only
+  // width the iframe renders crisply at), so to make it FIT the smaller
+  // collapsed window we scale it down uniformly rather than clip it — the
+  // bug before was a full-size frame clipped to a small box, showing only a
+  // corner. Both mini and full are 16:9, so a single uniform scale
+  // (miniW/width → 1) shows the whole frame at every size. transformOrigin
+  // is top-left (default for RN scale is center, so we translate to keep the
+  // scaled top-left pinned to the window's top-left).
+  const videoScale = t.interpolate({ inputRange: [0, 1], outputRange: [miniW / width, 1] });
+  const videoScaleTX = t.interpolate({ inputRange: [0, 1], outputRange: [-(width - miniW) / 2, 0] });
+  const videoScaleTY = t.interpolate({ inputRange: [0, 1], outputRange: [-(fullVideoHeight - miniH) / 2, 0] });
+  const videoRadius = t.interpolate({ inputRange: [0, 1], outputRange: [theme.radius.md, 0] });
+  // Drag only applies while collapsed; scale it out as we expand so a stray
+  // offset can't shove the expanded video off-screen.
+  const dragFactor = t.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+  const panX = Animated.multiply(pan.x, dragFactor);
+  const panY = Animated.multiply(pan.y, dragFactor);
 
-  // The sheet fills the screen when expanded, shrinks to the mini-bar when
-  // collapsed. Animating top + height (JS driver) so the whole player slab
-  // physically resizes.
-  const sheetTop = t.interpolate({
-    inputRange: [0, 1],
-    outputRange: [height - TAB_BAR_HEIGHT - MINI_HEIGHT, 0],
-  });
-  const sheetHeight = t.interpolate({
-    inputRange: [0, 1],
-    outputRange: [MINI_HEIGHT, height],
-  });
-  const videoWidth = t.interpolate({ inputRange: [0, 1], outputRange: [miniVideoWidth, width] });
-  const videoHeight = t.interpolate({ inputRange: [0, 1], outputRange: [MINI_HEIGHT, fullVideoHeight] });
-  const detailsOpacity = t.interpolate({ inputRange: [0.6, 1], outputRange: [0, 1], extrapolate: 'clamp' });
-  const miniOpacity = t.interpolate({ inputRange: [0, 0.35], outputRange: [1, 0], extrapolate: 'clamp' });
+  const detailsOpacity = t.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' });
   const headerOpacity = detailsOpacity;
+  const miniChromeOpacity = t.interpolate({ inputRange: [0, 0.25], outputRange: [1, 0], extrapolate: 'clamp' });
+  // Dim/hide the full black backdrop when collapsed so only the floating
+  // window shows (no full-screen black behind the app).
+  const backdropOpacity = t.interpolate({ inputRange: [0, 0.02, 1], outputRange: [0, 1, 1], extrapolate: 'clamp' });
 
-  // The live YouTube surface. Rendered ONCE here and shared by both layouts
-  // via absolute positioning + animated size — this is what preserves
-  // playback across expand/collapse. Sits at the top-left of the sheet in
-  // both states (full width when expanded, mini thumbnail when collapsed).
-  const playerSurface = (
-    <Animated.View style={[styles.videoSlot, { width: videoWidth, height: videoHeight }]}>
+  const videoElement = (
+    <View style={{ width, height: fullVideoHeight }}>
       {isAudioMode ? (
-        <View style={styles.audioStage}>
-          <Ionicons name="headset" size={expanded ? 48 : 22} color={theme.colors.white} />
-        </View>
+        <View style={styles.audioStage}><Ionicons name="headset" size={expanded ? 48 : 20} color={theme.colors.white} /></View>
       ) : canPlayVideo ? (
         <YoutubePlayer
           ref={playerRef}
@@ -194,90 +257,73 @@ export function PlayerHost() {
         />
       ) : (
         <View style={styles.unavailableStage}>
-          <Ionicons name="videocam-off-outline" size={expanded ? 36 : 20} color={theme.colors.grayIcon} />
+          <Ionicons name="videocam-off-outline" size={expanded ? 36 : 18} color={theme.colors.grayIcon} />
           {expanded && <Text style={styles.unavailableText}>Video not available for this item yet.</Text>}
         </View>
       )}
-      {!ready && canPlayVideo && !isAudioMode && (
-        <View style={styles.loaderOverlay} pointerEvents="none">
-          <ActivityIndicator color={theme.colors.white} />
-        </View>
-      )}
-    </Animated.View>
+    </View>
   );
 
   return (
-    <Animated.View
-      style={[styles.sheet, { top: sheetTop, height: sheetHeight }]}
-      pointerEvents="box-none"
-    >
-      {/* EXPANDED header — fades in only near the top of the expansion. */}
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {/* Full black backdrop — only visible when expanded, tap-through when
+          collapsed so the app stays usable behind the floating window. */}
       <Animated.View
-        style={[styles.header, { opacity: headerOpacity, paddingTop: insets.top }]}
+        style={[styles.backdrop, { opacity: backdropOpacity }]}
+        pointerEvents={expanded ? 'auto' : 'none'}
+      />
+
+      {/* EXPANDED header. */}
+      <Animated.View
+        style={[styles.header, { opacity: headerOpacity, paddingTop: insets.top, height: headerHeight }]}
         pointerEvents={expanded ? 'auto' : 'none'}
       >
         <Pressable onPress={collapse} hitSlop={12} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Minimize player">
-          <Ionicons name="chevron-down" size={26} color={theme.colors.white} />
+          <Ionicons name="chevron-down" size={24} color={theme.colors.white} />
         </Pressable>
-        <Text style={styles.headerLabel}>Now Playing</Text>
-        <View style={styles.iconBtn} />
+        <Text style={styles.headerLabel} numberOfLines={1}>
+          {message.series ? message.series : message.type === 'service' ? 'Service' : 'Message'}
+        </Text>
+        <Pressable onPress={onShare} hitSlop={12} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Share this message">
+          <Ionicons name="share-outline" size={20} color={theme.colors.white} />
+        </Pressable>
       </Animated.View>
 
-      {/* The shared live player surface. */}
-      <View style={styles.stageRow}>
-        {/* When collapsed, the whole mini-bar (thumbnail + text + controls)
-            is one tap target that expands the player. When expanded, the
-            video area is just the video. */}
-        {expanded ? (
-          playerSurface
-        ) : (
-          <Pressable style={styles.miniRow} onPress={expand} accessibilityRole="button" accessibilityLabel={`Expand player: ${message.title}`}>
-            {playerSurface}
-            <Animated.View style={[styles.miniText, { opacity: miniOpacity }]}>
-              <Text style={styles.miniTitle} numberOfLines={1}>{message.title}</Text>
-              <Text style={styles.miniMeta} numberOfLines={1}>{message.speaker}</Text>
-            </Animated.View>
-            <Animated.View style={{ opacity: miniOpacity, flexDirection: 'row' }}>
-              <Pressable
-                onPress={() => setPlaying((p) => !p)}
-                hitSlop={10}
-                style={styles.miniBtn}
-                accessibilityRole="button"
-                accessibilityLabel={playing ? 'Pause' : 'Play'}
-              >
-                <Ionicons name={playing ? 'pause' : 'play'} size={20} color={theme.colors.navy} />
-              </Pressable>
-              <Pressable
-                onPress={close}
-                hitSlop={10}
-                style={styles.miniBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Close player"
-              >
-                <Ionicons name="close" size={20} color={theme.colors.graySecondary} />
-              </Pressable>
-            </Animated.View>
-          </Pressable>
-        )}
-      </View>
-
-      {/* EXPANDED details + related content — only interactive when expanded,
-          faded out during collapse so it doesn't flash behind the mini-bar. */}
-      <Animated.View style={[styles.detailsWrap, { opacity: detailsOpacity }]} pointerEvents={expanded ? 'auto' : 'none'}>
-        <ScrollView contentContainerStyle={styles.detailsContent} showsVerticalScrollIndicator={false}>
+      {/* EXPANDED details beneath the video. */}
+      <Animated.View
+        style={[styles.detailsWrap, { top: headerHeight + fullVideoHeight, bottom: 0, opacity: detailsOpacity }]}
+        pointerEvents={expanded ? 'auto' : 'none'}
+      >
+        <ScrollView contentContainerStyle={[styles.detailsContent, { paddingBottom: insets.bottom + theme.spacing.xxxl }]} showsVerticalScrollIndicator={false}>
           <FadeInUp>
             <Text style={styles.title}>{message.title}</Text>
-            <Text style={styles.metaText}>
-              {message.speaker}
-              {message.series ? ` · ${message.series}` : ''}
-              {` · ${shortDate(message.publishedAt)}`}
-            </Text>
+            <View style={styles.metaChips}>
+              <MetaChip icon="person-circle-outline" label={message.speaker} />
+              <MetaChip icon="calendar-outline" label={shortDate(message.publishedAt)} />
+              {message.duration ? <MetaChip icon="time-outline" label={message.duration} /> : null}
+            </View>
           </FadeInUp>
+
+          <View style={styles.actionsRow}>
+            <ActionButton icon="share-outline" label="Share" onPress={onShare} />
+            <ActionButton icon="bookmark-outline" label="Save" onPress={() => {}} disabled />
+            <ActionButton icon="download-outline" label="Download" onPress={() => {}} disabled />
+          </View>
 
           {hasAudio(message) && hasVideo(message) && (
             <View style={styles.modeRow}>
               <ModeChip label="Video" icon="videocam" active={mode === 'video'} onPress={() => setMode('video')} />
               <ModeChip label="Audio" icon="headset" active={mode === 'audio'} onPress={() => setMode('audio')} />
+            </View>
+          )}
+
+          {message.series && (
+            <View style={styles.seriesCard}>
+              <Ionicons name="albums" size={18} color={theme.colors.pink} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.seriesCardLabel}>Part of a series</Text>
+                <Text style={styles.seriesCardName} numberOfLines={1}>{message.series}</Text>
+              </View>
             </View>
           )}
 
@@ -300,7 +346,77 @@ export function PlayerHost() {
           ))}
         </ScrollView>
       </Animated.View>
-    </Animated.View>
+
+      {/* THE SHARED VIDEO WINDOW. Absolutely positioned; morphs between the
+          floating mini rect and the full-width expanded video. When
+          collapsed it also carries the free-drag pan offset, a tap-to-expand
+          layer, and a small close button. */}
+      <Animated.View
+        style={[
+          styles.videoWindow,
+          {
+            left: videoLeft,
+            top: videoTop,
+            width: videoW,
+            height: videoH,
+            borderRadius: videoRadius,
+            transform: [{ translateX: panX }, { translateY: panY }],
+          },
+          !expanded && styles.videoWindowFloating,
+        ]}
+        pointerEvents="box-none"
+        renderToHardwareTextureAndroid
+        shouldRasterizeIOS
+        {...(!expanded ? panResponder.panHandlers : {})}
+      >
+        <Animated.View
+          style={{
+            width,
+            height: fullVideoHeight,
+            transform: [
+              { translateX: videoScaleTX },
+              { translateY: videoScaleTY },
+              { scale: videoScale },
+            ],
+          }}
+          pointerEvents={expanded ? 'auto' : 'none'}
+        >
+          {videoElement}
+        </Animated.View>
+
+        {/* Collapsed-only chrome: a tap layer to expand + a close button.
+            Fades out as the window grows so it never lingers over the
+            expanded video. When expanded, pointerEvents none so the real
+            YouTube controls are usable. */}
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { opacity: miniChromeOpacity }]}
+          pointerEvents={expanded ? 'none' : 'box-none'}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => expandRef.current()} accessibilityRole="button" accessibilityLabel={`Expand player: ${message.title}`} />
+          <Pressable onPress={close} hitSlop={8} style={styles.miniClose} accessibilityRole="button" accessibilityLabel="Close player">
+            <Ionicons name="close" size={16} color={theme.colors.white} />
+          </Pressable>
+        </Animated.View>
+      </Animated.View>
+    </View>
+  );
+}
+
+function MetaChip({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  return (
+    <View style={styles.metaChip}>
+      <Ionicons name={icon} size={13} color={theme.colors.graySecondary} />
+      <Text style={styles.metaChipText} numberOfLines={1}>{label}</Text>
+    </View>
+  );
+}
+
+function ActionButton({ icon, label, onPress, disabled }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; disabled?: boolean }) {
+  return (
+    <PressableScale onPress={onPress} disabled={disabled} style={[styles.actionBtn, disabled && styles.actionBtnDisabled]} accessibilityRole="button" accessibilityLabel={label}>
+      <Ionicons name={icon} size={20} color={disabled ? theme.colors.grayIcon : theme.colors.navy} />
+      <Text style={[styles.actionLabel, disabled && { color: theme.colors.grayIcon }]}>{label}</Text>
+    </PressableScale>
   );
 }
 
@@ -318,9 +434,7 @@ function RelatedRow({ message, onPress }: { message: Message; onPress: () => voi
     <PressableScale style={styles.relatedRow} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Play ${message.title}, ${message.duration}`}>
       <View style={styles.relatedThumb}>
         <SmartImage uri={message.thumbnail} style={StyleSheet.absoluteFill} />
-        <View style={styles.relatedPlayBadge}>
-          <Ionicons name="play" size={12} color={theme.colors.white} style={{ marginLeft: 1 }} />
-        </View>
+        <View style={styles.relatedPlayBadge}><Ionicons name="play" size={12} color={theme.colors.white} style={{ marginLeft: 1 }} /></View>
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.relatedRowTitle} numberOfLines={2}>{message.title}</Text>
@@ -330,101 +444,54 @@ function RelatedRow({ message, onPress }: { message: Message; onPress: () => voi
   );
 }
 
+function clamp(v: number, min: number, max: number) { return Math.max(min, Math.min(max, v)); }
+
 const styles = StyleSheet.create({
-  sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.black,
-    zIndex: 100,
-    elevation: 20,
-    overflow: 'hidden',
-  },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: theme.colors.black, zIndex: 90 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'flex-end',
+    justifyContent: 'space-between', paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.black, zIndex: 95,
   },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerLabel: {
-    fontFamily: theme.fontFamily.bodySemibold,
-    fontSize: theme.fontSize.caption,
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    flex: 1, textAlign: 'center', marginHorizontal: theme.spacing.sm, paddingBottom: theme.spacing.xs,
+    fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: 'rgba(255,255,255,0.75)',
+    letterSpacing: 0.5, textTransform: 'uppercase',
   },
-  stageRow: {
-    backgroundColor: theme.colors.black,
-  },
-  videoSlot: {
-    backgroundColor: theme.colors.black,
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
-  miniRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: MINI_HEIGHT,
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.grayBorder,
-  },
-  miniText: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.md,
-  },
-  miniTitle: {
-    fontFamily: theme.fontFamily.bodySemibold,
-    fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
-  },
-  miniMeta: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
-    marginTop: 1,
-  },
-  miniBtn: {
-    width: 44,
-    height: MINI_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  detailsWrap: { position: 'absolute', left: 0, right: 0, backgroundColor: theme.colors.bg, zIndex: 92 },
+  detailsContent: { padding: theme.spacing.xl },
+  title: { fontFamily: theme.fontFamily.display, fontSize: theme.fontSize.sectionHeading, color: theme.colors.navy, marginBottom: theme.spacing.md, lineHeight: 30 },
+  metaChips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.grayBorder, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: 6, maxWidth: '100%' },
+  metaChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, flexShrink: 1 },
+  actionsRow: { flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.xl },
+  actionBtn: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: theme.spacing.md, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.grayBorder, backgroundColor: theme.colors.surface },
+  actionBtnDisabled: { opacity: 0.55 },
+  actionLabel: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.navy },
   audioStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.navy },
-  unavailableStage: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xl },
+  unavailableStage: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xl, backgroundColor: theme.colors.black },
   unavailableText: { fontFamily: theme.fontFamily.body, color: theme.colors.grayIcon, textAlign: 'center', fontSize: theme.fontSize.body },
-  loaderOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  detailsWrap: {
-    flex: 1,
-    backgroundColor: theme.colors.bg,
-  },
-  detailsContent: { padding: theme.spacing.xl, paddingBottom: theme.spacing.xxxl * 2 },
-  title: { fontFamily: theme.fontFamily.display, fontSize: theme.fontSize.sectionHeading, color: theme.colors.navy, marginBottom: theme.spacing.sm },
-  metaText: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.body, color: theme.colors.graySecondary },
-  modeRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.lg },
-  modeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.lg, minHeight: 40, borderRadius: theme.radius.full,
-    borderWidth: 1, borderColor: theme.colors.grayBorder, backgroundColor: theme.colors.surface,
-  },
+  modeRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xl },
+  modeChip: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, paddingHorizontal: theme.spacing.lg, minHeight: 40, borderRadius: theme.radius.full, borderWidth: 1, borderColor: theme.colors.grayBorder, backgroundColor: theme.colors.surface },
   modeChipActive: { backgroundColor: theme.colors.navy, borderColor: theme.colors.navy },
   modeChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.slate },
   modeChipTextActive: { color: theme.colors.white },
-  upNext: {
-    marginTop: theme.spacing.xxl, padding: theme.spacing.lg, backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.grayBorder,
-  },
+  seriesCard: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginTop: theme.spacing.xl, padding: theme.spacing.lg, backgroundColor: '#FDF2F7', borderRadius: theme.radius.md, borderWidth: 1, borderColor: '#F8D6E6' },
+  seriesCardLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', color: theme.colors.pink },
+  seriesCardName: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.navy, marginTop: 2 },
+  upNext: { marginTop: theme.spacing.xxl, padding: theme.spacing.lg, backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.grayBorder },
   upNextLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: theme.fontSize.caption, color: theme.colors.pink, letterSpacing: 0.8, marginBottom: theme.spacing.md },
   relatedSection: { marginTop: theme.spacing.xxl, gap: theme.spacing.md },
   relatedTitle: { fontFamily: theme.fontFamily.display, fontSize: theme.fontSize.bodyLg, color: theme.colors.navy, marginBottom: theme.spacing.xs },
   relatedRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
   relatedThumb: { width: 128, height: 72, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
-  relatedPlayBadge: {
-    position: 'absolute', left: 6, bottom: 6, width: 24, height: 24, borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(10,22,33,0.6)', alignItems: 'center', justifyContent: 'center',
-  },
+  relatedPlayBadge: { position: 'absolute', left: 6, bottom: 6, width: 24, height: 24, borderRadius: theme.radius.full, backgroundColor: 'rgba(10,22,33,0.6)', alignItems: 'center', justifyContent: 'center' },
   relatedRowTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.navy, lineHeight: 18 },
   relatedRowMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, marginTop: 2 },
+  videoWindow: { position: 'absolute', backgroundColor: theme.colors.black, overflow: 'hidden', zIndex: 100 },
+  videoWindowFloating: {
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 12,
+  },
+  miniClose: { position: 'absolute', top: 5, right: 5, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(10,22,33,0.6)', alignItems: 'center', justifyContent: 'center' },
 });

@@ -29,13 +29,14 @@ import { View, Text, FlatList, SectionList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { seeAllStyles } from '../constants/styles/seeAll.styles';
+import { theme } from '../constants/theme';
 import { CardGrid } from '../components/ui/CardGrid';
 import { CollectionShell } from '../components/ui/CollectionShell';
 import { usePlayback } from '../providers/PlaybackProvider';
 import { MessageCard } from '../components/ui/MessageCard';
 import { ServiceRow } from '../components/ui/ServiceRow';
-import { GroupCard } from '../components/ui/GroupCard';
-import { PlaylistCircle } from '../components/ui/PlaylistCircle';
+import { SeriesListRow } from '../components/ui/SeriesListRow';
+import { PlaylistListRow } from '../components/ui/PlaylistListRow';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SkeletonGrid, SkeletonList } from '../components/ui/Skeletons';
 import { Message, getRecentlyAdded } from '../data/content';
@@ -43,7 +44,6 @@ import { useMessages } from '../hooks/useMessages';
 import { usePlaylists } from '../hooks/usePlaylists';
 import { classifyMessages, ContentGroup } from '../utils/contentGrouping';
 import {
-  chunk,
   groupByMonth,
   groupByRecency,
   isOngoing,
@@ -102,12 +102,12 @@ const listPerfProps = {
 
 const SERIES_PILLS = ['All', 'Ongoing', 'Completed', 'A-Z'];
 
-// One FlatList renders both the group headers and the 2-col rows, so the
-// whole thing stays virtualized (SectionList can't do numColumns, and
-// nesting FlatLists inside a ScrollView breaks virtualization entirely).
+// One FlatList renders both the group headers and the series rows, so the
+// whole thing stays virtualized. Rows are full-width now (SeriesListRow),
+// not 2-col tiles — see SeriesListRow for the rationale.
 type SeriesRow =
   | { kind: 'header'; key: string; label: string }
-  | { kind: 'row'; key: string; groups: ContentGroup[] };
+  | { kind: 'row'; key: string; group: ContentGroup };
 
 function SeriesCollection({ groups, loading, onOpenGroup }: {
   groups: ContentGroup[];
@@ -128,12 +128,12 @@ function SeriesCollection({ groups, loading, onOpenGroup }: {
       const sorted = pill === 'A-Z'
         ? [...visible].sort((a, b) => a.label.localeCompare(b.label))
         : visible;
-      return chunk(sorted, 2).map((pair, i) => ({ kind: 'row', key: `r${i}`, groups: pair }));
+      return sorted.map((g) => ({ kind: 'row', key: g.key, group: g }));
     }
     if (pill === 'Ongoing') visible = visible.filter(isOngoing);
     if (pill === 'Completed') visible = visible.filter((g) => !isOngoing(g));
     if (pill !== 'All') {
-      return chunk(visible, 2).map((pair, i) => ({ kind: 'row', key: `r${i}`, groups: pair }));
+      return visible.map((g) => ({ kind: 'row', key: g.key, group: g }));
     }
 
     const ongoing = visible.filter(isOngoing);
@@ -141,11 +141,11 @@ function SeriesCollection({ groups, loading, onOpenGroup }: {
     const out: SeriesRow[] = [];
     if (ongoing.length > 0) {
       out.push({ kind: 'header', key: 'h-ongoing', label: 'Ongoing' });
-      chunk(ongoing, 2).forEach((pair, i) => out.push({ kind: 'row', key: `ro${i}`, groups: pair }));
+      ongoing.forEach((g) => out.push({ kind: 'row', key: g.key, group: g }));
     }
     if (completed.length > 0) {
       out.push({ kind: 'header', key: 'h-completed', label: 'Completed' });
-      chunk(completed, 2).forEach((pair, i) => out.push({ kind: 'row', key: `rc${i}`, groups: pair }));
+      completed.forEach((g) => out.push({ kind: 'row', key: g.key, group: g }));
     }
     return out;
   }, [groups, query, pill]);
@@ -171,29 +171,24 @@ function SeriesCollection({ groups, loading, onOpenGroup }: {
           style={{ flex: 1 }}
           contentContainerStyle={seeAllStyles.listContent}
           {...listPerfProps}
-          renderItem={({ item }) =>
+          ItemSeparatorComponent={() => <View style={{ height: theme.spacing.md }} />}
+          renderItem={({ item, index }) =>
             item.kind === 'header' ? (
               <GroupHeader label={item.label} />
             ) : (
-              <View style={seeAllStyles.tileRow}>
-                {item.groups.map((g) => (
-                  <GroupCard
-                    key={g.key}
-                    title={g.label}
-                    subtitle={`${g.count} message${g.count === 1 ? '' : 's'}`}
-                    thumbnail={g.thumbnail}
-                    onPress={() => onOpenGroup(g.label)}
-                  />
-                ))}
-                {/* Odd final row: spacer keeps the lone tile at half width
-                    instead of stretching across the whole screen. */}
-                {item.groups.length === 1 && <View style={{ flex: 1 }} />}
-              </View>
+              <SeriesListRow
+                title={item.group.label}
+                count={item.group.count}
+                thumbnail={item.group.thumbnail}
+                isOngoing={isOngoing(item.group)}
+                index={rows.slice(0, index + 1).filter((r) => r.kind === 'row').length}
+                onPress={() => onOpenGroup(item.group.label)}
+              />
             )
           }
         />
       ) : loading ? (
-        <SkeletonGrid />
+        <SkeletonList rows={6} />
       ) : query || pill !== 'All' ? (
         <EmptyState
           icon="search"
@@ -317,10 +312,10 @@ function MessageListCollection({
 }
 
 // ---------------------------------------------------------------------------
-// Playlists — 3-col circle grid, no pills. Circles match how playlists
-// already render on the hub, and at the channel's current playlist count
-// a filter row would be UI weight with no problem behind it. Search stays
-// because it's the shell's constant.
+// Playlists — a vertical list of square-art rows (Spotify/Apple Music
+// style), replacing the circle grid. See PlaylistListRow for why: circles
+// read as people/stations, square-art rows read as collections, and the
+// list form gives titles and counts real room.
 // ---------------------------------------------------------------------------
 
 function PlaylistsCollection() {
@@ -346,13 +341,11 @@ function PlaylistsCollection() {
         <FlatList
           data={visible}
           keyExtractor={(p) => p.id}
-          numColumns={3}
           style={{ flex: 1 }}
-          columnWrapperStyle={seeAllStyles.circleRow}
           contentContainerStyle={seeAllStyles.listContent}
           {...listPerfProps}
           renderItem={({ item }) => (
-            <PlaylistCircle
+            <PlaylistListRow
               title={item.title}
               count={item.itemCount}
               thumbnail={item.thumbnail}
@@ -363,7 +356,7 @@ function PlaylistsCollection() {
           )}
         />
       ) : loading ? (
-        <SkeletonGrid tiles={6} />
+        <SkeletonList rows={6} />
       ) : query ? (
         <EmptyState
           icon="search"
