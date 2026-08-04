@@ -19,13 +19,14 @@
 //    screen; the choice persists and this screen re-reads it on focus.
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../constants/theme';
 import { TranslationCode, getSavedTranslation } from '../services/bibleVersions';
 import { getVersesForReference, Verse } from '../services/bibleApi';
+import { HIGHLIGHT_COLORS, colorValue, verseKey, getAllHighlights, setHighlight } from '../utils/highlights';
 import { compactReference } from '../utils/referenceParser';
 import { markReadingUnlocked, getDayByDate } from '../utils/biblePlan.utils';
 import { BibleQuickNav, QuickNavItem } from '../components/bible/BibleQuickNav';
@@ -47,6 +48,7 @@ const READING_LABELS: Record<string, string> = {
 };
 
 export default function ReadingScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{
     reference: string;
@@ -68,6 +70,31 @@ export default function ReadingScreen() {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  // verseKey -> colorId, loaded once and updated in place as the reader taps.
+  const [highlights, setHighlights] = useState<Record<string, string>>({});
+  // The verse whose color menu is open (null = menu closed).
+  const [activeVerse, setActiveVerse] = useState<Verse | null>(null);
+
+  // Load saved highlights once.
+  useEffect(() => {
+    getAllHighlights().then(setHighlights);
+  }, []);
+
+  // Apply (or clear) a color on the currently-selected verse, persist, and
+  // close the menu. Optimistically updates local state so the highlight
+  // appears instantly.
+  const applyHighlight = useCallback(async (colorId: string | null) => {
+    if (!activeVerse) return;
+    const key = verseKey(activeVerse.book, activeVerse.chapter, activeVerse.number);
+    setHighlights((prev) => {
+      const next = { ...prev };
+      if (colorId === null) delete next[key];
+      else next[key] = colorId;
+      return next;
+    });
+    setActiveVerse(null);
+    await setHighlight(key, colorId);
+  }, [activeVerse]);
   const [fontSize, setFontSize] = useState(17);
   const [navVisible, setNavVisible] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
@@ -286,7 +313,16 @@ export default function ReadingScreen() {
                       <View style={styles.chapterRule} />
                     </View>
                   )}
-                  <Text style={[styles.verse, { fontSize, lineHeight: fontSize * 1.7 }]}>
+                  <Text
+                    onPress={() => setActiveVerse(verse)}
+                    style={[
+                      styles.verse,
+                      { fontSize, lineHeight: fontSize * 1.7 },
+                      colorValue(highlights[verseKey(verse.book, verse.chapter, verse.number)]) != null && {
+                        backgroundColor: colorValue(highlights[verseKey(verse.book, verse.chapter, verse.number)]),
+                      },
+                    ]}
+                  >
                     <Text style={styles.verseNumber}>{verse.number} </Text>
                     {verse.text}
                   </Text>
@@ -304,6 +340,48 @@ export default function ReadingScreen() {
           visible={navVisible}
           onSelect={switchReading}
         />
+      )}
+
+      {/* Highlight color picker — a light bottom sheet that appears when a
+          verse is tapped. Pink and purple lead (brand + what was asked
+          for); the rest give choice. If the verse is already highlighted, a
+          Remove option clears it. */}
+      {activeVerse && (
+        <>
+          <Pressable style={styles.sheetScrim} onPress={() => setActiveVerse(null)} accessibilityLabel="Close highlight menu" />
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle} numberOfLines={1}>
+              {activeVerse.book ? `${activeVerse.book} ` : ''}
+              {activeVerse.chapter ? `${activeVerse.chapter}:` : ''}{activeVerse.number}
+            </Text>
+            <Text style={styles.sheetSub}>Highlight</Text>
+            <View style={styles.swatchRow}>
+              {HIGHLIGHT_COLORS.map((c) => {
+                const selected =
+                  highlights[verseKey(activeVerse.book, activeVerse.chapter, activeVerse.number)] === c.id;
+                return (
+                  <Pressable
+                    key={c.id}
+                    onPress={() => applyHighlight(c.id)}
+                    style={[styles.swatch, { backgroundColor: c.value }, selected && styles.swatchSelected]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Highlight ${c.label}`}
+                    accessibilityState={{ selected }}
+                  >
+                    {selected && <Ionicons name="checkmark" size={18} color={theme.colors.navy} />}
+                  </Pressable>
+                );
+              })}
+            </View>
+            {highlights[verseKey(activeVerse.book, activeVerse.chapter, activeVerse.number)] && (
+              <Pressable onPress={() => applyHighlight(null)} style={styles.removeBtn} accessibilityRole="button" accessibilityLabel="Remove highlight">
+                <Ionicons name="close-circle-outline" size={18} color={theme.colors.graySecondary} />
+                <Text style={styles.removeText}>Remove highlight</Text>
+              </Pressable>
+            )}
+          </View>
+        </>
       )}
     </SafeAreaView>
   );
@@ -424,6 +502,73 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.body,
     color: theme.colors.navy,
+  },
+  sheetScrim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(10,22,33,0.25)',
+  },
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.lg,
+    borderTopRightRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderColor: theme.colors.grayBorder,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.grayBorder,
+    marginBottom: theme.spacing.lg,
+  },
+  sheetTitle: {
+    fontFamily: theme.fontFamily.display,
+    fontSize: theme.fontSize.bodyLg,
+    color: theme.colors.navy,
+  },
+  sheetSub: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1,
+    color: theme.colors.grayIcon,
+    marginTop: 2,
+    marginBottom: theme.spacing.md,
+  },
+  swatchRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  swatch: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(10,22,33,0.08)',
+  },
+  swatchSelected: {
+    borderWidth: 2,
+    borderColor: theme.colors.navy,
+  },
+  removeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+    minHeight: 44,
+  },
+  removeText: {
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.graySecondary,
   },
   // Centered label between two hairlines — the classic book treatment for
   // a chapter break: unmistakable as a boundary, but quiet enough (small

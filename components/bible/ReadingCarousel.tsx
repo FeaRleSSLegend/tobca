@@ -3,6 +3,20 @@ import { View, Text, Pressable, StyleSheet, FlatList, Dimensions, NativeSyntheti
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import { Verse } from '../../services/bibleApi';
+import { PressableScale } from '../ui/motion';
+
+// Each reading type gets its own glyph so the four cards aren't visually
+// interchangeable — a small personality cue that helps the eye tell "which
+// reading is this" before reading the label.
+function iconFor(key: string): keyof typeof Ionicons.glyphMap {
+  switch (key) {
+    case 'oldTestament': return 'book-outline';
+    case 'newTestament': return 'sparkles-outline';
+    case 'psalm': return 'musical-notes-outline';
+    case 'proverb': return 'bulb-outline';
+    default: return 'book-outline';
+  }
+}
 
 export interface ReadingCarouselItem {
   key: string;
@@ -64,20 +78,27 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
         onMomentumScrollEnd={handleMomentumEnd}
         contentContainerStyle={{ paddingRight: CARD_PEEK }}
         renderItem={({ item }) => (
-          <Pressable
+          <PressableScale
             onPress={() => onPressCard(item)}
             style={[styles.card, { width: CARD_WIDTH, marginRight: CARD_GAP }]}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.label}, ${item.reference}. Tap to read.`}
           >
-            <Text style={styles.label}>{item.label.toUpperCase()}</Text>
+            <View style={styles.cardHead}>
+              <View style={styles.iconBadge}>
+                <Ionicons name={iconFor(item.key)} size={15} color={theme.colors.pink} />
+              </View>
+              <Text style={styles.label}>{item.label.toUpperCase()}</Text>
+            </View>
             <Text style={styles.reference}>{item.reference}</Text>
             <Text style={styles.preview} numberOfLines={4}>
               {previewText(item)}
             </Text>
             <View style={styles.footer}>
-              <Text style={styles.readMore}>Read</Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.colors.pink} />
+              <Text style={styles.readMore}>Read passage</Text>
+              <Ionicons name="arrow-forward" size={15} color={theme.colors.pink} />
             </View>
-          </Pressable>
+          </PressableScale>
         )}
       />
 
@@ -118,29 +139,44 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderWidth: theme.layout.cardBorderWidth,
     borderColor: theme.colors.grayBorder,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.lg,
-    minHeight: 190,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.xl,
+    minHeight: 210,
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  iconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: theme.radius.full,
+    backgroundColor: '#FDF2F7',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
     color: theme.colors.pink,
     letterSpacing: 0.8,
-    marginBottom: theme.spacing.xs,
   },
   reference: {
     fontFamily: theme.fontFamily.display,
-    fontSize: theme.fontSize.cardTitle,
-    fontWeight: '700',
+    fontSize: 20,
     color: theme.colors.navy,
     marginBottom: theme.spacing.sm,
   },
   preview: {
     flex: 1,
-    fontFamily: theme.fontFamily.body,
-    fontSize: theme.fontSize.body,
-    lineHeight: 20,
+    // Serif — mirrors the actual reader and the reference's scripture
+    // typography, so the preview reads like a taste of the passage rather
+    // than UI text.
+    fontFamily: theme.fontFamily.serif,
+    fontSize: 15,
+    lineHeight: 23,
     color: theme.colors.graySecondary,
   },
   footer: {

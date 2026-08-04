@@ -192,6 +192,7 @@ export default function PlanScreen() {
           isRead={isRead}
           canMarkAsRead={hasReadSomething}
           onMarkAsRead={handleMarkAsRead}
+          planProgress={percentage / 100}
         />
 
         <StreakSummary
