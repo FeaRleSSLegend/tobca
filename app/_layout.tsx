@@ -1,5 +1,5 @@
 // app/_layout.tsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlaybackProvider } from '../providers/PlaybackProvider';
@@ -25,10 +25,12 @@ import {
 
 // Keep the native splash screen visible until fonts finish loading —
 // prevents a flash of system-font text before the real fonts swap in.
-SplashScreen.preventAutoHideAsync();
+// preventAutoHideAsync can itself reject in some environments; swallow it
+// so a splash-API hiccup can never bubble up and wedge startup.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_500Medium,
     SpaceGrotesk_600SemiBold,
     SpaceGrotesk_700Bold,
@@ -41,15 +43,30 @@ export default function RootLayout() {
     Lora_600SemiBold,
   });
 
+  // A hard safety valve: never let the app sit on the splash for more than
+  // a few seconds waiting on fonts. In a fresh production build the Google
+  // font files have to load for the first time, and if any one of them
+  // stalls, `fontsLoaded` would otherwise never flip and the app would hang
+  // on the splash forever (which is exactly the failure this guards). After
+  // the timeout we proceed anyway — missing fonts fall back to the system
+  // font, a cosmetic issue; a frozen app is a fatal one.
+  const [timedOut, setTimedOut] = useState(false);
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
+    const t = setTimeout(() => setTimedOut(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
-  // Render nothing until fonts are ready — the native splash screen
-  // stays up covering this, so there's no visible blank frame.
-  if (!fontsLoaded) {
+  // Proceed as soon as fonts load, OR error, OR the timeout elapses.
+  const ready = fontsLoaded || !!fontError || timedOut;
+
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [ready]);
+
+  // The native splash stays up covering this until we're ready.
+  if (!ready) {
     return null;
   }
 
