@@ -1,4 +1,24 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls -S)",
+      "Bash(xargs -I{} sh -c 'echo \"$\\(wc -c < \"{}\"\\) {}\"')",
+      "Bash(adb devices *)",
+      "Bash(adb shell *)",
+      "Bash(npx expo *)",
+      "Bash(grep -vE \"^\\\\s*#|^\\\\s*$\" android/gradle.properties)",
+      "Bash(adb logcat *)",
+      "Bash(./gradlew assembleRelease -q)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(adb install *)",
+      "Bash(./gradlew assembleRelease --rerun-tasks -x lint -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease)",
+      "Bash(adb pull *)",
+      "Bash(adb exec-out *)",
+      "Bash(./gradlew assembleRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease)",
+      "Bash(python -c ' *)",
+      "Bash(echo \"clean=$?\")"
+    ]
+  },
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }
