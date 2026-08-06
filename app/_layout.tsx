@@ -27,9 +27,12 @@ import {
 // prevents a flash of system-font text before the real fonts swap in.
 // preventAutoHideAsync can itself reject in some environments; swallow it
 // so a splash-API hiccup can never bubble up and wedge startup.
+console.log('[BOOT] _layout module evaluating');
 SplashScreen.preventAutoHideAsync().catch(() => {});
+console.log('[BOOT] preventAutoHideAsync called');
 
 export default function RootLayout() {
+  console.log('[BOOT] RootLayout render start');
   const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_500Medium,
     SpaceGrotesk_600SemiBold,
@@ -42,6 +45,7 @@ export default function RootLayout() {
     Lora_400Regular_Italic,
     Lora_600SemiBold,
   });
+  console.log('[BOOT] useFonts returned', { fontsLoaded, fontError: !!fontError });
 
   // A hard safety valve: never let the app sit on the splash for more than
   // a few seconds waiting on fonts. In a fresh production build the Google
@@ -52,23 +56,34 @@ export default function RootLayout() {
   // font, a cosmetic issue; a frozen app is a fatal one.
   const [timedOut, setTimedOut] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setTimedOut(true), 4000);
+    console.log('[BOOT] timeout effect armed');
+    const t = setTimeout(() => {
+      console.log('[BOOT] 4s timeout fired');
+      setTimedOut(true);
+    }, 4000);
     return () => clearTimeout(t);
   }, []);
 
   // Proceed as soon as fonts load, OR error, OR the timeout elapses.
   const ready = fontsLoaded || !!fontError || timedOut;
+  console.log('[BOOT] ready =', ready);
 
   useEffect(() => {
     if (ready) {
-      SplashScreen.hideAsync().catch(() => {});
+      console.log('[BOOT] calling hideAsync');
+      SplashScreen.hideAsync()
+        .then(() => console.log('[BOOT] hideAsync resolved'))
+        .catch((e) => console.log('[BOOT] hideAsync rejected', e));
     }
   }, [ready]);
 
   // The native splash stays up covering this until we're ready.
   if (!ready) {
+    console.log('[BOOT] not ready yet, returning null');
     return null;
   }
+
+  console.log('[BOOT] rendering real tree');
 
   return (
     <SafeAreaProvider>
