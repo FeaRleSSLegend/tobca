@@ -37,7 +37,7 @@ export function parseReadingReference(reference: string): PassageSegment[] {
       const [, book, chapterStr, startStr, endStr] = fullMatch;
       const usfm = getUSFMCode(book);
       if (!usfm) {
-        console.warn(`[referenceParser] Unknown book "${book}" in "${reference}"`);
+        if (__DEV__) console.warn(`[referenceParser] Unknown book "${book}" in "${reference}"`);
         continue;
       }
       currentBook = book;
@@ -53,7 +53,7 @@ export function parseReadingReference(reference: string): PassageSegment[] {
       continue;
     }
 
-    console.warn(`[referenceParser] Could not parse part "${part}" in "${reference}"`);
+    if (__DEV__) console.warn(`[referenceParser] Could not parse part "${part}" in "${reference}"`);
   }
 
   return segments;

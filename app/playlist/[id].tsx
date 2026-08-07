@@ -7,7 +7,7 @@
 // other collection screen. It has its own identity: art-forward, built to
 // feel curated.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, ScrollView, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,11 @@ export default function PlaylistScreen() {
   const { id, title } = useLocalSearchParams<{ id: string; title?: string }>();
   const router = useRouter();
   const { play } = usePlayback();
+  const { height: screenHeight } = useWindowDimensions();
+  // Proportional, not the old fixed 300: a cinematic hero has to hold its
+  // share of the screen on a tall phone and still leave the list visible on a
+  // short one. Clamped so it can never eat the whole viewport.
+  const heroHeight = Math.max(320, Math.min(Math.round(screenHeight * 0.46), 440));
   const [items, setItems] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -79,7 +84,7 @@ export default function PlaylistScreen() {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: theme.spacing.xxxl * 2 }}>
         {/* MASTHEAD — large artwork with a scrim the title sits on. */}
-        <View style={styles.masthead}>
+        <View style={[styles.masthead, { height: heroHeight }]}>
           {cover ? (
             <SmartImage uri={cover} style={StyleSheet.absoluteFill} />
           ) : loading ? (
@@ -87,8 +92,21 @@ export default function PlaylistScreen() {
           ) : (
             <LinearGradient colors={theme.gradient.colors} start={theme.gradient.start} end={theme.gradient.end} style={StyleSheet.absoluteFill} />
           )}
+
+          {/* Two scrims rather than one. A single top-to-bottom ramp either
+              leaves the back button floating on bare artwork or washes out
+              the middle of the image to protect it. A short dark cap at the
+              top handles the button, and a separate weighted ramp handles the
+              title block — so the picture itself stays clean in between. */}
           <LinearGradient
-            colors={['rgba(10,22,33,0.15)', 'rgba(10,22,33,0.55)', 'rgba(10,22,33,0.95)']}
+            colors={['rgba(10,22,33,0.55)', 'rgba(10,22,33,0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.topScrim}
+          />
+          <LinearGradient
+            colors={['rgba(10,22,33,0)', 'rgba(10,22,33,0.6)', 'rgba(10,22,33,0.97)']}
+            locations={[0, 0.55, 1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -99,14 +117,16 @@ export default function PlaylistScreen() {
               <Ionicons name="chevron-back" size={24} color={theme.colors.white} />
             </Pressable>
 
-            <View style={styles.mastheadText}>
+            <FadeInUp style={styles.mastheadText}>
               <Text style={styles.kicker}>PLAYLIST</Text>
-              <Text style={styles.title} numberOfLines={3}>{title ?? 'Playlist'}</Text>
+              <Text style={styles.title} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {title ?? 'Playlist'}
+              </Text>
               <Text style={styles.subMeta}>
                 {loading ? 'Loading…' : `${items.length} message${items.length === 1 ? '' : 's'}`}
                 {!loading && totalMin >= 1 ? ` · ${Math.round(totalMin)} min` : ''}
               </Text>
-            </View>
+            </FadeInUp>
           </SafeAreaView>
         </View>
 
@@ -143,7 +163,7 @@ export default function PlaylistScreen() {
             Array.from({ length: 6 }).map((_, i) => (
               <View key={i} style={styles.trackRow}>
                 <Shimmer style={styles.trackNumSkeleton} width={24} />
-                <Shimmer style={styles.trackThumb} width={64} />
+                <Shimmer style={styles.trackThumb} width={76} />
                 <View style={{ flex: 1, gap: 6 }}>
                   <Shimmer style={{ height: 12, borderRadius: 4, width: '80%' }} width={220} />
                   <Shimmer style={{ height: 10, borderRadius: 4, width: '40%' }} width={110} />
@@ -157,14 +177,19 @@ export default function PlaylistScreen() {
           ) : (
             items.map((m, i) => (
               <FadeInUp key={m.id} delay={staggerDelay(i)}>
-                <PressableScale style={styles.trackRow} onPress={() => play(m)} accessibilityRole="button" accessibilityLabel={`Play ${m.title}`}>
+                <PressableScale style={styles.trackRow} onPress={() => play(m)} accessibilityRole="button" accessibilityLabel={`Play ${m.title}, ${m.duration}`}>
                   <Text style={styles.trackNum}>{i + 1}</Text>
                   <View style={styles.trackThumb}>
                     <SmartImage uri={m.thumbnail} style={StyleSheet.absoluteFill} />
+                    {m.duration ? (
+                      <View style={styles.trackDuration}>
+                        <Text style={styles.trackDurationText}>{m.duration}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.trackTitle} numberOfLines={2}>{m.title}</Text>
-                    <Text style={styles.trackMeta} numberOfLines={1}>{m.speaker} · {m.duration}</Text>
+                    <Text style={styles.trackMeta} numberOfLines={1}>{m.speaker}</Text>
                   </View>
                   <Ionicons name="play-circle" size={26} color={theme.colors.grayIcon} />
                 </PressableScale>
@@ -184,16 +209,19 @@ const ACTION_HEIGHT = 54;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
-  masthead: { height: 300, backgroundColor: theme.colors.navy, justifyContent: 'flex-end' },
+  masthead: { backgroundColor: theme.colors.navy, justifyContent: 'flex-end' },
   mastheadSafe: { flex: 1, justifyContent: 'space-between' },
+  topScrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
   backBtn: {
     width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
-    borderRadius: theme.radius.full, backgroundColor: 'rgba(0,0,0,0.25)', margin: theme.spacing.md,
+    borderRadius: theme.radius.full, backgroundColor: 'rgba(0,0,0,0.3)', margin: theme.spacing.md,
   },
-  mastheadText: { paddingHorizontal: theme.spacing.xl, paddingBottom: theme.spacing.xl },
-  kicker: { fontFamily: theme.fontFamily.bodyBold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.85)', marginBottom: 6 },
-  title: { fontFamily: theme.fontFamily.display, fontSize: 30, lineHeight: 34, color: theme.colors.white },
-  subMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.body, color: 'rgba(255,255,255,0.8)', marginTop: 8 },
+  mastheadText: { paddingHorizontal: theme.spacing.xl, paddingBottom: theme.spacing.xxl },
+  kicker: { fontFamily: theme.fontFamily.bodyBold, fontSize: 11, letterSpacing: 1.8, color: 'rgba(255,255,255,0.9)', marginBottom: 8 },
+  // Bigger and tighter than before: a cinematic title wants a line height
+  // close to its cap height so a three-line name still reads as one block.
+  title: { fontFamily: theme.fontFamily.display, fontSize: 36, lineHeight: 39, color: theme.colors.white, letterSpacing: -0.5 },
+  subMeta: { fontFamily: theme.fontFamily.bodyMedium, fontSize: theme.fontSize.bodyLg, color: 'rgba(255,255,255,0.75)', marginTop: 10 },
   // One control group: both buttons share ACTION_HEIGHT and the same full
   // radius, separated by a single spacing step, so they read as a matched
   // pair rather than two unrelated shapes that happen to sit side by side.
@@ -241,7 +269,13 @@ const styles = StyleSheet.create({
   trackRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingVertical: theme.spacing.sm },
   trackNum: { width: 22, textAlign: 'center', fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.grayIcon },
   trackNumSkeleton: { width: 22, height: 14, borderRadius: 4 },
-  trackThumb: { width: 64, height: 44, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
+  trackThumb: { width: 76, height: 44, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
+  trackDuration: {
+    position: 'absolute', right: 3, bottom: 3,
+    paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4,
+    backgroundColor: 'rgba(10,22,33,0.82)',
+  },
+  trackDurationText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 9, color: theme.colors.white, includeFontPadding: false },
   trackTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.navy, lineHeight: 18 },
   trackMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, marginTop: 2 },
 });

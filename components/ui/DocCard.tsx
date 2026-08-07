@@ -1,4 +1,5 @@
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
+import { PressableScale } from './motion';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
@@ -18,13 +19,13 @@ interface DocCardProps {
 // as "past" instead of "file."
 export const DocCard = ({ name, subtitle, icon = 'document-text-outline', onPress }: DocCardProps) => {
   return (
-    <Pressable style={styles.wrapper} onPress={onPress}>
+    <PressableScale style={styles.wrapper} onPress={onPress}>
       <View style={styles.icon}>
         <Ionicons name={icon} size={18} color={theme.colors.slate} />
       </View>
       <Text style={styles.name} numberOfLines={2}>{name}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
-    </Pressable>
+    </PressableScale>
   );
 };
 

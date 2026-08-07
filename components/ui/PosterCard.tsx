@@ -1,4 +1,5 @@
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
+import { PressableScale } from './motion';
 import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +14,7 @@ interface PosterCardProps {
 
 export const PosterCard = ({ title, subtitle, thumbnail, onPress }: PosterCardProps) => {
   return (
-    <Pressable style={styles.wrapper} onPress={onPress}>
+    <PressableScale style={styles.wrapper} onPress={onPress}>
       <View style={styles.thumb}>
         {thumbnail ? (
           <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
@@ -29,7 +30,7 @@ export const PosterCard = ({ title, subtitle, thumbnail, onPress }: PosterCardPr
       </View>
       <Text style={styles.title} numberOfLines={2}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
-    </Pressable>
+    </PressableScale>
   );
 };
 

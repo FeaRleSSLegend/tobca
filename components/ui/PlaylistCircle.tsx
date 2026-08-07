@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from './motion';
 import { SmartImage } from './SmartImage';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -14,7 +15,7 @@ interface PlaylistCircleProps {
 const CIRCLE_SIZE = 88;
 
 export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: PlaylistCircleProps) => (
-  <Pressable
+  <PressableScale
     onPress={onPress}
     style={styles.wrap}
     accessibilityRole="button"
@@ -31,7 +32,7 @@ export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: 
       {title}
     </Text>
     <Text style={styles.count}>{count} videos</Text>
-  </Pressable>
+  </PressableScale>
 ));
 
 const styles = StyleSheet.create({

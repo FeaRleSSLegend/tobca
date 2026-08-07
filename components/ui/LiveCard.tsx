@@ -1,4 +1,5 @@
-import { Text, View, Pressable } from 'react-native'
+import { Text, View } from 'react-native'
+import { PressableScale } from './motion'
 import { theme } from '../../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { liveStyles } from '../../constants/styles/live.styles';
@@ -57,7 +58,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCar
         </Text>
       </View>
 
-      <Pressable
+      <PressableScale
         style={liveStyles.primaryBtnWrapper}
         onPress={onWatch}
         disabled={!onWatch}
@@ -68,7 +69,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCar
           <Ionicons name="play" size={16} color={theme.colors.pink} style={{ marginLeft: 1 }} />
           <Text style={liveStyles.primaryBtnText}>Watch now</Text>
         </View>
-      </Pressable>
+      </PressableScale>
     </LinearGradient>
   ) : (
     <LinearGradient
@@ -92,7 +93,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCar
         </Text>
       </View>
 
-      <Pressable
+      <PressableScale
         style={liveStyles.primaryBtnWrapper}
         accessibilityRole="button"
         accessibilityLabel={`Add ${nextService.name} to calendar`}
@@ -103,7 +104,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCar
             Add to Calendar
           </Text>
         </View>
-      </Pressable>
+      </PressableScale>
     </LinearGradient>
   );
 };

@@ -31,6 +31,7 @@ import {
   Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -53,6 +54,7 @@ const MINI_MARGIN = 12;
 export function PlayerHost() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { activeMessage, mode, expanded, hasActive, play, setMode, expand, collapse, close } =
     usePlayback();
   const { messages } = useMessages();
@@ -64,19 +66,28 @@ export function PlayerHost() {
   const saveTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const restoredRef = useRef(false);
 
-  // ---- First-load recovery for the YouTube WebView ----
-  // The iframe player lives in a WebView, and mounting it in the very same
-  // commit that first reveals the player raced the WebView's own attach.
-  // YouTube answered that race with a "sign in to confirm" /
-  // ERR_BLOCKED_BY_RESPONSE page that only cleared when you left and came
-  // back — i.e. when the WebView got remounted into a settled tree. Two
-  // guards, in order:
-  //   1. ARM: hold the player back for one short beat after a message is
-  //      set, so the WebView attaches to a hierarchy that has stopped
-  //      moving instead of one mid-mount.
-  //   2. REMOUNT: if YouTube still errors, bump `playerKey` ONCE per
-  //      message. That's exactly the leave-and-return the user was doing by
-  //      hand, done automatically before they ever see the error page.
+  // ---- Load reliability for the YouTube WebView ----
+  // The real failure was NOT YouTube blocking us. By default
+  // react-native-youtube-iframe does not render its own HTML — it points the
+  // WebView at a page hosted on a third-party GitHub Pages site
+  // (lonelycpp.github.io/.../iframe_v2.html, see DEFAULT_BASE_URL in the
+  // package) and passes the player config as a query string. So every single
+  // playback depended on a host that has nothing to do with YouTube or us
+  // being reachable, and when it wasn't the WebView painted its own error
+  // page: "net::ERR_CONNECTION_REFUSED", error code -6.
+  //
+  // `useLocalHTML` makes the library inline that same player HTML instead, so
+  // the only network dependency left is YouTube's own iframe API. Paired with
+  // `baseUrlOverride`, which is what the library uses as the document's
+  // baseUrl in local mode — without it the page would be served from
+  // about:blank and YouTube rejects embeds with a null origin.
+  //
+  // Two guards remain behind that:
+  //   1. ARM: hold the player back one short beat after a message is set, so
+  //      the WebView attaches to a hierarchy that has stopped moving.
+  //   2. REMOUNT: if it still errors, bump `playerKey` once per message after
+  //      a longer pause — the automatic version of the leave-and-come-back
+  //      that used to be the only way out.
   const [playerKey, setPlayerKey] = useState(0);
   const [webViewArmed, setWebViewArmed] = useState(false);
   const recoveredRef = useRef(false);
@@ -182,12 +193,18 @@ export function PlayerHost() {
   useEffect(() => {
     if (!message) { setWebViewArmed(false); return; }
     setWebViewArmed(false);
-    const t = setTimeout(() => setWebViewArmed(true), 120);
+    // A retry waits longer than a first load: whatever made the first attempt
+    // fail (a half-open socket, a WebView still tearing down) needs more than
+    // a frame to clear, and an instant retry mostly just fails twice.
+    const t = setTimeout(() => setWebViewArmed(true), recoveredRef.current ? 450 : 120);
     return () => clearTimeout(t);
   }, [message?.id, playerKey]);
 
   const onPlayerError = useCallback((err: string) => {
-    console.warn('YouTube player error:', err);
+    // Dev-only, and never a warn: the library forwards an undefined payload
+    // for most failures, so this was logging "undefined" into the user's
+    // console twice per recovery while telling nobody anything.
+    if (__DEV__) console.log('[player] recovering from YouTube error:', err);
     // One automatic retry per message. A second failure is a real problem
     // (video removed, embedding disabled) and looping the remount would
     // just hide it behind an endless reload.
@@ -239,6 +256,15 @@ export function PlayerHost() {
     try { await Share.share({ message: url ? `${message.title}\n${url}` : message.title, ...(url ? { url } : {}) }); }
     catch { /* dismissed */ }
   }, [message?.id]);
+
+  // Opening the series collapses the player first. This host renders ABOVE
+  // the whole app, so pushing a route while expanded would navigate behind a
+  // full-screen player and look like the tap did nothing — the mini window
+  // keeps playback alive while the collection comes forward.
+  const openSeries = useCallback((series: string) => {
+    collapse();
+    router.push({ pathname: '/see-all', params: { filter: series, title: series } });
+  }, [collapse, router]);
 
   const relatedSections = useMemo(() => (message ? buildRelatedSections(message, messages) : []), [message?.id, messages]);
   const upNext = relatedSections[0]?.items[0] ?? null;
@@ -297,8 +323,36 @@ export function PlayerHost() {
             onReady={onReady}
             onError={onPlayerError}
             onChangeState={onChangeState}
+            // controls:true is deliberate and stays — YouTube's own transport
+            // (scrubber, play/pause, fullscreen) is the playback surface. Only
+            // the shell around it is ours.
             initialPlayerParams={{ controls: true, modestbranding: true, rel: false }}
-            webViewProps={{ allowsInlineMediaPlayback: true }}
+            // Inline the player HTML instead of fetching it from the
+            // package's GitHub Pages host — see the note by `playerKey`.
+            useLocalHTML
+            // Doubles as the document baseUrl in local mode, i.e. the origin
+            // the embed reports to YouTube. It must be a real https origin
+            // that is NOT youtube.com: the library's script never sets an
+            // explicit `origin` player var, so the IFrame API derives it from
+            // window.location, and an embed claiming to be hosted ON
+            // youtube.com is rejected as an invalid embed context — which is
+            // what produced "This video is unavailable, error 152" even though
+            // the Data API reports these videos as embeddable:true. The
+            // church's own domain is the honest origin to present; nothing is
+            // ever fetched from it, the HTML is local.
+            baseUrlOverride="https://theolivebrookchurch.org"
+            webViewProps={{
+              allowsInlineMediaPlayback: true,
+              mediaPlaybackRequiresUserAction: false,
+              // Hardware layer: without it the WebView can compose badly
+              // against the animated (JS-driven) container it lives in during
+              // the expand/collapse morph.
+              androidLayerType: 'hardware',
+              // Nothing in the embed should ever spawn a second window; left
+              // on, a stray target=_blank can hand the surface to a blank
+              // popup that looks exactly like a load failure.
+              setSupportMultipleWindows: false,
+            }}
           />
         ) : (
           <View style={styles.loadingStage}>
@@ -329,11 +383,16 @@ export function PlayerHost() {
         pointerEvents={expanded ? 'auto' : 'none'}
       >
         <Pressable onPress={collapse} hitSlop={12} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Minimize player">
-          <Ionicons name="chevron-down" size={24} color={theme.colors.white} />
+          <Ionicons name="chevron-down" size={26} color={theme.colors.white} />
         </Pressable>
-        <Text style={styles.headerLabel} numberOfLines={1}>
-          {message.series ? message.series : message.type === 'service' ? 'Service' : 'Message'}
-        </Text>
+        {/* Centre label sits in its own flexed box so it stays optically
+            centred regardless of the two icon buttons' widths — the previous
+            flex:1 Text was centred against the row, not the screen. */}
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerLabel} numberOfLines={1}>
+            {message.series ? message.series : message.type === 'service' ? 'Service' : 'Now Playing'}
+          </Text>
+        </View>
         <Pressable onPress={onShare} hitSlop={12} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Share this message">
           <Ionicons name="share-outline" size={20} color={theme.colors.white} />
         </Pressable>
@@ -345,7 +404,14 @@ export function PlayerHost() {
         pointerEvents={expanded ? 'auto' : 'none'}
       >
         <ScrollView contentContainerStyle={[styles.detailsContent, { paddingBottom: insets.bottom + theme.spacing.xxxl }]} showsVerticalScrollIndicator={false}>
+          {/* MASTHEAD — the title block. An eyebrow above the title gives the
+              page a top edge to start from instead of opening cold on a
+              wrapped sentence, and it's where the message's kind lives so the
+              title doesn't have to carry it. */}
           <FadeInUp>
+            <Text style={styles.eyebrow}>
+              {message.type === 'service' ? 'SERVICE' : message.series ? 'FROM THE SERIES' : 'MESSAGE'}
+            </Text>
             <Text style={styles.title}>{message.title}</Text>
             <View style={styles.metaChips}>
               <MetaChip icon="person-circle-outline" label={message.speaker} />
@@ -354,27 +420,46 @@ export function PlayerHost() {
             </View>
           </FadeInUp>
 
-          <View style={styles.actionsRow}>
-            <ActionButton icon="share-outline" label="Share" onPress={onShare} />
-            <ActionButton icon="bookmark-outline" label="Save" onPress={() => {}} disabled />
-            <ActionButton icon="download-outline" label="Download" onPress={() => {}} disabled />
-          </View>
+          {/* ACTIONS — Share is the only one that does anything today, so it
+              is the only one styled as live. Save and Download stay present
+              and clearly secondary rather than being hidden: removing them
+              would make the row look sparse, and greying them the same as a
+              broken control would make them look failed. */}
+          <FadeInUp delay={40}>
+            <View style={styles.actionsRow}>
+              <ActionButton icon="share-outline" label="Share" onPress={onShare} primary />
+              <ActionButton icon="bookmark-outline" label="Save" onPress={() => {}} disabled />
+              <ActionButton icon="download-outline" label="Download" onPress={() => {}} disabled />
+            </View>
+          </FadeInUp>
 
           {hasAudio(message) && hasVideo(message) && (
-            <View style={styles.modeRow}>
-              <ModeChip label="Video" icon="videocam" active={mode === 'video'} onPress={() => setMode('video')} />
-              <ModeChip label="Audio" icon="headset" active={mode === 'audio'} onPress={() => setMode('audio')} />
-            </View>
+            <FadeInUp delay={80}>
+              <View style={styles.modeRow}>
+                <ModeChip label="Video" icon="videocam" active={mode === 'video'} onPress={() => setMode('video')} />
+                <ModeChip label="Audio" icon="headset" active={mode === 'audio'} onPress={() => setMode('audio')} />
+              </View>
+            </FadeInUp>
           )}
 
           {message.series && (
-            <View style={styles.seriesCard}>
-              <Ionicons name="albums" size={18} color={theme.colors.pink} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.seriesCardLabel}>Part of a series</Text>
-                <Text style={styles.seriesCardName} numberOfLines={1}>{message.series}</Text>
-              </View>
-            </View>
+            <FadeInUp delay={80}>
+              <PressableScale
+                style={styles.seriesCard}
+                onPress={() => openSeries(message.series!)}
+                accessibilityRole="button"
+                accessibilityLabel={`See all of the series ${message.series}`}
+              >
+                <View style={styles.seriesIcon}>
+                  <Ionicons name="albums" size={17} color={theme.colors.pink} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.seriesCardLabel}>PART OF A SERIES</Text>
+                  <Text style={styles.seriesCardName} numberOfLines={1}>{message.series}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+              </PressableScale>
+            </FadeInUp>
           )}
 
           {ended && upNext && (
@@ -386,6 +471,10 @@ export function PlayerHost() {
 
           {relatedSections.map((section) => (
             <View key={section.key} style={styles.relatedSection}>
+              {/* A hairline above each section title does the work a big
+                  margin was doing before, at a fraction of the vertical
+                  budget — the list stays close to what it belongs to. */}
+              <View style={styles.rule} />
               <Text style={styles.relatedTitle}>{section.title}</Text>
               {section.items.map((m, i) => (
                 <FadeInUp key={m.id} delay={staggerDelay(i)}>
@@ -461,11 +550,39 @@ function MetaChip({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label
   );
 }
 
-function ActionButton({ icon, label, onPress, disabled }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; disabled?: boolean }) {
+// Three states in one control so the row stays visually even: `primary` is
+// the live action (filled), plain is available-but-secondary, `disabled` is
+// present-but-not-yet. Crucially the disabled pair keeps the same size and
+// shape as the live one — only their fill and content colour drop back — so
+// the row reads as one designed group rather than one button plus two
+// failures.
+function ActionButton({ icon, label, onPress, disabled, primary }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  primary?: boolean;
+}) {
+  const tint = disabled ? theme.colors.grayIcon : primary ? theme.colors.white : theme.colors.navy;
   return (
-    <PressableScale onPress={onPress} disabled={disabled} style={[styles.actionBtn, disabled && styles.actionBtnDisabled]} accessibilityRole="button" accessibilityLabel={label}>
-      <Ionicons name={icon} size={20} color={disabled ? theme.colors.grayIcon : theme.colors.navy} />
-      <Text style={[styles.actionLabel, disabled && { color: theme.colors.grayIcon }]}>{label}</Text>
+    <PressableScale
+      onPress={onPress}
+      disabled={disabled}
+      // containerStyle carries the flex. `style` lands on the inner animated
+      // view, so a flex:1 there never reached the element the row measures —
+      // every button collapsed to hug its icon and the labels spilled out
+      // past the pill. This is the row's actual layout owner.
+      containerStyle={styles.actionSlot}
+      style={[styles.actionBtn, primary && styles.actionBtnPrimary, disabled && styles.actionBtnDisabled]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
+      accessibilityHint={disabled ? 'Coming soon' : undefined}
+    >
+      <Ionicons name={icon} size={20} color={tint} />
+      {/* One line, always. "Download" is the widest label and the one that
+          was wrapping out of its box. */}
+      <Text style={[styles.actionLabel, { color: tint }]} numberOfLines={1}>{label}</Text>
     </PressableScale>
   );
 }
@@ -484,11 +601,20 @@ function RelatedRow({ message, onPress }: { message: Message; onPress: () => voi
     <PressableScale style={styles.relatedRow} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Play ${message.title}, ${message.duration}`}>
       <View style={styles.relatedThumb}>
         <SmartImage uri={message.thumbnail} style={StyleSheet.absoluteFill} />
-        <View style={styles.relatedPlayBadge}><Ionicons name="play" size={12} color={theme.colors.white} style={{ marginLeft: 1 }} /></View>
+        {/* Duration on the artwork, the way every video product does it —
+            it frees the meta line below to carry speaker and date instead of
+            spending its width restating the length. */}
+        {message.duration ? (
+          <View style={styles.relatedDuration}>
+            <Text style={styles.relatedDurationText}>{message.duration}</Text>
+          </View>
+        ) : null}
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.relatedRowTitle} numberOfLines={2}>{message.title}</Text>
-        <Text style={styles.relatedRowMeta} numberOfLines={1}>{message.speaker} · {message.duration}</Text>
+        <Text style={styles.relatedRowMeta} numberOfLines={1}>
+          {message.speaker} · {shortDate(message.publishedAt)}
+        </Text>
       </View>
     </PressableScale>
   );
@@ -504,21 +630,42 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.black, zIndex: 95,
   },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.spacing.sm },
   headerLabel: {
-    flex: 1, textAlign: 'center', marginHorizontal: theme.spacing.sm, paddingBottom: theme.spacing.xs,
-    fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: 'rgba(255,255,255,0.75)',
-    letterSpacing: 0.5, textTransform: 'uppercase',
+    textAlign: 'center',
+    fontFamily: theme.fontFamily.bodyBold, fontSize: 11, color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.4, textTransform: 'uppercase',
   },
-  detailsWrap: { position: 'absolute', left: 0, right: 0, backgroundColor: theme.colors.bg, zIndex: 92 },
-  detailsContent: { padding: theme.spacing.xl },
-  title: { fontFamily: theme.fontFamily.display, fontSize: theme.fontSize.sectionHeading, color: theme.colors.navy, marginBottom: theme.spacing.md, lineHeight: 30 },
+  // Rounded top edge over the black backdrop: the detail sheet reads as a
+  // surface the video sits on top of, rather than the page simply changing
+  // colour at the video's bottom edge.
+  detailsWrap: {
+    position: 'absolute', left: 0, right: 0, backgroundColor: theme.colors.bg, zIndex: 92,
+    borderTopLeftRadius: theme.radius.lg, borderTopRightRadius: theme.radius.lg, overflow: 'hidden',
+  },
+  detailsContent: { paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.xxl },
+  eyebrow: {
+    fontFamily: theme.fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.2,
+    color: theme.colors.pink, marginBottom: 6,
+  },
+  title: { fontFamily: theme.fontFamily.display, fontSize: 22, color: theme.colors.navy, marginBottom: theme.spacing.lg, lineHeight: 29 },
   metaChips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
-  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.grayBorder, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: 6, maxWidth: '100%' },
-  metaChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, flexShrink: 1 },
-  actionsRow: { flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.xl },
-  actionBtn: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: theme.spacing.md, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.grayBorder, backgroundColor: theme.colors.surface },
-  actionBtnDisabled: { opacity: 0.55 },
-  actionLabel: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.navy },
+  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.grayBorder, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, minHeight: 30, maxWidth: '100%' },
+  metaChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, flexShrink: 1, includeFontPadding: false },
+  actionsRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xl },
+  // The row's layout unit — one equal share each, on the Pressable itself.
+  actionSlot: { flex: 1 },
+  actionBtn: {
+    width: '100%', alignItems: 'center', justifyContent: 'center', gap: 6,
+    height: 64, borderRadius: theme.radius.md, paddingHorizontal: theme.spacing.xs,
+    borderWidth: 1, borderColor: theme.colors.grayBorder, backgroundColor: theme.colors.surface,
+  },
+  actionBtnPrimary: { backgroundColor: theme.colors.navy, borderColor: theme.colors.navy },
+  // Softer than the live buttons but still a real surface — a flat opacity
+  // drop on the whole control is what made these read as broken before.
+  actionBtnDisabled: { backgroundColor: theme.colors.bg, borderColor: theme.colors.grayBorder },
+  actionLabel: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 11, letterSpacing: 0.1, includeFontPadding: false },
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: theme.colors.grayBorder, marginBottom: theme.spacing.lg },
   audioStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.navy },
   unavailableStage: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xl, backgroundColor: theme.colors.black },
   loadingStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.black },
@@ -529,17 +676,26 @@ const styles = StyleSheet.create({
   modeChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.slate },
   modeChipTextActive: { color: theme.colors.white },
   seriesCard: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginTop: theme.spacing.xl, padding: theme.spacing.lg, backgroundColor: '#FDF2F7', borderRadius: theme.radius.md, borderWidth: 1, borderColor: '#F8D6E6' },
-  seriesCardLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', color: theme.colors.pink },
-  seriesCardName: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.navy, marginTop: 2 },
+  seriesIcon: {
+    width: 36, height: 36, borderRadius: theme.radius.full,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.white,
+  },
+  seriesCardLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, letterSpacing: 0.9, color: theme.colors.pink },
+  seriesCardName: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.bodyLg, color: theme.colors.navy, marginTop: 3 },
   upNext: { marginTop: theme.spacing.xxl, padding: theme.spacing.lg, backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.grayBorder },
-  upNextLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: theme.fontSize.caption, color: theme.colors.pink, letterSpacing: 0.8, marginBottom: theme.spacing.md },
-  relatedSection: { marginTop: theme.spacing.xxl, gap: theme.spacing.md },
-  relatedTitle: { fontFamily: theme.fontFamily.display, fontSize: theme.fontSize.bodyLg, color: theme.colors.navy, marginBottom: theme.spacing.xs },
+  upNextLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, color: theme.colors.pink, letterSpacing: 1.2, marginBottom: theme.spacing.md },
+  relatedSection: { marginTop: theme.spacing.xxl, gap: theme.spacing.lg },
+  relatedTitle: { fontFamily: theme.fontFamily.display, fontSize: theme.fontSize.sectionHeading, color: theme.colors.navy, marginBottom: theme.spacing.xs },
   relatedRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
-  relatedThumb: { width: 128, height: 72, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
-  relatedPlayBadge: { position: 'absolute', left: 6, bottom: 6, width: 24, height: 24, borderRadius: theme.radius.full, backgroundColor: 'rgba(10,22,33,0.6)', alignItems: 'center', justifyContent: 'center' },
-  relatedRowTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.navy, lineHeight: 18 },
-  relatedRowMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, marginTop: 2 },
+  relatedThumb: { width: 132, height: 74, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
+  relatedDuration: {
+    position: 'absolute', right: 5, bottom: 5,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
+    backgroundColor: 'rgba(10,22,33,0.82)',
+  },
+  relatedDurationText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 10, color: theme.colors.white, includeFontPadding: false },
+  relatedRowTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.bodyLg, color: theme.colors.navy, lineHeight: 19 },
+  relatedRowMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, marginTop: 3 },
   videoWindow: { position: 'absolute', backgroundColor: theme.colors.black, overflow: 'hidden', zIndex: 100 },
   videoWindowFloating: {
     shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 12,

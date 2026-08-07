@@ -30,6 +30,7 @@ import { HIGHLIGHT_COLORS, colorValue, verseKey, getAllHighlights, setHighlight 
 import { compactReference } from '../utils/referenceParser';
 import { markReadingUnlocked, markDayAsRead, getDayByDate } from '../utils/biblePlan.utils';
 import { BibleQuickNav, QuickNavItem } from '../components/bible/BibleQuickNav';
+import { PopIn } from '../components/ui/motion';
 
 const scrollKey = (date: string, readingKey: string) => `@bible_scroll_${date}_${readingKey}`;
 
@@ -386,7 +387,14 @@ export default function ReadingScreen() {
                     accessibilityLabel={`Highlight ${c.label}`}
                     accessibilityState={{ selected }}
                   >
-                    {selected && <Ionicons name="checkmark" size={18} color={theme.colors.navy} />}
+                    {/* The tick mounts the instant a colour is applied, so
+                        popping it in is the app confirming the highlight
+                        rather than the swatch just quietly redrawing. */}
+                    {selected && (
+                      <PopIn>
+                        <Ionicons name="checkmark" size={18} color={theme.colors.navy} />
+                      </PopIn>
+                    )}
                   </Pressable>
                 );
               })}

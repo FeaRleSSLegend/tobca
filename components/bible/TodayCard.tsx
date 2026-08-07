@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { theme } from '../../constants/theme';
-import { PressableScale } from '../ui/motion';
+import { PressableScale, PopIn } from '../ui/motion';
 
 interface TodayCardProps {
   day: number;
@@ -81,10 +81,12 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgre
           )}
         </>
       ) : (
-        <View style={styles.readBadge}>
+        // This badge only ever mounts at the moment the day is completed, so
+        // a mount pop IS the confirmation of the action — no trigger needed.
+        <PopIn style={styles.readBadge}>
           <Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />
           <Text style={styles.readBadgeText}>Completed for today</Text>
-        </View>
+        </PopIn>
       )}
     </View>
   );

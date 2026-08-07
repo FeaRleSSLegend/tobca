@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from './motion';
 import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,8 +25,10 @@ interface GroupCardProps {
  * one — same icon-per-meaning reasoning GridCard applies to its types.
  */
 export const GroupCard = React.memo(({ title, subtitle, thumbnail, onPress }: GroupCardProps) => (
-  <Pressable
-    style={styles.card}
+  <PressableScale
+    // containerStyle, not style: `card` is pure layout (flex: 1 for the
+    // 2-col grid) and has to land on the element the grid measures.
+    containerStyle={styles.card}
     onPress={onPress}
     accessibilityRole="button"
     accessibilityLabel={`${title}, ${subtitle}`}
@@ -49,7 +52,7 @@ export const GroupCard = React.memo(({ title, subtitle, thumbnail, onPress }: Gr
       {title}
     </Text>
     <Text style={styles.subtitle}>{subtitle}</Text>
-  </Pressable>
+  </PressableScale>
 ));
 
 const styles = StyleSheet.create({

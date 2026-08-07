@@ -16,7 +16,7 @@
 //     scale, an opacity fade. Per the brief, you should feel the polish
 //     without noticing the animation.
 
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
   Easing,
@@ -28,7 +28,7 @@ import {
 } from 'react-native';
 // From expo-router, not @react-navigation/native — SDK 56+ rejects a direct
 // react-navigation import at bundle time (expo-router re-exports the hook).
-import { useIsFocused } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 
 // ---------------------------------------------------------------------------
 // PressableScale — a Pressable that dips slightly when pressed. This is the
@@ -40,6 +40,13 @@ import { useIsFocused } from 'expo-router';
 interface PressableScaleProps extends PressableProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  // Layout style for the OUTER Pressable. `style` lands on the inner animated
+  // view — it has to, because that's the box being scaled, and putting the
+  // background and padding anywhere else would scale the content off its own
+  // backdrop. But that means layout a PARENT needs to see (`flex: 1` in a
+  // grid or a row) never reaches the element being measured, and the control
+  // silently collapses to hug its content. Pass that layout here instead.
+  containerStyle?: StyleProp<ViewStyle>;
   // How deep the press dips. 0.97 is the default (barely perceptible, the
   // iOS-ish amount); pass a smaller number for larger surfaces that can
   // afford a bit more travel.
@@ -49,6 +56,7 @@ interface PressableScaleProps extends PressableProps {
 export const PressableScale = ({
   children,
   style,
+  containerStyle,
   activeScale = 0.97,
   onPressIn,
   onPressOut,
@@ -80,6 +88,7 @@ export const PressableScale = ({
         animateTo(1, 12);
         onPressOut?.(e);
       }}
+      style={containerStyle}
       {...rest}
     >
       <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
@@ -136,6 +145,21 @@ export const FadeInUp = ({ children, style, delay = 0, offset = 8 }: FadeInUpPro
 // Wraps a tab screen's root. Runs on focus rather than mount because bottom
 // tabs keep screens mounted — without the focus trigger it would animate
 // once, the first time each tab was ever opened, and never again.
+//
+// WHY THE RESET HAPPENS ON FOCUS, NOT ON BLUR
+// The first version zeroed the value when the screen BLURRED, so the next
+// focus would have a "from" state to animate out of. Two things killed it:
+//   - react-native-screens detaches an inactive tab's native views. Writing
+//     to a native-driven node whose view has already been torn down means
+//     the reset can land nowhere, and the screen re-attaches sitting at 1 —
+//     the animation then runs 1→1 and nothing visibly happens.
+//   - it left the screen parked at opacity 0 whenever it wasn't focused, so
+//     any path that re-showed a screen WITHOUT firing focus would show a
+//     blank page.
+// Resetting at the top of the focus callback fixes both: the "from" state is
+// written to a node that is definitely attached, one instruction before the
+// animation that consumes it, and a blurred screen is always left fully
+// opaque so the worst case is no animation rather than an empty screen.
 // ---------------------------------------------------------------------------
 
 interface TabTransitionProps {
@@ -144,25 +168,26 @@ interface TabTransitionProps {
 }
 
 export const TabTransition = ({ children, style }: TabTransitionProps) => {
-  const isFocused = useIsFocused();
   const progress = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    if (!isFocused) {
-      // Reset while off-screen so the next focus animates from the start
-      // instead of snapping in already-settled.
+  useFocusEffect(
+    useCallback(() => {
       progress.setValue(0);
-      return;
-    }
-    const anim = Animated.timing(progress, {
-      toValue: 1,
-      duration: 170,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    });
-    anim.start();
-    return () => anim.stop();
-  }, [isFocused, progress]);
+      const anim = Animated.timing(progress, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      });
+      anim.start();
+      return () => {
+        anim.stop();
+        // Leave the screen visible on the way out. See the note above: a
+        // blurred screen parked at 0 is how this breaks badly.
+        progress.setValue(1);
+      };
+    }, [progress])
+  );
 
   // 0.96 → 1: enough to register as movement, small enough that text never
   // looks like it's being resized.
@@ -176,6 +201,48 @@ export const TabTransition = ({ children, style }: TabTransitionProps) => {
 };
 
 const styles_tabTransition: ViewStyle = { flex: 1 };
+
+// ---------------------------------------------------------------------------
+// PopIn — a confirmation. For the moment a piece of UI appears BECAUSE the
+// user just changed something: a reading flipping to complete, a highlight
+// landing on a verse. It overshoots and settles, which is the difference
+// between the app acknowledging an action and the app merely re-rendering.
+//
+// Deliberately mount-only. Every case this is for swaps one element for
+// another (button → completed badge, empty swatch → ticked swatch), so the
+// confirming element is newly mounted anyway and no trigger plumbing is
+// needed. Don't reach for it on things that mount during normal navigation —
+// that's what FadeInUp is for, and a pop on arrival reads as a twitch.
+// ---------------------------------------------------------------------------
+
+interface PopInProps {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}
+
+export const PopIn = ({ children, style }: PopInProps) => {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const anim = Animated.timing(progress, {
+      toValue: 1,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [progress]);
+
+  const scale = progress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.72, 1.1, 1] });
+  // Opacity finishes well before the scale does, so what you see is a settle
+  // rather than something still fading while it is already the right size.
+  const opacity = progress.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] });
+
+  return (
+    <Animated.View style={[style, { opacity, transform: [{ scale }] }]}>{children}</Animated.View>
+  );
+};
 
 // Stagger helper: FadeInUp whose delay is derived from a list index, capped
 // so a long list never makes the last item wait noticeably. Use for the

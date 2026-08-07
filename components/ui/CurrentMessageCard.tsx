@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from './motion';
 import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +22,7 @@ interface CurrentMessageProps {
 // meta, play button in the corner.
 export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
   return (
-    <Pressable
+    <PressableScale
       style={styles.card}
       onPress={onPress}
       accessibilityRole="button"
@@ -64,7 +65,7 @@ export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
           {message.speaker} · {message.duration}
         </Text>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
 

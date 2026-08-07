@@ -44,6 +44,10 @@ export const GridCard = React.memo(({
   return (
     <PressableScale
       onPress={onPress}
+      // The grid measures the Pressable, so its column share has to live
+      // here; `card` keeps the surface (background, border, radius) because
+      // that is the box being scaled on press.
+      containerStyle={styles.cardSlot}
       style={styles.card}
       accessibilityRole="button"
       accessibilityLabel={`${title}${speaker ? `, ${speaker}` : ''}, ${duration}`}
@@ -81,8 +85,11 @@ export const GridCard = React.memo(({
 });
 
 const styles = StyleSheet.create({
-  card: {
+  cardSlot: {
     flex: 1,
+  },
+  card: {
+    width: '100%',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.grayBorder,

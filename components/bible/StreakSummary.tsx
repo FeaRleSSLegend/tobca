@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from '../ui/motion';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
@@ -16,7 +17,7 @@ interface StreakSummaryProps {
 // good and tappable enough to dig into.
 export const StreakSummary = ({ streak, percentage, onPress }: StreakSummaryProps) => {
   return (
-    <Pressable onPress={onPress} style={styles.card}>
+    <PressableScale onPress={onPress} style={styles.card}>
       <View style={styles.flameWrap}>
         <Ionicons name="flame" size={20} color={theme.colors.pink} />
       </View>
@@ -41,7 +42,7 @@ export const StreakSummary = ({ streak, percentage, onPress }: StreakSummaryProp
       </View>
 
       <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
-    </Pressable>
+    </PressableScale>
   );
 };
 

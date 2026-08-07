@@ -13,7 +13,7 @@ import { GridCard } from '../../components/ui/GridCard';
 import { PlaylistCircle } from '../../components/ui/PlaylistCircle';
 import { getCurrentlyStreaming, getRecentlyAdded } from '../../data/content';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
-import { TabTransition } from '../../components/ui/motion';
+import { TabTransition, FadeInUp, staggerDelay } from '../../components/ui/motion';
 import { useMessages } from '../../hooks/useMessages';
 import { usePlaylists } from '../../hooks/usePlaylists';
 import { usePlayback } from '../../providers/PlaybackProvider';
@@ -93,14 +93,15 @@ export default function LibraryScreen() {
                     <>
                         <SectionLabel label="Series" onPress={() => openCollection('series', 'Series')} />
                         <HScroll>
-                            {series.slice(0, PREVIEW_COUNT).map((s) => (
-                                <PosterCard
-                                    key={s.key}
-                                    title={s.label}
-                                    subtitle={`${s.count} messages`}
-                                    thumbnail={s.thumbnail}
-                                    onPress={() => openGroup(s.label)}
-                                />
+                            {series.slice(0, PREVIEW_COUNT).map((s, i) => (
+                                <FadeInUp key={s.key} delay={staggerDelay(i)}>
+                                    <PosterCard
+                                        title={s.label}
+                                        subtitle={`${s.count} messages`}
+                                        thumbnail={s.thumbnail}
+                                        onPress={() => openGroup(s.label)}
+                                    />
+                                </FadeInUp>
                             ))}
                         </HScroll>
                     </>
@@ -110,14 +111,15 @@ export default function LibraryScreen() {
                     <>
                         <SectionLabel label="Services" onPress={() => openCollection('services', 'Services')} />
                         <HScroll>
-                            {recurringServices.slice(0, PREVIEW_COUNT).map((s) => (
-                                <PosterCard
-                                    key={s.key}
-                                    title={s.label}
-                                    subtitle={`${s.count} messages`}
-                                    thumbnail={s.thumbnail}
-                                    onPress={() => openGroup(s.label)}
-                                />
+                            {recurringServices.slice(0, PREVIEW_COUNT).map((s, i) => (
+                                <FadeInUp key={s.key} delay={staggerDelay(i)}>
+                                    <PosterCard
+                                        title={s.label}
+                                        subtitle={`${s.count} messages`}
+                                        thumbnail={s.thumbnail}
+                                        onPress={() => openGroup(s.label)}
+                                    />
+                                </FadeInUp>
                             ))}
                         </HScroll>
                     </>
@@ -127,14 +129,15 @@ export default function LibraryScreen() {
                     <>
                         <SectionLabel label="Playlists" onPress={() => openCollection('playlists', 'Playlists')} />
                         <HScroll>
-                            {playlists.slice(0, PREVIEW_COUNT).map((p) => (
-                                <PlaylistCircle
-                                    key={p.id}
-                                    title={p.title}
-                                    count={p.itemCount}
-                                    thumbnail={p.thumbnail}
-                                    onPress={() => router.push({ pathname: '/playlist/[id]', params: { id: p.id, title: p.title } })}
-                                />
+                            {playlists.slice(0, PREVIEW_COUNT).map((p, i) => (
+                                <FadeInUp key={p.id} delay={staggerDelay(i)}>
+                                    <PlaylistCircle
+                                        title={p.title}
+                                        count={p.itemCount}
+                                        thumbnail={p.thumbnail}
+                                        onPress={() => router.push({ pathname: '/playlist/[id]', params: { id: p.id, title: p.title } })}
+                                    />
+                                </FadeInUp>
                             ))}
                         </HScroll>
                     </>

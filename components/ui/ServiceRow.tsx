@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from './motion';
 import { Ionicons } from '@expo/vector-icons';
 import { SmartImage } from './SmartImage';
 import { theme } from '../../constants/theme';
@@ -31,7 +32,7 @@ export const ServiceRow = React.memo(({ message, serviceLabel, onPress }: Servic
   const fullDate = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       style={styles.row}
       accessibilityRole="button"
@@ -61,7 +62,7 @@ export const ServiceRow = React.memo(({ message, serviceLabel, onPress }: Servic
       </View>
 
       <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
-    </Pressable>
+    </PressableScale>
   );
 });
 

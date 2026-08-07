@@ -1,4 +1,5 @@
 import { View, Text, Pressable, StyleSheet, ImageBackground } from 'react-native';
+import { PressableScale } from './motion';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -16,7 +17,7 @@ interface VerseOfDayCardProps {
 // by comparison, not compete with it card-for-card.
 export const VerseOfDayCard = ({ reference, text, onPress, onShare }: VerseOfDayCardProps) => {
   return (
-    <Pressable onPress={onPress} style={styles.wrapper}>
+    <PressableScale onPress={onPress} style={styles.wrapper}>
       <ImageBackground
         source={require('../../assets/verse-of-day-bg.jpg')}
         style={styles.bg}
@@ -45,7 +46,7 @@ export const VerseOfDayCard = ({ reference, text, onPress, onShare }: VerseOfDay
           <Text style={styles.reference}>{reference}</Text>
         </View>
       </ImageBackground>
-    </Pressable>
+    </PressableScale>
   );
 };
 

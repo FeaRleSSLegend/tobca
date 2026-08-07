@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from './motion';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
@@ -18,7 +19,7 @@ export const ReadingCard = ({
   onPress 
 }: ReadingCardProps) => {
   return (
-    <Pressable onPress={onPress} style={styles.container}>
+    <PressableScale onPress={onPress} style={styles.container}>
       <View style={styles.leftContent}>
         <Text style={styles.eyebrow}>{date}</Text>
         <Text style={styles.verse} numberOfLines={2}>{verse}</Text>
@@ -31,7 +32,7 @@ export const ReadingCard = ({
         <Text style={styles.streakNum}>{streak}</Text>
         <Text style={styles.streakLabel}>DAY{'\n'}STREAK</Text>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
 
