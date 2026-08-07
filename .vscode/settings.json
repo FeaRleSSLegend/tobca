@@ -1,0 +1,12 @@
+{
+  // Use the workspace's TypeScript (6.0.3), not VS Code's bundled copy.
+  //
+  // expo/tsconfig.base.json — which this project extends — uses the
+  // "${configDir}" template variable in its `exclude` list, and that requires
+  // TypeScript >= 5.5. When the editor falls back to an older bundled version
+  // it does two visible things: it flags tsconfig.json itself as invalid, and
+  // it silently stops honouring `exclude`, so it starts type-checking
+  // node_modules/ and android/ and floods the Problems panel with errors that
+  // `npx tsc --noEmit` never reports.
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

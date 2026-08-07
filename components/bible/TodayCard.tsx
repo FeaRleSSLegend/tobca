@@ -68,7 +68,9 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgre
         // Same 50pt height as the button and badge it stands in for, so the
         // card doesn't resize when the real state arrives.
         <View style={styles.loadingSlot}>
-          <BrandLoader width={124} onDark />
+          {/* White, not brand pink/purple — the swooshes' own colours vanish
+              against this card's pink→purple gradient. */}
+          <BrandLoader width={132} tint={theme.colors.white} />
         </View>
       ) : !isRead ? (
         <>
