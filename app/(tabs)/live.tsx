@@ -11,7 +11,7 @@ import { ServicePill } from "../../components/ui/ServicePill";
 import { MessageCard } from "../../components/ui/MessageCard";
 import { VerseOfDayCard } from "../../components/ui/VerseOfDayCard";
 import { TodayReadingRow } from "../../components/ui/TodayReadingRow";
-import { FadeInUp, staggerDelay } from "../../components/ui/motion";
+import { FadeInUp, staggerDelay, TabTransition } from "../../components/ui/motion";
 import { ScreenWithWatermark } from "../../components/ui/ScreenWithWatermark";
 import { useLiveStatus } from "../../hooks/useLiveStatus";
 import { useMessages } from "../../hooks/useMessages";
@@ -71,6 +71,7 @@ export default function LiveScreen() {
   );
 
   return (
+    <TabTransition>
     <ScreenWithWatermark style={sharedStyles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header row: greeting + avatar */}
@@ -197,5 +198,6 @@ export default function LiveScreen() {
         </View>
       </ScrollView>
     </ScreenWithWatermark>
+    </TabTransition>
   );
 }

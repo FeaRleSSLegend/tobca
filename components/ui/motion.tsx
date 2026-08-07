@@ -26,6 +26,9 @@ import {
   StyleProp,
   View,
 } from 'react-native';
+// From expo-router, not @react-navigation/native — SDK 56+ rejects a direct
+// react-navigation import at bundle time (expo-router re-exports the hook).
+import { useIsFocused } from 'expo-router';
 
 // ---------------------------------------------------------------------------
 // PressableScale — a Pressable that dips slightly when pressed. This is the
@@ -53,26 +56,28 @@ export const PressableScale = ({
 }: PressableScaleProps) => {
   const scale = useRef(new Animated.Value(1)).current;
 
-  const animateTo = (to: number) =>
+  // The two halves of a press want different curves, which one shared spring
+  // couldn't give them. Going DOWN should be dead calm — any wobble on the
+  // way in feels like the surface is unstable under the finger. Coming BACK
+  // UP is the moment the tap is acknowledged, so it rebounds a little past
+  // rest before settling. That asymmetry is the whole difference between a
+  // control that feels alive and one that just changes size.
+  const animateTo = (to: number, bounciness: number) =>
     Animated.spring(scale, {
       toValue: to,
       useNativeDriver: true,
-      // Softer than a default spring: lower speed and a hair of give makes
-      // the press read as a gentle settle rather than a hard snap. This is
-      // the single most-felt interaction, so calibrating it toward "calm"
-      // sets the tone for how the whole app feels.
       speed: 20,
-      bounciness: 4,
+      bounciness,
     }).start();
 
   return (
     <Pressable
       onPressIn={(e) => {
-        animateTo(activeScale);
+        animateTo(activeScale, 0);
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        animateTo(1);
+        animateTo(1, 12);
         onPressOut?.(e);
       }}
       {...rest}
@@ -119,6 +124,58 @@ export const FadeInUp = ({ children, style, delay = 0, offset = 8 }: FadeInUpPro
     </Animated.View>
   );
 };
+
+// ---------------------------------------------------------------------------
+// TabTransition — the entrance for a bottom-tab screen. Bottom tabs swap
+// instantly by default, which reads as a hard cut; a small scale-up paired
+// with a fade gives the incoming screen a sense of arriving without costing
+// anyone time. Deliberately quicker than FadeInUp (170ms vs 340ms) and with
+// no travel: a tab switch is a jump between peers, not content settling into
+// place, so it should land almost before you notice it started.
+//
+// Wraps a tab screen's root. Runs on focus rather than mount because bottom
+// tabs keep screens mounted — without the focus trigger it would animate
+// once, the first time each tab was ever opened, and never again.
+// ---------------------------------------------------------------------------
+
+interface TabTransitionProps {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}
+
+export const TabTransition = ({ children, style }: TabTransitionProps) => {
+  const isFocused = useIsFocused();
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isFocused) {
+      // Reset while off-screen so the next focus animates from the start
+      // instead of snapping in already-settled.
+      progress.setValue(0);
+      return;
+    }
+    const anim = Animated.timing(progress, {
+      toValue: 1,
+      duration: 170,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [isFocused, progress]);
+
+  // 0.96 → 1: enough to register as movement, small enough that text never
+  // looks like it's being resized.
+  const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
+
+  return (
+    <Animated.View style={[styles_tabTransition, style, { opacity: progress, transform: [{ scale }] }]}>
+      {children}
+    </Animated.View>
+  );
+};
+
+const styles_tabTransition: ViewStyle = { flex: 1 };
 
 // Stagger helper: FadeInUp whose delay is derived from a list index, capped
 // so a long list never makes the last item wait noticeably. Use for the

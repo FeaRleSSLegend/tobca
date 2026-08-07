@@ -64,6 +64,23 @@ export function PlayerHost() {
   const saveTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const restoredRef = useRef(false);
 
+  // ---- First-load recovery for the YouTube WebView ----
+  // The iframe player lives in a WebView, and mounting it in the very same
+  // commit that first reveals the player raced the WebView's own attach.
+  // YouTube answered that race with a "sign in to confirm" /
+  // ERR_BLOCKED_BY_RESPONSE page that only cleared when you left and came
+  // back — i.e. when the WebView got remounted into a settled tree. Two
+  // guards, in order:
+  //   1. ARM: hold the player back for one short beat after a message is
+  //      set, so the WebView attaches to a hierarchy that has stopped
+  //      moving instead of one mid-mount.
+  //   2. REMOUNT: if YouTube still errors, bump `playerKey` ONCE per
+  //      message. That's exactly the leave-and-return the user was doing by
+  //      hand, done automatically before they ever see the error page.
+  const [playerKey, setPlayerKey] = useState(0);
+  const [webViewArmed, setWebViewArmed] = useState(false);
+  const recoveredRef = useRef(false);
+
   const closeRef = useRef(close);
   useEffect(() => { closeRef.current = close; }, [close]);
   const expandRef = useRef(expand);
@@ -157,7 +174,29 @@ export function PlayerHost() {
     })
   ).current;
 
-  useEffect(() => { if (!message) return; restoredRef.current = false; setReady(false); setEnded(false); setPlaying(true); }, [message?.id]);
+  useEffect(() => { if (!message) return; restoredRef.current = false; recoveredRef.current = false; setReady(false); setEnded(false); setPlaying(true); }, [message?.id]);
+
+  // Arms the WebView a beat after the message changes, and re-arms after a
+  // recovery remount (playerKey bump) so the new instance also gets a
+  // settled tree rather than being swapped in mid-teardown.
+  useEffect(() => {
+    if (!message) { setWebViewArmed(false); return; }
+    setWebViewArmed(false);
+    const t = setTimeout(() => setWebViewArmed(true), 120);
+    return () => clearTimeout(t);
+  }, [message?.id, playerKey]);
+
+  const onPlayerError = useCallback((err: string) => {
+    console.warn('YouTube player error:', err);
+    // One automatic retry per message. A second failure is a real problem
+    // (video removed, embedding disabled) and looping the remount would
+    // just hide it behind an endless reload.
+    if (recoveredRef.current) return;
+    recoveredRef.current = true;
+    restoredRef.current = false; // let the fresh instance restore position
+    setReady(false);
+    setPlayerKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
     if (!expanded) return;
@@ -244,17 +283,28 @@ export function PlayerHost() {
       {isAudioMode ? (
         <View style={styles.audioStage}><Ionicons name="headset" size={expanded ? 48 : 20} color={theme.colors.white} /></View>
       ) : canPlayVideo ? (
-        <YoutubePlayer
-          ref={playerRef}
-          height={fullVideoHeight}
-          width={width}
-          play={playing}
-          videoId={videoId}
-          onReady={onReady}
-          onChangeState={onChangeState}
-          initialPlayerParams={{ controls: true, modestbranding: true, rel: false }}
-          webViewProps={{ allowsInlineMediaPlayback: true }}
-        />
+        webViewArmed ? (
+          <YoutubePlayer
+            // videoId + recovery counter: changing either is a deliberate
+            // full remount of the WebView, which is the only reliable way
+            // to clear YouTube's blocked-response page.
+            key={`${videoId}:${playerKey}`}
+            ref={playerRef}
+            height={fullVideoHeight}
+            width={width}
+            play={playing}
+            videoId={videoId}
+            onReady={onReady}
+            onError={onPlayerError}
+            onChangeState={onChangeState}
+            initialPlayerParams={{ controls: true, modestbranding: true, rel: false }}
+            webViewProps={{ allowsInlineMediaPlayback: true }}
+          />
+        ) : (
+          <View style={styles.loadingStage}>
+            <ActivityIndicator color={theme.colors.white} />
+          </View>
+        )
       ) : (
         <View style={styles.unavailableStage}>
           <Ionicons name="videocam-off-outline" size={expanded ? 36 : 18} color={theme.colors.grayIcon} />
@@ -471,6 +521,7 @@ const styles = StyleSheet.create({
   actionLabel: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.navy },
   audioStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.navy },
   unavailableStage: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xl, backgroundColor: theme.colors.black },
+  loadingStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.black },
   unavailableText: { fontFamily: theme.fontFamily.body, color: theme.colors.grayIcon, textAlign: 'center', fontSize: theme.fontSize.body },
   modeRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xl },
   modeChip: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, paddingHorizontal: theme.spacing.lg, minHeight: 40, borderRadius: theme.radius.full, borderWidth: 1, borderColor: theme.colors.grayBorder, backgroundColor: theme.colors.surface },

@@ -13,6 +13,7 @@ import { GridCard } from '../../components/ui/GridCard';
 import { PlaylistCircle } from '../../components/ui/PlaylistCircle';
 import { getCurrentlyStreaming, getRecentlyAdded } from '../../data/content';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
+import { TabTransition } from '../../components/ui/motion';
 import { useMessages } from '../../hooks/useMessages';
 import { usePlaylists } from '../../hooks/usePlaylists';
 import { usePlayback } from '../../providers/PlaybackProvider';
@@ -67,6 +68,7 @@ export default function LibraryScreen() {
         router.push({ pathname: '/see-all', params: { filter: label, title: label } });
 
     return (
+        <TabTransition>
         <ScreenWithWatermark style={sharedStyles.container}>
             <View style={sharedStyles.headerRow}>
                 <Text style={{ fontSize: theme.fontSize.heroTitle, fontFamily: theme.fontFamily.display }}>
@@ -166,5 +168,6 @@ export default function LibraryScreen() {
                 <View style={{ height: theme.spacing.xxxl }} />
             </ScrollView>
         </ScreenWithWatermark>
+        </TabTransition>
     );
 }

@@ -117,10 +117,20 @@ export default function PlaylistScreen() {
             control group anchored to the masthead above. */}
         {!loading && !failed && items.length > 0 && (
           <View style={styles.actions}>
-            <PressableScale style={styles.playBtn} onPress={() => playFrom(items)} accessibilityRole="button" accessibilityLabel="Play playlist">
-              <Ionicons name="play" size={22} color={theme.colors.white} style={{ marginLeft: 1 }} />
-              <Text style={styles.playBtnText}>Play all</Text>
-            </PressableScale>
+            {/* PressableScale puts its `style` on the inner Animated.View,
+                not on the Pressable — so `flex: 1` on playBtn never reached
+                the element doing the measuring, and the button collapsed to
+                hug its content. This wrapper is what actually claims the
+                row's free width; the button then fills it. */}
+            <View style={styles.playBtnWrap}>
+              <PressableScale style={styles.playBtn} onPress={() => playFrom(items)} accessibilityRole="button" accessibilityLabel="Play playlist">
+                {/* The play glyph's bounding box carries empty space on its
+                    left, so it reads as off-centre next to the label unless
+                    nudged back a point. */}
+                <Ionicons name="play" size={20} color={theme.colors.white} style={styles.playBtnIcon} />
+                <Text style={styles.playBtnText}>Play all</Text>
+              </PressableScale>
+            </View>
             <PressableScale style={styles.shuffleBtn} onPress={shuffle} accessibilityRole="button" accessibilityLabel="Shuffle playlist">
               <Ionicons name="shuffle" size={20} color={theme.colors.navy} />
             </PressableScale>
@@ -167,6 +177,11 @@ export default function PlaylistScreen() {
   );
 }
 
+// Shared height for Play and Shuffle. A single constant is what guarantees
+// the two stay matched — the previous pair drifted because each carried its
+// own literal.
+const ACTION_HEIGHT = 54;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   masthead: { height: 300, backgroundColor: theme.colors.navy, justifyContent: 'flex-end' },
@@ -179,14 +194,46 @@ const styles = StyleSheet.create({
   kicker: { fontFamily: theme.fontFamily.bodyBold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.85)', marginBottom: 6 },
   title: { fontFamily: theme.fontFamily.display, fontSize: 30, lineHeight: 34, color: theme.colors.white },
   subMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.body, color: 'rgba(255,255,255,0.8)', marginTop: 8 },
+  // One control group: both buttons share ACTION_HEIGHT and the same full
+  // radius, separated by a single spacing step, so they read as a matched
+  // pair rather than two unrelated shapes that happen to sit side by side.
   actions: { flexDirection: 'row', gap: theme.spacing.md, paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.xl, alignItems: 'center' },
+  playBtnWrap: { flex: 1 },
   playBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: theme.colors.navy, borderRadius: theme.radius.full, height: 52,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    // Horizontal padding matters even on a full-width button: it's the floor
+    // that keeps icon and label off the pill's curved ends if the label ever
+    // grows (a longer word, a larger accessibility text size).
+    paddingHorizontal: theme.spacing.xl,
+    height: ACTION_HEIGHT,
+    backgroundColor: theme.colors.navy,
+    borderRadius: theme.radius.full,
+    // A soft lift in the button's own color — enough to seat it above the
+    // page as the primary action without reading as a drop shadow.
+    shadowColor: theme.colors.navy,
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
-  playBtnText: { fontFamily: theme.fontFamily.bodyBold, fontSize: theme.fontSize.bodyLg, color: theme.colors.white, letterSpacing: 0.2 },
+  playBtnIcon: { marginLeft: -2 },
+  playBtnText: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: theme.fontSize.cardTitle,
+    color: theme.colors.white,
+    letterSpacing: 0.2,
+    // Android pads text vertically inside its own line box, which pushed the
+    // label a couple of points below the icon's centre line. Off, plus an
+    // explicit line height, and the two sit on the same axis on both platforms.
+    includeFontPadding: false,
+    lineHeight: theme.fontSize.cardTitle + 3,
+  },
   shuffleBtn: {
-    width: 52, height: 52, alignItems: 'center', justifyContent: 'center',
+    width: ACTION_HEIGHT, height: ACTION_HEIGHT, alignItems: 'center', justifyContent: 'center',
     backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.grayBorder,
     borderRadius: theme.radius.full,
   },

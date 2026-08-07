@@ -16,7 +16,10 @@
       "Bash(adb exec-out *)",
       "Bash(./gradlew assembleRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease)",
       "Bash(python -c ' *)",
-      "Bash(echo \"clean=$?\")"
+      "Bash(echo \"clean=$?\")",
+      "Bash(npx tsc *)",
+      "Bash(git rm *)",
+      "Bash(wait)"
     ]
   },
   "enabledPlugins": {

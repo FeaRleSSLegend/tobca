@@ -28,7 +28,7 @@ import { TranslationCode, getSavedTranslation } from '../services/bibleVersions'
 import { getVersesForReference, Verse } from '../services/bibleApi';
 import { HIGHLIGHT_COLORS, colorValue, verseKey, getAllHighlights, setHighlight } from '../utils/highlights';
 import { compactReference } from '../utils/referenceParser';
-import { markReadingUnlocked, getDayByDate } from '../utils/biblePlan.utils';
+import { markReadingUnlocked, markDayAsRead, getDayByDate } from '../utils/biblePlan.utils';
 import { BibleQuickNav, QuickNavItem } from '../components/bible/BibleQuickNav';
 
 const scrollKey = (date: string, readingKey: string) => `@bible_scroll_${date}_${readingKey}`;
@@ -101,6 +101,7 @@ export default function ReadingScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
   const hasFiredUnlock = useRef(false);
+  const hasAutoCompleted = useRef(false);
   const saveOffsetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restoredRef = useRef(false);
   const lastOffsetY = useRef(0);
@@ -153,6 +154,22 @@ export default function ReadingScreen() {
       cancelled = true;
     };
   }, [reference, translation, retryCount]);
+
+  // Opening a reading IS reading it. Marking the day complete used to cost a
+  // second, separate tap on the Plan tab's "Mark as Read" button, which asked
+  // someone to report back on something the app already knew: they were here,
+  // and the passage was in front of them. Once verses actually render, the
+  // day is marked — once per visit, and only on a real passage (a load error
+  // or an empty result leaves verses empty and nothing fires).
+  //
+  // The manual button stays: it's the fallback for a day read elsewhere, and
+  // by the time someone reaches it after reading, it already shows completed.
+  useEffect(() => {
+    if (hasAutoCompleted.current || !date || verses.length === 0) return;
+    hasAutoCompleted.current = true;
+    markReadingUnlocked(date);
+    markDayAsRead(date);
+  }, [verses, date]);
 
   // Restore scroll position once per reading — re-armed when the quick
   // nav switches to a different reading, so each of the four keeps its

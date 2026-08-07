@@ -10,11 +10,13 @@ import { DocCard } from '../../components/ui/DocCard';
 import { AudioPlayer } from '../../components/ui/AudioPlayer';
 import { currentFocus, prayerResources, archivedFocuses } from '../../data/prayer';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
+import { TabTransition } from '../../components/ui/motion';
 
 export default function PrayerScreen() {
     const [isPlaying, setIsPlaying] = useState(false);
 
     return (
+        <TabTransition>
         <ScreenWithWatermark style={sharedStyles.container}>
             <ScrollView contentContainerStyle={prayerStyles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={sharedStyles.headerRow}>
@@ -70,5 +72,6 @@ export default function PrayerScreen() {
                 onPlayPause={() => setIsPlaying(!isPlaying)}
             />
         </ScreenWithWatermark>
+        </TabTransition>
     );
 }

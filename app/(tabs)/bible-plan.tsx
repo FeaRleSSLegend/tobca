@@ -7,6 +7,7 @@ import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
+import { TabTransition } from '../../components/ui/motion';
 import { TodayCard } from '../../components/bible/TodayCard';
 import { StreakSummary } from '../../components/bible/StreakSummary';
 import { StreakModal } from '../../components/bible/StreakModal';
@@ -108,12 +109,19 @@ export default function PlanScreen() {
     };
   }, [todayReading, translation]);
 
-  // Re-check the unlock flag every time this tab regains focus — covers
-  // coming back from app/reading.tsx after finishing a passage there.
+  // Re-check completion state every time this tab regains focus — covers
+  // coming back from app/reading.tsx, which now marks the day complete on
+  // its own the moment a passage renders. Without re-reading progress here
+  // (not just the unlock flag), the card would keep offering "Mark as Read"
+  // for a day the reader had already finished seconds earlier.
   useFocusEffect(
     useCallback(() => {
       if (!todayReading) return;
       isReadingUnlocked(todayReading.date).then(setHasReadSomething);
+      getProgress().then((prog) => {
+        setProgress(prog);
+        setIsRead(prog.completedDays.includes(todayReading.date));
+      });
     }, [todayReading])
   );
 
@@ -178,6 +186,7 @@ export default function PlanScreen() {
   ];
 
   return (
+    <TabTransition>
     <ScreenWithWatermark style={sharedStyles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={sharedStyles.headerRow}>
@@ -236,6 +245,7 @@ export default function PlanScreen() {
         todayNumber={todayNumber}
       />
     </ScreenWithWatermark>
+    </TabTransition>
   );
 }
 
