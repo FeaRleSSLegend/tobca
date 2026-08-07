@@ -32,6 +32,7 @@ import { compactReference } from '../utils/referenceParser';
 import { markReadingUnlocked, markDayAsRead, getDayByDate } from '../utils/biblePlan.utils';
 import { BibleQuickNav, QuickNavItem } from '../components/bible/BibleQuickNav';
 import { PopIn } from '../components/ui/motion';
+import { BrandLoader } from '../components/ui/BrandLoader';
 
 const scrollKey = (date: string, readingKey: string) => `@bible_scroll_${date}_${readingKey}`;
 
@@ -287,13 +288,18 @@ export default function ReadingScreen() {
               on screen — a one-line whisper, not a loading screen. */}
           {loading && verses.length > 0 && (
             <View style={styles.switchingRow}>
-              <ActivityIndicator size="small" color={theme.colors.graySecondary} />
-              <Text style={styles.switchingText}>Switching to {translation?.toUpperCase()}</Text>
+              <BrandLoader width={54} />
+              <Text style={styles.switchingText}>Loading {translation?.toUpperCase()}</Text>
             </View>
           )}
 
           {loading && verses.length === 0 ? (
-            <Text style={styles.loadingText}>Loading…</Text>
+            // Full-passage load (not a version switch) — the branded loader
+            // carries the wait instead of the word "Loading…".
+            <View style={styles.passageLoading}>
+              <BrandLoader width={170} />
+              <Text style={styles.switchingText}>Loading {translation?.toUpperCase()}</Text>
+            </View>
           ) : loadError && verses.length === 0 ? (
             <View style={styles.errorBlock}>
               <Ionicons name="cloud-offline-outline" size={28} color={theme.colors.grayIcon} />
@@ -493,6 +499,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
+  },
+  // Vertical stack for the full-passage wait: the mark reads as the subject,
+  // with the translation named underneath so the wait is explained.
+  passageLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+    paddingTop: theme.spacing.xxxl,
   },
   switchingText: {
     fontFamily: theme.fontFamily.body,

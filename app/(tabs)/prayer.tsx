@@ -11,7 +11,6 @@ import { AudioPlayer } from '../../components/ui/AudioPlayer';
 import { currentFocus, prayerResources, archivedFocuses } from '../../data/prayer';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition } from '../../components/ui/motion';
-import { BrandLoader } from '../../components/ui/BrandLoader';
 
 export default function PrayerScreen() {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -63,23 +62,6 @@ export default function PrayerScreen() {
                         <DocCard key={f.month} name={f.title} subtitle={`${f.pages} pages`} icon="archive-outline" />
                     ))}
                 </HScroll>
-
-                {/* TEMPORARY — BrandLoader preview.
-                    The real loading states it was built for (Today's Reading,
-                    the plan carousel) only appear before the scripture cache is
-                    warm, so on a device that has already read them the loader
-                    is effectively unreachable. Parked here, always running, so
-                    the animation can actually be watched.
-                    Delete this block once you've seen it. */}
-                <View style={{ alignItems: 'center', paddingVertical: theme.spacing.xxxl, gap: theme.spacing.xl }}>
-                    <BrandLoader width={220} />
-                    <BrandLoader width={140} />
-                    {/* Single-tint variant, as used on the Plan hero (which
-                        passes white because brand pink/purple vanish against
-                        its gradient). Navy here so it's visible on this
-                        light background. */}
-                    <BrandLoader width={220} tint={theme.colors.navy} />
-                </View>
             </ScrollView>
 
             {/* Sticky Audio Player */}

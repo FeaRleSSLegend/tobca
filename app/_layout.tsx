@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlaybackProvider } from '../providers/PlaybackProvider';
 import { PlayerHost } from '../components/player/PlayerHost';
+import { AnimatedSplash } from '../components/ui/AnimatedSplash';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import {
@@ -59,6 +60,13 @@ export default function RootLayout() {
   // Proceed as soon as fonts load, OR error, OR the timeout elapses.
   const ready = fontsLoaded || !!fontError || timedOut;
 
+  // The animated splash takes over from the native one. The native splash is a
+  // static image and can't animate, so the handoff is: hide it the moment the
+  // tree can render, and have AnimatedSplash already mounted underneath it on
+  // the same white background — so the swap is invisible and the animation
+  // starts from what the user was already looking at.
+  const [splashDone, setSplashDone] = useState(false);
+
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
@@ -81,6 +89,10 @@ export default function RootLayout() {
             One mounted YouTube instance, so audio/video never restarts when
             you collapse it to keep browsing. */}
         <PlayerHost />
+
+        {/* Last child so it covers the app, including the player overlay.
+            Unmounted once finished — it has no reason to stay in the tree. */}
+        {!splashDone && <AnimatedSplash onDone={() => setSplashDone(true)} />}
       </PlaybackProvider>
     </SafeAreaProvider>
   );

@@ -17,14 +17,34 @@ export interface Verse {
 }
 
 /**
- * NOTE on approach: the /passages endpoint returns one opaque `content`
- * string for a range (no per-verse breakdown), and it's unconfirmed whether
- * format=html gives parseable verse markup. So this fetches one verse per
- * request via the same endpoint and assembles the array ourselves — slower
- * per-call but guaranteed correct, and results are cached so it only
- * happens once per passage/translation. If format=html turns out to expose
- * verse spans once you have a live key, fetchSegmentVerses is the only
- * function that would need to change.
+ * ONE REQUEST PER SEGMENT, not per verse.
+ *
+ * This module used to fetch every verse individually, because format=text
+ * returns one opaque blob for a range and it was unverified whether
+ * format=html exposed verse boundaries. It does. A ranged request returns
+ * anchors of the form
+ *
+ *   <span class="yv-v" v="7"></span><span class="yv-vlbl">7</span>Verse text…
+ *
+ * which is enough to split the passage back into numbered verses. The old
+ * approach cost one ~1s round trip PER VERSE: a single day's four readings
+ * ran to 50+ requests, which is why the Plan tab and the reader sat on a
+ * loader for so long.
+ *
+ * Verified before switching: ranged+parsed output is byte-identical to the
+ * per-verse output for prose (1 Corinthians 4) and for poetry with
+ * superscriptions and small-caps divine names (Psalm 13, Psalm 29).
+ *
+ * Two details the range form gets for free:
+ *   - a verse absent from a translation (Romans 16:24 in modern critical
+ *     texts) simply has no anchor, so it drops out exactly as the old
+ *     404-per-verse path made it drop out;
+ *   - the passage heading / psalm superscription sits BEFORE the first
+ *     anchor, so discarding the leading chunk removes it — matching the old
+ *     behaviour, which never saw it at all.
+ *
+ * fetchVersesOneByOne is kept as a fallback for the case where a range
+ * request 404s or yields nothing parseable.
  */
 
 /**
@@ -67,7 +87,92 @@ async function fetchSingleVerse(
   return (json.content ?? '').trim();
 }
 
-async function fetchSegmentVerses(bibleId: number, segment: PassageSegment): Promise<Verse[]> {
+// Hermes has no DOM, so the passage markup is unwound with string work.
+// `&amp;` is decoded LAST: doing it first would turn "&amp;lt;" into "&lt;"
+// and then into "<", corrupting text that legitimately contains an escaped
+// entity.
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&amp;/g, '&');
+}
+
+function plainText(fragment: string): string {
+  return decodeEntities(fragment.replace(/<[^>]+>/g, ''))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Split a ranged passage's HTML back into numbered verses. */
+function parsePassageHtml(content: string, segment: PassageSegment): Verse[] {
+  // The printed verse label is a separate span from the anchor; drop it, or
+  // every verse's text would start with its own number (the reader draws that
+  // itself).
+  let s = content.replace(/<span class="yv-vlbl">[\s\S]*?<\/span>/g, '');
+  // Block ends become spaces. Without this, poetry set as consecutive <div>s
+  // would concatenate across the line break: "forever?How long".
+  s = s.replace(/<\/(?:div|p)>/g, ' ');
+
+  // A capturing split interleaves [before, num, text, num, text, …]; index 0
+  // is whatever preceded the first verse (heading/superscription) and is
+  // dropped.
+  const parts = s.split(/<span class="yv-v" v="(\d+)"[^>]*>\s*<\/span>/);
+
+  const verses: Verse[] = [];
+  for (let i = 1; i < parts.length - 1; i += 2) {
+    const number = parseInt(parts[i], 10);
+    if (!Number.isFinite(number)) continue;
+    // Guard against the API ever returning more than was asked for.
+    if (number < segment.startVerse || number > segment.endVerse) continue;
+    const text = plainText(parts[i + 1]);
+    if (text) verses.push({ number, text, chapter: segment.chapter, book: segment.book });
+  }
+  return verses;
+}
+
+/**
+ * One request for the whole segment. Returns null when the range can't be
+ * served or parsed, so the caller can fall back to the per-verse path rather
+ * than showing an empty passage.
+ */
+async function fetchRangedVerses(
+  bibleId: number,
+  segment: PassageSegment
+): Promise<Verse[] | null> {
+  if (!APP_KEY) {
+    throw new Error('EXPO_PUBLIC_YVP_APP_KEY is not set. Add it to your .env file.');
+  }
+
+  // Note the range form: "PSA.13.1-6". The fully-qualified
+  // "PSA.13.1-PSA.13.6" that USFM elsewhere accepts 404s on this endpoint.
+  const passageId =
+    segment.startVerse === segment.endVerse
+      ? `${segment.usfm}.${segment.chapter}.${segment.startVerse}`
+      : `${segment.usfm}.${segment.chapter}.${segment.startVerse}-${segment.endVerse}`;
+
+  const res = await fetch(`${BASE_URL}/v1/bibles/${bibleId}/passages/${passageId}?format=html`, {
+    headers: { 'X-YVP-App-Key': APP_KEY },
+  });
+
+  if (res.status === 404) return null; // let the per-verse path try
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${passageId}: ${res.status} ${res.statusText}`);
+  }
+
+  const json = await res.json();
+  const content: string = json.content ?? '';
+  const verses = parsePassageHtml(content, segment);
+  return verses.length > 0 ? verses : null;
+}
+
+/** The original path: one request per verse. Fallback only. */
+async function fetchVersesOneByOne(bibleId: number, segment: PassageSegment): Promise<Verse[]> {
   const verseNumbers: number[] = [];
   for (let v = segment.startVerse; v <= segment.endVerse; v++) {
     verseNumbers.push(v);
@@ -89,6 +194,12 @@ async function fetchSegmentVerses(bibleId: number, segment: PassageSegment): Pro
     }
   });
   return verses;
+}
+
+async function fetchSegmentVerses(bibleId: number, segment: PassageSegment): Promise<Verse[]> {
+  const ranged = await fetchRangedVerses(bibleId, segment);
+  if (ranged) return ranged;
+  return fetchVersesOneByOne(bibleId, segment);
 }
 
 function cacheKey(translation: TranslationCode, reference: string): string {
@@ -183,9 +294,9 @@ export async function clearPassageCache(): Promise<void> {
  * day's readings for the new version are usually already local (and once
  * cached, they're cached forever — scripture doesn't change).
  *
- * Sequential on purpose: getVersesForReference already fans out one
- * request per verse internally, so running references in series keeps
- * the burst against YouVersion's API bounded instead of multiplying it.
+ * Sequential on purpose: getVersesForReference fans out one request per
+ * SEGMENT internally, so running references in series keeps the burst against
+ * YouVersion's API bounded instead of multiplying it.
  */
 export function prefetchReferences(references: string[], translation: TranslationCode): void {
   (async () => {

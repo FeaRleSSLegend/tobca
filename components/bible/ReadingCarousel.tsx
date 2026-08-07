@@ -100,8 +100,12 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
             {/* A bare "Loading…" in serif read as a verse that happened to say
                 "Loading" — the branded bars are unmistakably a wait state. */}
             {isPreviewLoading(item) ? (
-              <View style={styles.preview}>
-                <BrandLoader width={116} />
+              // Centred in the space the preview text will occupy, so the card
+              // doesn't reflow when the passage lands — and sized large enough
+              // to be the card's subject while it waits, rather than a token
+              // spinner tucked in a corner.
+              <View style={styles.previewLoading}>
+                <BrandLoader width={190} />
               </View>
             ) : (
               <Text style={styles.preview} numberOfLines={4}>
@@ -182,6 +186,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: theme.colors.navy,
     marginBottom: theme.spacing.sm,
+  },
+  previewLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   preview: {
     flex: 1,
