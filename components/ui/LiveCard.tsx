@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native'
+import { Text, View, Linking } from 'react-native'
 import { PressableScale } from './motion'
 import { theme } from '../../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,7 +35,26 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCar
   // this was evaluated once when the JS bundle first ran, so the countdown
   // ("in 2 days 3 hrs") silently froze at whatever was true at app launch
   // and the card could keep advertising a service that already happened.
-  const { service: nextService, countdownLabel } = getNextService();
+  const { service: nextService, countdownLabel, startsAt } = getNextService();
+
+  // "Add to Calendar" was a button with no onPress at all — the most
+  // prominent control on the home screen did nothing, and once every card
+  // gained press-scale it even animated as though it had worked. Wired to a
+  // Google Calendar template URL, which needs no new dependency and is
+  // handled by the Calendar app when installed, the browser otherwise.
+  const onAddToCalendar = () => {
+    // Google's template wants UTC basic-format timestamps: 20260808T083000Z
+    const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const ends = new Date(startsAt.getTime() + 90 * 60 * 1000);
+    const url =
+      'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+      `&text=${encodeURIComponent(`${nextService.name} · The OliveBrook Church`)}` +
+      `&dates=${stamp(startsAt)}/${stamp(ends)}`;
+    Linking.openURL(url).catch(() => {
+      // No calendar app and no browser is a legitimate device state; there is
+      // nothing useful to say about it, so fail quietly rather than throw.
+    });
+  };
 
   return isLive ? (
     <LinearGradient
@@ -95,6 +114,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCar
 
       <PressableScale
         style={liveStyles.primaryBtnWrapper}
+        onPress={onAddToCalendar}
         accessibilityRole="button"
         accessibilityLabel={`Add ${nextService.name} to calendar`}
       >

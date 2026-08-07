@@ -17,7 +17,11 @@ interface VerseOfDayCardProps {
 // by comparison, not compete with it card-for-card.
 export const VerseOfDayCard = ({ reference, text, onPress, onShare }: VerseOfDayCardProps) => {
   return (
-    <PressableScale onPress={onPress} style={styles.wrapper}>
+    // Home renders this card without an onPress, so the whole card was a
+    // tappable that dipped under your finger and then did nothing. `disabled`
+    // when unwired suppresses the press feedback too, so it stops advertising
+    // an interaction it doesn't have.
+    <PressableScale onPress={onPress} disabled={!onPress} style={styles.wrapper}>
       <ImageBackground
         source={require('../../assets/verse-of-day-bg.jpg')}
         style={styles.bg}

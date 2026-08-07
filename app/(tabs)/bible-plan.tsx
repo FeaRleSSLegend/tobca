@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
@@ -30,6 +31,7 @@ import { getVersesForReference, Verse } from '../../services/bibleApi';
 
 export default function PlanScreen() {
   const router = useRouter();
+  const push = useGuardedPush();
   const [translation, setTranslation] = useState<TranslationCode>('niv');
   const [todayReading, setTodayReading] = useState<DayPlan | null>(null);
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
@@ -147,7 +149,7 @@ export default function PlanScreen() {
 
   const openReading = (item: ReadingCarouselItem) => {
     if (!todayReading) return;
-    router.push({
+    push({
       pathname: '/reading',
       params: {
         reference: item.reference,
@@ -196,12 +198,15 @@ export default function PlanScreen() {
           </View>
         </View>
 
-        <TodayCard 
+        <TodayCard
           day={todayReading.day}
           isRead={isRead}
           canMarkAsRead={hasReadSomething}
           onMarkAsRead={handleMarkAsRead}
           planProgress={percentage / 100}
+          // progress === null means stored data is still in flight, so
+          // isRead/canMarkAsRead are defaults rather than facts.
+          loading={progress === null}
         />
 
         <StreakSummary

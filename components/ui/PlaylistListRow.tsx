@@ -47,9 +47,15 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
   },
+  // 16:9, not the previous 60x60 square. The source is a YouTube video
+  // thumbnail, which is always 16:9 — forcing it into a square meant
+  // contentFit:'cover' cropped roughly 44% of the frame away (both sides), so
+  // covers with text or a speaker to one side lost it entirely. Matching the
+  // container to the asset's real shape is what makes it "fit"; no contentFit
+  // setting can add back pixels a square frame cropped off.
   artwork: {
-    width: 60,
-    height: 60,
+    width: 96,
+    height: 54,
     borderRadius: theme.radius.sm,
     overflow: 'hidden',
     backgroundColor: theme.colors.grayBorder,

@@ -32,6 +32,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useGuardedPush } from '../../hooks/useGuardedPush';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -55,6 +56,7 @@ export function PlayerHost() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const push = useGuardedPush();
   const { activeMessage, mode, expanded, hasActive, play, setMode, expand, collapse, close } =
     usePlayback();
   const { messages } = useMessages();
@@ -263,7 +265,7 @@ export function PlayerHost() {
   // keeps playback alive while the collection comes forward.
   const openSeries = useCallback((series: string) => {
     collapse();
-    router.push({ pathname: '/see-all', params: { filter: series, title: series } });
+    push({ pathname: '/see-all', params: { filter: series, title: series } });
   }, [collapse, router]);
 
   const relatedSections = useMemo(() => (message ? buildRelatedSections(message, messages) : []), [message?.id, messages]);

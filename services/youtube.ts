@@ -34,6 +34,29 @@ function isoDurationToSeconds(iso: string): number {
   return h * 3600 + m * 60 + s;
 }
 
+/**
+ * Pick the artwork for a 16:9 frame.
+ *
+ * YouTube's thumbnail sizes are NOT all the same shape, which is the trap:
+ *   default  120x90    4:3
+ *   medium   320x180   16:9
+ *   high     480x360   4:3
+ *   standard 640x480   4:3
+ *   maxres   1280x720  16:9
+ *
+ * The 4:3 variants are the 16:9 frame letterboxed inside baked-in black bars.
+ * Drop one of those into a 16:9 container and no `contentFit` can save it —
+ * `cover` crops the picture to hide the bars, `contain` shows them. So only
+ * the genuinely-16:9 sizes are eligible here.
+ *
+ * `medium` alone (the previous choice) is only 320px wide, which is fine for a
+ * list row but visibly soft blown up to a full-width playlist hero — hence
+ * preferring maxres and falling back, rather than the reverse.
+ */
+function pickThumbnail(thumbs: any): string {
+  return thumbs?.maxres?.url ?? thumbs?.medium?.url ?? '';
+}
+
 function secondsToLabel(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -103,7 +126,7 @@ async function fetchPlaylistVideos(playlistId: string, cacheKey: string, cap = 5
         videoId: i.snippet.resourceId.videoId,
         title: i.snippet.title,
         publishedAt: i.snippet.publishedAt.slice(0, 10),
-        thumbnail: i.snippet.thumbnails?.medium?.url ?? '',
+        thumbnail: pickThumbnail(i.snippet.thumbnails),
         duration: secondsToLabel(durationSeconds),
         durationSeconds,
       };
@@ -166,7 +189,7 @@ export async function fetchChannelPlaylists(): Promise<YouTubePlaylist[]> {
       id: p.id,
       title: p.snippet.title,
       itemCount: p.contentDetails.itemCount,
-      thumbnail: p.snippet.thumbnails?.medium?.url ?? '',
+      thumbnail: pickThumbnail(p.snippet.thumbnails),
     }));
 
   await AsyncStorage.setItem(cacheKey, JSON.stringify({ playlists, fetchedAt: Date.now() }));

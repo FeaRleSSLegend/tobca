@@ -4,12 +4,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { theme } from '../../constants/theme';
 import { PressableScale, PopIn } from '../ui/motion';
+import { BrandLoader } from '../ui/BrandLoader';
 
 interface TodayCardProps {
   day: number;
   isRead: boolean;
   canMarkAsRead: boolean;
   onMarkAsRead: () => void;
+  // Stored progress hasn't come back yet, so isRead/canMarkAsRead are not
+  // answers — they're just their defaults. Rendering the button off those
+  // means the card briefly claims "not read" for a day that IS read, then
+  // flips. The loader holds that space until the truth arrives.
+  loading?: boolean;
   // Overall plan completion 0..1, drawn as a ring — turns the hero into a
   // quiet progress indicator, the way the reference cards carry a "days" chip.
   planProgress?: number;
@@ -24,7 +30,7 @@ interface TodayCardProps {
 // depth. It's the strongest thing on the screen without a photo library
 // behind it — the gradient does the immersive work church-stock imagery
 // would otherwise carry.
-export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgress = 0 }: TodayCardProps) => {
+export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgress = 0, loading = false }: TodayCardProps) => {
   return (
     <View style={styles.card}>
       <LinearGradient
@@ -54,11 +60,17 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgre
       <View style={styles.body}>
         <Text style={styles.eyebrow}>TODAY'S PLAN</Text>
         <Text style={styles.headline}>
-          {isRead ? "Today's reading complete" : 'Your reading for today'}
+          {loading ? 'Your reading for today' : isRead ? "Today's reading complete" : 'Your reading for today'}
         </Text>
       </View>
 
-      {!isRead ? (
+      {loading ? (
+        // Same 50pt height as the button and badge it stands in for, so the
+        // card doesn't resize when the real state arrives.
+        <View style={styles.loadingSlot}>
+          <BrandLoader width={124} onDark />
+        </View>
+      ) : !isRead ? (
         <>
           <PressableScale
             onPress={onMarkAsRead}
@@ -163,6 +175,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 30,
     color: theme.colors.white,
+  },
+  loadingSlot: {
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   markBtn: {
     flexDirection: 'row',

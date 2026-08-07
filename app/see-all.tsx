@@ -27,6 +27,7 @@
 import { useMemo, useState } from 'react';
 import { View, Text, FlatList, SectionList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useGuardedPush } from '../hooks/useGuardedPush';
 import { Ionicons } from '@expo/vector-icons';
 import { seeAllStyles } from '../constants/styles/seeAll.styles';
 import { theme } from '../constants/theme';
@@ -320,6 +321,7 @@ function MessageListCollection({
 
 function PlaylistsCollection() {
   const router = useRouter();
+  const push = useGuardedPush();
   const { playlists, loading } = usePlaylists();
   const [query, setQuery] = useState('');
 
@@ -350,7 +352,7 @@ function PlaylistsCollection() {
               count={item.itemCount}
               thumbnail={item.thumbnail}
               onPress={() =>
-                router.push({ pathname: '/playlist/[id]', params: { id: item.id, title: item.title } })
+                push({ pathname: '/playlist/[id]', params: { id: item.id, title: item.title } })
               }
             />
           )}
@@ -451,6 +453,7 @@ function MessagesRouter({ section, filter, title }: {
   title?: string;
 }) {
   const router = useRouter();
+  const push = useGuardedPush();
   const { messages, loading } = useMessages();
 
   const classified = useMemo(() => classifyMessages(messages), [messages]);
@@ -465,7 +468,7 @@ function MessagesRouter({ section, filter, title }: {
         groups={classified.series}
         loading={loading}
         onOpenGroup={(label) =>
-          router.push({ pathname: '/see-all', params: { filter: label, title: label } })
+          push({ pathname: '/see-all', params: { filter: label, title: label } })
         }
       />
     );

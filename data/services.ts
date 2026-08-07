@@ -25,7 +25,7 @@ export function getTodayServices(): Service[] {
 
 // Finds the next upcoming service (wraps to next week if today's already past).
 // Used by live.tsx to power the Next-Service card when isLive is false.
-export function getNextService(): { service: Service; countdownLabel: string } {
+export function getNextService(): { service: Service; countdownLabel: string; startsAt: Date } {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const now = new Date();
   const nowDayIndex = now.getDay();
@@ -66,5 +66,12 @@ export function getNextService(): { service: Service; countdownLabel: string } {
       ? `in ${days} day${days > 1 ? 's' : ''} ${hours} hr${hours !== 1 ? 's' : ''}`
       : `in ${hours} hr${hours !== 1 ? 's' : ''}`;
 
-  return { service: best!.service, countdownLabel };
+  // The concrete start instant, so callers don't have to re-derive it from the
+  // weekday name and a "8:30 AM" string. minutesAway is already exact relative
+  // to `now`; zeroing seconds keeps the result on the minute.
+  const startsAt = new Date(now);
+  startsAt.setSeconds(0, 0);
+  startsAt.setMinutes(startsAt.getMinutes() + best!.minutesAway);
+
+  return { service: best!.service, countdownLabel, startsAt };
 }

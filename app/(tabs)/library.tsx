@@ -1,6 +1,7 @@
 import { View, Text, ScrollView } from 'react-native';
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
+import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { SearchBar } from '../../components/ui/SearchBar';
@@ -44,6 +45,7 @@ const PREVIEW_COUNT = 6;
  */
 export default function LibraryScreen() {
     const router = useRouter();
+  const push = useGuardedPush();
     const { messages } = useMessages();
     const { playlists } = usePlaylists();
     const { play } = usePlayback();
@@ -60,12 +62,12 @@ export default function LibraryScreen() {
     );
 
     const openCollection = (section: string, title: string) =>
-        router.push({ pathname: '/see-all', params: { section, title } });
+        push({ pathname: '/see-all', params: { section, title } });
     // Tapping a poster skips the collection screen and goes straight into
     // that one group's contents — the poster IS the choice, so routing
     // through the full Series list first would just add a hop.
     const openGroup = (label: string) =>
-        router.push({ pathname: '/see-all', params: { filter: label, title: label } });
+        push({ pathname: '/see-all', params: { filter: label, title: label } });
 
     return (
         <TabTransition>
@@ -135,7 +137,7 @@ export default function LibraryScreen() {
                                         title={p.title}
                                         count={p.itemCount}
                                         thumbnail={p.thumbnail}
-                                        onPress={() => router.push({ pathname: '/playlist/[id]', params: { id: p.id, title: p.title } })}
+                                        onPress={() => push({ pathname: '/playlist/[id]', params: { id: p.id, title: p.title } })}
                                     />
                                 </FadeInUp>
                             ))}

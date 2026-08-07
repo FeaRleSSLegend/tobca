@@ -12,7 +12,15 @@ interface PlaylistCircleProps {
   onPress?: () => void;
 }
 
-const CIRCLE_SIZE = 88;
+// Was an 88pt CIRCLE. The artwork is a 16:9 YouTube thumbnail, and the church
+// bakes the playlist name into that artwork — so a circular crop threw away
+// ~44% of the frame horizontally AND cut the top and bottom off, which is how
+// covers reading "WHAT IF" and "SPIRIT BREAKTHROUGH" ended up as unreadable
+// fragments on the Library shelf. A 16:9 tile is the shape the asset actually
+// is, so nothing has to be cropped at all. Matches the Series/Services posters
+// directly above it, which makes the shelf read as one system.
+const TILE_WIDTH = 150;
+const TILE_HEIGHT = Math.round((TILE_WIDTH * 9) / 16);
 
 export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: PlaylistCircleProps) => (
   <PressableScale
@@ -37,27 +45,29 @@ export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: 
 
 const styles = StyleSheet.create({
   wrap: {
-    width: CIRCLE_SIZE + theme.spacing.md,
-    alignItems: 'center',
+    width: TILE_WIDTH,
   },
   circle: {
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
+    width: TILE_WIDTH,
+    height: TILE_HEIGHT,
+    borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.navy,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
+  // Left-aligned now the tile is rectangular — centred labels under a wide
+  // tile leave ragged gaps on both sides of a two-line title.
   title: {
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.bodyBold,
     color: theme.colors.navy,
-    textAlign: 'center',
+    lineHeight: 16,
   },
   count: {
     fontSize: theme.fontSize.caption,
     color: theme.colors.graySecondary,
+    marginTop: 2,
   },
 });

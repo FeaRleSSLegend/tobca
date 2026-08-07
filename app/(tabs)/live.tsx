@@ -20,6 +20,7 @@ import { getTodayReading, isDayCompleted, getProgress, getCompletionPercentage }
 import { buildMessage } from "../../data/contentModel";
 import { PRIMARY_BRANCH_ID } from "../../data/branches";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useGuardedPush } from '../../hooks/useGuardedPush';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -47,6 +48,7 @@ function greetingForNow(): string {
 export default function LiveScreen() {
   const todayName = DAY_NAMES[new Date().getDay()];
   const router = useRouter();
+  const push = useGuardedPush();
   const liveStatus = useLiveStatus();
   const { messages } = useMessages();
   const { play } = usePlayback();
@@ -145,7 +147,7 @@ export default function LiveScreen() {
             ]}
             isDone={readingDone}
             planProgress={planProgress}
-            onPress={() => router.push('/bible-plan')}
+            onPress={() => push('/bible-plan')}
           />
         )}
 
@@ -157,7 +159,7 @@ export default function LiveScreen() {
             slots; the chevron leads to the Services COLLECTION (past
             recordings by month), which is the closest real destination
             until a dedicated schedule screen exists. */}
-        <SectionLabel label="This Week's Services" onPress={() => router.push({ pathname: '/see-all', params: { section: 'services', title: 'Services' } })}/>
+        <SectionLabel label="This Week's Services" onPress={() => push({ pathname: '/see-all', params: { section: 'services', title: 'Services' } })}/>
 
         <ScrollView
           horizontal
@@ -179,7 +181,7 @@ export default function LiveScreen() {
         {/* Latest Messages — same chevron-row pattern as Library's hub
             headers: one interaction language for "this section continues
             elsewhere" across both tabs. */}
-        <SectionLabel label="Latest Messages" onPress={() => router.push({ pathname: '/see-all', params: { section: 'latest', title: 'Latest Messages' } })}/>
+        <SectionLabel label="Latest Messages" onPress={() => push({ pathname: '/see-all', params: { section: 'latest', title: 'Latest Messages' } })}/>
 
         <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.md, marginBottom: theme.spacing.xxxl }}>
           {latestMessages.map((m, i) => (

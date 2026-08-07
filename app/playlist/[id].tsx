@@ -163,7 +163,7 @@ export default function PlaylistScreen() {
             Array.from({ length: 6 }).map((_, i) => (
               <View key={i} style={styles.trackRow}>
                 <Shimmer style={styles.trackNumSkeleton} width={24} />
-                <Shimmer style={styles.trackThumb} width={76} />
+                <Shimmer style={styles.trackThumb} width={80} />
                 <View style={{ flex: 1, gap: 6 }}>
                   <Shimmer style={{ height: 12, borderRadius: 4, width: '80%' }} width={220} />
                   <Shimmer style={{ height: 10, borderRadius: 4, width: '40%' }} width={110} />
@@ -269,7 +269,10 @@ const styles = StyleSheet.create({
   trackRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingVertical: theme.spacing.sm },
   trackNum: { width: 22, textAlign: 'center', fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.grayIcon },
   trackNumSkeleton: { width: 22, height: 14, borderRadius: 4 },
-  trackThumb: { width: 76, height: 44, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
+  // Exactly 16:9 (80/45), matching the source aspect. The old 76x44 was 1.727
+  // against the asset's 1.778 — close enough to look intentional, far enough
+  // to shave a couple of pixels off the top and bottom of every thumbnail.
+  trackThumb: { width: 80, height: 45, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
   trackDuration: {
     position: 'absolute', right: 3, bottom: 3,
     paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4,

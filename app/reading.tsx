@@ -21,6 +21,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useGuardedPush } from '../hooks/useGuardedPush';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../constants/theme';
@@ -51,6 +52,7 @@ const READING_LABELS: Record<string, string> = {
 export default function ReadingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const push = useGuardedPush();
   const params = useLocalSearchParams<{
     reference: string;
     translation: TranslationCode;
@@ -249,7 +251,7 @@ export default function ReadingScreen() {
 
         <Pressable
           style={styles.translationPill}
-          onPress={() => router.push('/bible-versions')}
+          onPress={() => push('/bible-versions')}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Bible version ${translation?.toUpperCase()}, change version`}

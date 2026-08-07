@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import { Verse } from '../../services/bibleApi';
 import { PressableScale } from '../ui/motion';
+import { BrandLoader } from '../ui/BrandLoader';
 
 // Each reading type gets its own glyph so the four cards aren't visually
 // interchangeable — a small personality cue that helps the eye tell "which
@@ -44,9 +45,14 @@ const CARD_PEEK = 32;
 const CARD_WIDTH = SCREEN_WIDTH - theme.layout.screenPadding * 2 - CARD_PEEK;
 const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
 
+// Still waiting: no verses yet AND the fetch hasn't reported failure. A failed
+// preview is a finished state with its own copy, not a loader.
+function isPreviewLoading(item: ReadingCarouselItem): boolean {
+  return !item.failed && item.verses.length === 0;
+}
+
 function previewText(item: ReadingCarouselItem): string {
   if (item.failed) return 'Preview unavailable right now. Tap Read to open the full passage.';
-  if (item.verses.length === 0) return 'Loading…';
   return item.verses.slice(0, 2).map(v => v.text).join(' ');
 }
 
@@ -91,9 +97,17 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
               <Text style={styles.label}>{item.label.toUpperCase()}</Text>
             </View>
             <Text style={styles.reference}>{item.reference}</Text>
-            <Text style={styles.preview} numberOfLines={4}>
-              {previewText(item)}
-            </Text>
+            {/* A bare "Loading…" in serif read as a verse that happened to say
+                "Loading" — the branded bars are unmistakably a wait state. */}
+            {isPreviewLoading(item) ? (
+              <View style={styles.preview}>
+                <BrandLoader width={116} />
+              </View>
+            ) : (
+              <Text style={styles.preview} numberOfLines={4}>
+                {previewText(item)}
+              </Text>
+            )}
             <View style={styles.footer}>
               <Text style={styles.readMore}>Read passage</Text>
               <Ionicons name="arrow-forward" size={15} color={theme.colors.pink} />
