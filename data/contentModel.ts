@@ -19,8 +19,18 @@
 //    at once.
 
 import { BranchId } from './branches';
+import { FeaturedChannelId } from './channels';
 
 export type ContentSource = 'youtube' | 'telegram';
+
+/**
+ * Who a message belongs to: a church branch, or a featured non-branch channel
+ * (see data/channels.ts). Both need a slot in the composite id so provenance
+ * stays readable and ids can never collide — `youtube:kubwa:abc` vs
+ * `youtube:yinka:abc` — but only branches appear in the branch filter, and
+ * only branch content goes through sermon classification.
+ */
+export type ContentOwnerId = BranchId | FeaturedChannelId;
 
 export type MessageType = 'sermon' | 'series' | 'audio' | 'video' | 'service';
 
@@ -41,7 +51,7 @@ export interface Message {
   id: string;
 
   source: ContentSource;
-  branchId: BranchId;
+  branchId: ContentOwnerId;
 
   title: string;
   speaker: string;
@@ -66,7 +76,7 @@ export interface Message {
 
 // Build the one true id. Keeping this in a function means the format lives
 // in exactly one place and can evolve without a find-and-replace.
-export function makeMessageId(source: ContentSource, branchId: BranchId, externalId: string): string {
+export function makeMessageId(source: ContentSource, branchId: ContentOwnerId, externalId: string): string {
   return `${source}:${branchId}:${externalId}`;
 }
 
@@ -114,7 +124,7 @@ export function hasVideo(m: Message): boolean {
  */
 export function buildMessage(input: {
   source: ContentSource;
-  branchId: BranchId;
+  branchId: ContentOwnerId;
   externalId: string;
   title: string;
   speaker: string;

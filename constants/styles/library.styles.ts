@@ -44,4 +44,11 @@ export const LibraryStyles = StyleSheet.create({
   // in-place filtered grid they styled moved to the collection screens
   // (see seeAll.styles.ts pillsView/pillsRow, which carry over the same
   // height-pinning fix documented on the old filterView).
+    // Same footprint as CurrentMessage so the swap doesn't shift the page.
+    heroSkeleton: {
+        height: 180,
+        marginTop: 20,
+        borderRadius: 14,
+        overflow: 'hidden',
+    },
 });

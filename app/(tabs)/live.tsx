@@ -15,6 +15,7 @@ import { FadeInUp, staggerDelay, TabTransition } from "../../components/ui/motio
 import { ScreenWithWatermark } from "../../components/ui/ScreenWithWatermark";
 import { useLiveStatus } from "../../hooks/useLiveStatus";
 import { useMessages } from "../../hooks/useMessages";
+import { SkeletonList } from "../../components/ui/Skeletons";
 import { usePlayback } from "../../providers/PlaybackProvider";
 import { getTodayReading, isDayCompleted, getProgress, getCompletionPercentage } from "../../utils/biblePlan.utils";
 import { buildMessage } from "../../data/contentModel";
@@ -50,7 +51,9 @@ export default function LiveScreen() {
   const router = useRouter();
   const push = useGuardedPush();
   const liveStatus = useLiveStatus();
-  const { messages } = useMessages();
+  const { messages, isBranchReady } = useMessages();
+  // Home shows the whole church, so it waits on every branch settling.
+  const messagesReady = isBranchReady('all');
   const { play } = usePlayback();
   const latestMessages = getLatestMessages(messages);
 
@@ -105,6 +108,7 @@ export default function LiveScreen() {
           isLive={liveStatus.isLive}
           title={liveStatus.title}
           source={liveStatus.source}
+          thumbnail={liveStatus.thumbnail}
           onWatch={
             liveStatus.videoId
               ? () =>
@@ -184,7 +188,14 @@ export default function LiveScreen() {
         <SectionLabel label="Latest Messages" onPress={() => push({ pathname: '/see-all', params: { section: 'latest', title: 'Latest Messages' } })}/>
 
         <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.md, marginBottom: theme.spacing.xxxl }}>
-          {latestMessages.map((m, i) => (
+          {!messagesReady ? (
+            <SkeletonList rows={2} />
+          ) : latestMessages.length === 0 ? (
+            <Text style={{ fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.body, color: theme.colors.graySecondary }}>
+              No messages yet.
+            </Text>
+          ) : (
+            latestMessages.map((m, i) => (
             <FadeInUp key={m.id} delay={staggerDelay(i)}>
               <MessageCard 
               id={m.id} 
@@ -196,7 +207,8 @@ export default function LiveScreen() {
               thumbnail={m.thumbnail}
               onPress={() => play(m)}/>
             </FadeInUp>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
     </ScreenWithWatermark>

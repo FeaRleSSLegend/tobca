@@ -1,5 +1,7 @@
-import { Text, View, Linking } from 'react-native'
+import { Text, View, Linking, StyleSheet, Animated, Easing } from 'react-native'
+import { useEffect, useRef } from 'react'
 import { PressableScale } from './motion'
+import { SmartImage } from './SmartImage'
 import { theme } from '../../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { liveStyles } from '../../constants/styles/live.styles';
@@ -17,7 +19,44 @@ interface LiveCardProps {
   // no confirmed stream to open (schedule-only fallback), which is why the
   // button is only wired in the youtube-source case.
   onWatch?: () => void;
+  /** Live stream artwork. When present the card becomes a photo hero. */
+  thumbnail?: string;
 }
+
+/**
+ * The LIVE dot, actually pulsing.
+ *
+ * It was a static pink circle before — a "live indicator" that never moved,
+ * which is the one thing a live indicator has to do. Opacity + scale on a
+ * gentle loop, native driver, so it keeps breathing regardless of what the JS
+ * thread is doing.
+ */
+const PulseDot = () => {
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  return (
+    <Animated.View
+      style={[
+        heroStyles.dot,
+        {
+          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.35] }),
+          transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] }) }],
+        },
+      ]}
+    />
+  );
+};
 
 // The first thing anyone sees on the app — pink/purple gradient hero,
 // matching how boldly the real site treats its own hero moment.
@@ -30,7 +69,7 @@ interface LiveCardProps {
 // and a labeled full-width "Watch now" button. A button with a word wins
 // over a bare icon circle for the card's single primary action — the icon
 // alone made "what happens if I tap this?" a guess.
-export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCardProps) => {
+export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail }: LiveCardProps) => {
   // Recomputed per render, NOT at module load — as a module-level const
   // this was evaluated once when the JS bundle first ran, so the countdown
   // ("in 2 days 3 hrs") silently froze at whatever was true at app launch
@@ -57,39 +96,62 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCar
   };
 
   return isLive ? (
-    <LinearGradient
-      colors={theme.gradient.colors}
-      start={theme.gradient.start}
-      end={theme.gradient.end}
-      style={liveStyles.liveCard}
-    >
-      <View style={liveStyles.badgePill}>
-        <View style={liveStyles.pulseDot} />
-        <Text style={liveStyles.badgeText}>LIVE</Text>
-      </View>
+    // PHOTO HERO. The stream's own thumbnail is the card, with a scrim for
+    // legibility — same SmartImage + gradient-scrim recipe as the playlist
+    // masthead and CurrentMessage card, so it reads as part of the same app.
+    // Falls back to the brand gradient when there's no thumbnail (the
+    // schedule-only path has no stream, so no artwork).
+    <View style={[liveStyles.liveCard, heroStyles.hero]}>
+      {thumbnail ? (
+        <>
+          <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
+          {/* Two stops weighted to the bottom: the top stays light enough to
+              see the picture, the bottom goes dark enough to carry text. */}
+          <LinearGradient
+            colors={['rgba(10,22,33,0.15)', 'rgba(10,22,33,0.55)', 'rgba(10,22,33,0.92)']}
+            locations={[0, 0.45, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </>
+      ) : (
+        <LinearGradient
+          colors={theme.gradient.colors}
+          start={theme.gradient.start}
+          end={theme.gradient.end}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
 
-      <View style={liveStyles.liveTitleBlock}>
+      <View style={heroStyles.content}>
+        <View style={heroStyles.badge}>
+          <PulseDot />
+          <Text style={liveStyles.badgeText}>LIVE</Text>
+        </View>
+
+        <View style={heroStyles.spacer} />
+
         <Text style={liveStyles.heroTitle} numberOfLines={2}>
           {title ?? 'Sunday Service'}
         </Text>
-        <Text style={liveStyles.heroCaption}>
+        <Text style={[liveStyles.heroCaption, { marginTop: 3 }]}>
           {source === 'youtube' ? 'Streaming live on YouTube' : 'Service in progress'}
         </Text>
-      </View>
 
-      <PressableScale
-        style={liveStyles.primaryBtnWrapper}
-        onPress={onWatch}
-        disabled={!onWatch}
-        accessibilityRole="button"
-        accessibilityLabel="Watch the live stream"
-      >
-        <View style={liveStyles.primaryBtn}>
+        <PressableScale
+          containerStyle={heroStyles.ctaSlot}
+          style={heroStyles.cta}
+          onPress={onWatch}
+          disabled={!onWatch}
+          accessibilityRole="button"
+          accessibilityLabel="Watch the live stream"
+        >
           <Ionicons name="play" size={16} color={theme.colors.pink} style={{ marginLeft: 1 }} />
           <Text style={liveStyles.primaryBtnText}>Watch now</Text>
-        </View>
-      </PressableScale>
-    </LinearGradient>
+        </PressableScale>
+      </View>
+    </View>
   ) : (
     <LinearGradient
       colors={theme.gradient.colors}
@@ -128,3 +190,51 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch }: LiveCar
     </LinearGradient>
   );
 };
+
+const heroStyles = StyleSheet.create({
+  // A real minimum height: the old card was only as tall as its text, which
+  // is fine for a gradient but makes a photo hero look like a cropped strip.
+  hero: {
+    minHeight: 230,
+    justifyContent: 'flex-end',
+    padding: 0,
+  },
+  content: {
+    padding: theme.spacing.lg,
+  },
+  spacer: {
+    height: theme.spacing.xxxl,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    height: 26,
+    borderRadius: theme.radius.sm,
+    // Solid red rather than a translucent scrim: on a photo the badge has to
+    // survive whatever is behind it, and red IS the live convention.
+    backgroundColor: '#E01B3C',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.white,
+  },
+  ctaSlot: {
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing.lg,
+  },
+  cta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    height: 46,
+    paddingHorizontal: theme.spacing.xxl,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.white,
+  },
+});

@@ -1,12 +1,45 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getPrimaryBranch, isPlaceholderChannel } from '../data/branches';
 
 const API_KEY = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
-const CHANNEL_ID = 'UC2iX9RmSZ6uAjFqi7putEaA';
-// YouTube convention: swap the "UC" prefix for "UU" to get the channel's
-// uploads playlist ID without spending an extra API call to look it up.
-const UPLOADS_PLAYLIST_ID = 'UU' + CHANNEL_ID.slice(2);
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Every fetch here now takes the channel it should read, rather than closing
+ * over one hardcoded id. The id itself belongs to the registries
+ * (data/branches.ts, data/channels.ts) — this module's job is talking to
+ * YouTube, not knowing which church it works for.
+ *
+ * Callers that genuinely mean "the main church channel" default to the primary
+ * branch, so existing behaviour is byte-for-byte unchanged.
+ */
+function primaryChannelId(): string {
+  return getPrimaryBranch().channelId;
+}
+
+// YouTube convention: swap the "UC" prefix for "UU" to get a channel's uploads
+// playlist id without spending an extra API call to look it up.
+function uploadsPlaylistId(channelId: string): string {
+  return 'UU' + channelId.slice(2);
+}
+
+/**
+ * Thrown for a channel whose id is still a placeholder. A distinct error type
+ * because it means something completely different from a network failure:
+ * nothing is broken, the id simply hasn't been filled in yet, and the UI should
+ * say "coming soon" rather than "couldn't load".
+ */
+export class PlaceholderChannelError extends Error {
+  constructor(channelId: string) {
+    super(`Channel id "${channelId}" is a placeholder — no real channel to fetch yet.`);
+    this.name = 'PlaceholderChannelError';
+  }
+}
+
+function requireRealChannel(channelId: string) {
+  if (isPlaceholderChannel(channelId)) throw new PlaceholderChannelError(channelId);
+}
 
 function requireApiKey() {
   if (!API_KEY) {
@@ -144,8 +177,14 @@ async function fetchPlaylistVideos(playlistId: string, cacheKey: string, cap = 5
  * services and series confidently; raise the cap later if the channel
  * outgrows it.
  */
-export async function fetchChannelUploads(): Promise<YouTubeVideo[]> {
-  return fetchPlaylistVideos(UPLOADS_PLAYLIST_ID, 'yt:uploads', 500);
+export async function fetchChannelUploads(
+  channelId: string = primaryChannelId()
+): Promise<YouTubeVideo[]> {
+  requireRealChannel(channelId);
+  // Cache key carries the channel. Sharing one 'yt:uploads' key across
+  // channels would have each branch's fetch overwrite the previous one's
+  // cache, so whichever resolved last would be served to both.
+  return fetchPlaylistVideos(uploadsPlaylistId(channelId), `yt:uploads:${channelId}`, 500);
 }
 
 export interface YouTubePlaylist {
@@ -161,10 +200,13 @@ export interface YouTubePlaylist {
  * collection when the channel has bothered to make one, more reliable
  * than guessing from titles. 1 quota unit.
  */
-export async function fetchChannelPlaylists(): Promise<YouTubePlaylist[]> {
+export async function fetchChannelPlaylists(
+  channelId: string = primaryChannelId()
+): Promise<YouTubePlaylist[]> {
+  requireRealChannel(channelId);
   requireApiKey();
 
-  const cacheKey = 'yt:playlists';
+  const cacheKey = `yt:playlists:${channelId}`;
   const cached = await AsyncStorage.getItem(cacheKey);
   if (cached) {
     const { playlists, fetchedAt } = JSON.parse(cached);
@@ -173,7 +215,7 @@ export async function fetchChannelPlaylists(): Promise<YouTubePlaylist[]> {
 
   const url = new URL(`${BASE_URL}/playlists`);
   url.searchParams.set('part', 'snippet,contentDetails');
-  url.searchParams.set('channelId', CHANNEL_ID);
+  url.searchParams.set('channelId', channelId);
   url.searchParams.set('maxResults', '50');
   url.searchParams.set('key', API_KEY!);
 
@@ -214,17 +256,25 @@ export async function fetchPlaylistItems(playlistId: string): Promise<YouTubeVid
  * outside them), and anything fresher than that is served from
  * AsyncStorage without spending the 100 units.
  */
-const LIVE_CACHE_KEY = 'yt:liveStatus';
+const liveCacheKey = (channelId: string) => `yt:liveStatus:${channelId}`;
 
 export type LiveCheckResult =
-  | { isLive: true; videoId: string; title: string }
+  // thumbnail comes straight from the search.list response we already pay for,
+  // rather than being guessed as i.ytimg.com/vi/<id>/maxresdefault.jpg — that
+  // URL 404s for plenty of streams, and a broken hero image is worse than a
+  // plain one.
+  | { isLive: true; videoId: string; title: string; thumbnail: string }
   | { isLive: false };
 
-export async function checkChannelLive(maxAgeMs = 5 * 60 * 1000): Promise<LiveCheckResult> {
+export async function checkChannelLive(
+  maxAgeMs = 5 * 60 * 1000,
+  channelId: string = primaryChannelId()
+): Promise<LiveCheckResult> {
+  requireRealChannel(channelId);
   requireApiKey();
 
   try {
-    const cached = await AsyncStorage.getItem(LIVE_CACHE_KEY);
+    const cached = await AsyncStorage.getItem(liveCacheKey(channelId));
     if (cached) {
       const { result, fetchedAt } = JSON.parse(cached);
       if (Date.now() - fetchedAt < maxAgeMs) return result;
@@ -235,7 +285,7 @@ export async function checkChannelLive(maxAgeMs = 5 * 60 * 1000): Promise<LiveCh
 
   const url = new URL(`${BASE_URL}/search`);
   url.searchParams.set('part', 'snippet');
-  url.searchParams.set('channelId', CHANNEL_ID);
+  url.searchParams.set('channelId', channelId);
   url.searchParams.set('eventType', 'live');
   url.searchParams.set('type', 'video');
   url.searchParams.set('key', API_KEY!);
@@ -246,9 +296,14 @@ export async function checkChannelLive(maxAgeMs = 5 * 60 * 1000): Promise<LiveCh
 
   const result: LiveCheckResult =
     json.items && json.items.length > 0
-      ? { isLive: true, videoId: json.items[0].id.videoId, title: json.items[0].snippet.title }
+      ? {
+          isLive: true,
+          videoId: json.items[0].id.videoId,
+          title: json.items[0].snippet.title,
+          thumbnail: pickThumbnail(json.items[0].snippet.thumbnails),
+        }
       : { isLive: false };
 
-  await AsyncStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({ result, fetchedAt: Date.now() }));
+  await AsyncStorage.setItem(liveCacheKey(channelId), JSON.stringify({ result, fetchedAt: Date.now() }));
   return result;
 }

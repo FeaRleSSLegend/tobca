@@ -16,13 +16,15 @@ import { MessageCard } from '../components/ui/MessageCard';
 import { ScreenWithWatermark } from '../components/ui/ScreenWithWatermark';
 import { getRecentlyAdded } from '../data/content';
 import { useMessages } from '../hooks/useMessages';
+import { SkeletonList } from '../components/ui/Skeletons';
 import { usePlayback } from '../providers/PlaybackProvider';
 
 export default function SearchScreen() {
   const router = useRouter();
   const { play } = usePlayback();
   const [query, setQuery] = useState('');
-  const { messages } = useMessages();
+  const { messages, isBranchReady } = useMessages();
+  const ready = isBranchReady('all');
   const recentlyAdded = getRecentlyAdded(messages);
 
   const results = query.trim().length > 0
@@ -64,6 +66,9 @@ export default function SearchScreen() {
           // recognizes from Library, so it orients rather than distracts.
           <>
             <Text style={searchStyles.sectionLabel}>Recently Added</Text>
+            {!ready ? (
+              <SkeletonList rows={4} />
+            ) : (
             <View style={searchStyles.resultsList}>
               {recentlyAdded.map((msg) => (
                 <MessageCard
@@ -80,6 +85,7 @@ export default function SearchScreen() {
                 />
               ))}
             </View>
+            )}
           </>
         ) : results.length > 0 ? (
           <View style={searchStyles.resultsList}>

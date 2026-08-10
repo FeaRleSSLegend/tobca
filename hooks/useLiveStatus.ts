@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { checkChannelLive } from '../services/youtube';
+import { getPrimaryBranch } from '../data/branches';
 import { getTodayServices } from '../data/services';
 
 function isNearServiceWindow(): boolean {
@@ -39,6 +40,8 @@ export interface LiveStatus {
   isLive: boolean;
   videoId?: string;
   title?: string;
+  /** Live stream artwork, for the Home hero. Absent on the schedule fallback. */
+  thumbnail?: string;
   // Where the answer came from — 'youtube' is a confirmed fact, 'schedule'
   // is a best guess used only when YouTube couldn't be asked. Cards use
   // this to caption honestly ("Streaming live" vs "Service in progress").
@@ -75,11 +78,22 @@ export function useLiveStatus(): LiveStatus {
     async function poll() {
       const nearWindow = isNearServiceWindow();
       try {
-        const result = await checkChannelLive(nearWindow ? 4 * 60 * 1000 : 30 * 60 * 1000);
+        // Live status is the PRIMARY branch's for now: Wuse 2 has no real
+        // channel id and no service schedule yet, so it has nothing to report.
+        const result = await checkChannelLive(
+          nearWindow ? 4 * 60 * 1000 : 30 * 60 * 1000,
+          getPrimaryBranch().channelId
+        );
         if (cancelled) return;
         setStatus(
           result.isLive
-            ? { isLive: true, videoId: result.videoId, title: result.title, source: 'youtube' }
+            ? {
+                isLive: true,
+                videoId: result.videoId,
+                title: result.title,
+                thumbnail: result.thumbnail,
+                source: 'youtube',
+              }
             : { isLive: false, source: 'youtube' }
         );
       } catch (e) {

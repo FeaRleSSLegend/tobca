@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { fetchChannelPlaylists, YouTubePlaylist } from '../services/youtube';
+import { fetchChannelPlaylists, PlaceholderChannelError, YouTubePlaylist } from '../services/youtube';
+import { getPrimaryBranch } from '../data/branches';
 
 export function usePlaylists() {
   const [playlists, setPlaylists] = useState<YouTubePlaylist[]>([]);
@@ -7,11 +8,15 @@ export function usePlaylists() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchChannelPlaylists()
+    // Curated playlists are the main church channel's; branches don't each
+    // maintain their own, so this stays pinned to the primary branch.
+    fetchChannelPlaylists(getPrimaryBranch().channelId)
       .then((p) => {
         if (!cancelled) setPlaylists(p);
       })
-      .catch((e) => console.warn('Playlists fetch failed:', e))
+      .catch((e) => {
+        if (!(e instanceof PlaceholderChannelError)) console.warn('Playlists fetch failed:', e);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

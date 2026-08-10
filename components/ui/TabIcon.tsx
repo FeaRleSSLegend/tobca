@@ -26,8 +26,24 @@ interface TabIconProps {
   focused: boolean;
 }
 
-const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
-
+// NOTE: no Animated.createAnimatedComponent(Ionicons) here, deliberately.
+//
+// That crashed with "undefined is not a function" out of pop.setValue(). The
+// throw is actually INSIDE setValue — Expo's LogBox collapses node_modules
+// frames, so it surfaces at the call site. For a natively-driven value,
+// AnimatedValue.setValue ends in:
+//
+//   NativeAnimatedAPI.setAnimatedNodeValue(this.__getNativeTag(), value)
+//
+// which needs a real native view tag. Ionicons is a third-party COMPOSITE
+// component (a font-glyph wrapper around Text), not a host component, so
+// driving it with useNativeDriver: true left the value marked native without a
+// tag to resolve. Every other Animated usage in this app targets a host view
+// (Animated.View) or runs on the JS driver, which is why only the tab bar broke.
+//
+// Animating a wrapper Animated.View instead is visually identical — scaling the
+// box scales the glyph — and puts the value on a host component like the rest
+// of the app.
 export default function TabIcon({ icon, label, focused }: TabIconProps) {
   const color = focused ? theme.colors.navy : theme.colors.grayIcon;
   const iconName = (focused ? icon : `${icon}-outline`) as IoniconName;
@@ -50,7 +66,9 @@ export default function TabIcon({ icon, label, focused }: TabIconProps) {
 
     if (isFirstRun.current) {
       isFirstRun.current = false;
-      pop.setValue(focused ? 1 : 0);
+      // No setValue needed: `pop` was constructed with exactly this value, so
+      // the call was always a no-op that only existed to restate the initial
+      // state — and it was the line that crashed.
       return () => settle.stop();
     }
 
@@ -97,7 +115,9 @@ export default function TabIcon({ icon, label, focused }: TabIconProps) {
         style={[styles.pill, { opacity: active, transform: [{ scale: pillScale }] }]}
       />
 
-      <AnimatedIonicons name={iconName} size={22} color={color} style={{ transform: [{ scale: iconScale }] }} />
+      <Animated.View style={{ transform: [{ scale: iconScale }] }}>
+        <Ionicons name={iconName} size={22} color={color} />
+      </Animated.View>
       <Text style={[styles.label, { color }]}>{label}</Text>
 
       {/* Always mounted now, not conditional on `focused`. Rendering it only
