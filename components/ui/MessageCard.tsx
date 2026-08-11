@@ -1,4 +1,5 @@
 import {View, Text, Pressable, StyleSheet} from 'react-native'
+import { displayTitle, displaySubtitle } from '../../utils/contentGrouping';
 import { SmartImage } from './SmartImage';
 import { PressableScale } from './motion';
 import { liveStyles } from '../../constants/styles/live.styles'
@@ -32,12 +33,16 @@ const typeIcon: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 export const MessageCard = ({title, speaker, duration, series, type, publishedAt, thumbnail, onPress}: MessageCardProps) => {
     const icon = (type && typeIcon[type]) || 'play';
+    // Prefer the SERVICE over the speaker on the meta line. On a church channel
+    // every upload has the same speaker, so that line was identical on every
+    // row — a full line of type that distinguished nothing. The service does.
+    const context = displaySubtitle(title) ?? speaker;
     return(
         <PressableScale
           onPress={onPress}
           style={liveStyles.latestMessageRow}
           accessibilityRole="button"
-          accessibilityLabel={`${title}, ${speaker}${duration ? `, ${duration}` : ''}`}
+          accessibilityLabel={`${displayTitle(title)}, ${speaker}${duration ? `, ${duration}` : ''}`}
         >
               <View style={liveStyles.latestMessageThumb}>
                 {thumbnail && (
@@ -54,9 +59,9 @@ export const MessageCard = ({title, speaker, duration, series, type, publishedAt
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={liveStyles.latestMessageTitle} numberOfLines={2}>{title}</Text>
+                <Text style={liveStyles.latestMessageTitle} numberOfLines={2}>{displayTitle(title)}</Text>
                 <Text style={liveStyles.latestMessageMeta} numberOfLines={1}>
-                  {speaker}
+                  {context}
                   {series ? <Text style={liveStyles.latestMessageSeriesTag}> · {series}</Text> : null}
                   {publishedAt ? ` · ${publishedAt}` : ''}
                 </Text>

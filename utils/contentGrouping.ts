@@ -160,6 +160,79 @@ function splitTitle(title: string): { theme: string | null; serviceLabel: string
   return known ? { theme: null, serviceLabel: known.label } : { theme: title, serviceLabel: null };
 }
 
+/**
+ * The title to SHOW a human, as opposed to the raw upload title.
+ *
+ * The channel names uploads for archiving, not for reading:
+ *   "The Manifold Grace of God || Sunday (2nd) Service || Pst. Abu Jibril || 9AUG2026"
+ * Rendered verbatim that is three lines of pipes, a name and a date where a
+ * headline should be — on the Library hero it ran to three lines and still
+ * truncated, so the one thing the card exists to say never fit.
+ *
+ * splitTitle already separates the theme from the service metadata for
+ * CLASSIFICATION; this exposes the same answer for DISPLAY. Preference order:
+ *   1. the theme, if the title has one ("The Manifold Grace of God")
+ *   2. the recognised service name, for a pure service recording
+ *   3. the raw title, if it has neither — never blank, never worse than today.
+ */
+export function displayTitle(title: string): string {
+  const { theme, serviceLabel } = splitTitle(title);
+  const cleaned = (theme ?? serviceLabel ?? title)
+    // Drop a trailing date the channel appends after the theme, e.g. "9AUG2026".
+    .replace(new RegExp(`\b\d{1,2}\s*(${MONTHS})[a-z]*\s*\d{2,4}\b`, 'gi'), '')
+    .replace(/[\s\-–:|,]+$/g, '')
+    .trim();
+  return cleaned || title;
+}
+
+/**
+ * The line UNDER a title in a list row.
+ *
+ * displayTitle() deliberately strips the service and date out of an upload
+ * title — which is right for a headline and WRONG on its own in a list, because
+ * a channel that runs the same series across four services publishes four
+ * uploads whose themes are identical. Stripped, they all render as "The
+ * Manifold Grace of God" with the same artwork and the same speaker, and the
+ * list becomes unusable: four rows that look like duplicates but aren't.
+ *
+ * So whatever displayTitle REMOVED is exactly what disambiguates the row.
+ * Returns the service ("Sunday Service") when the title carries one, otherwise
+ * null so the caller can fall back.
+ *
+ * Speaker is a poor substitute here: every upload on a church channel has the
+ * same one, so it costs a line and distinguishes nothing.
+ */
+export function displaySubtitle(title: string): string | null {
+  const { theme } = splitTitle(title);
+  if (!theme) return null; // a pure service recording already says so in its title
+
+  // The RAW service segment, not the normalised label. Classification folds
+  // "Sunday (1st) Service" and "Sunday (2nd) Service" into one "Sunday Service"
+  // bucket ON PURPOSE — they belong to the same recurring service. But for a
+  // LIST ROW that normalisation is exactly the information that tells two
+  // otherwise-identical rows apart: a church that streams the same series at
+  // both Sunday services publishes two uploads with the same theme, same
+  // artwork and the same date, and collapsing the ordinal makes them read as
+  // duplicates. So display keeps what grouping discards.
+  const parts = title.split(TITLE_SEPARATOR).map((p) => p.trim()).filter(Boolean);
+  let raw = parts.find((p) => KNOWN_SERVICE_PATTERNS.some((k) => k.pattern.test(p)));
+
+  // No service? Fall back to an INSTALMENT marker — "Day 1", "Part 2".
+  // A summit published as "…Summit with Fela Durotoye || Day 1 || 20JUN2026"
+  // has no service segment at all, and its theme is identical across every
+  // day, so without this a five-day playlist renders as five identical rows.
+  // Same principle as the ordinal above: whatever distinguishes the item is
+  // whatever the title's extra segments carry.
+  if (!raw) raw = parts.find((p) => /^(?:day|part|episode)\s*\d+$/i.test(p.trim()));
+  if (!raw) return null;
+
+  return raw
+    .replace(new RegExp(`\b\d{1,2}\s*(${MONTHS})[a-z]*\s*\d{2,4}\b`, 'gi'), '')
+    .replace(/\s+/g, ' ')
+    .replace(/[\s\-–:|,]+$/g, '')
+    .trim() || null;
+}
+
 export interface ContentGroup {
   key: string; // unique — safe to use directly as a React key
   label: string;

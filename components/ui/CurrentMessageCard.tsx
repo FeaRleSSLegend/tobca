@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import { Message } from '../../data/content';
+import { displayTitle } from '../../utils/contentGrouping';
 
 interface CurrentMessageProps {
   message: Message;
@@ -26,7 +27,7 @@ export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
       style={styles.card}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Current message: ${message.title}, ${message.speaker}`}
+      accessibilityLabel={`Current message: ${displayTitle(message.title)}, ${message.speaker}`}
     >
       {message.thumbnail ? (
         <>
@@ -59,7 +60,7 @@ export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
       <View>
         <Text style={styles.eyebrow}>Current Message</Text>
         <Text style={styles.title} numberOfLines={2}>
-          {message.title}
+          {displayTitle(message.title)}
         </Text>
         <Text style={styles.meta}>
           {message.speaker} · {message.duration}

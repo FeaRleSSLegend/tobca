@@ -18,6 +18,7 @@ import { PressableScale, FadeInUp, staggerDelay } from '../../components/ui/moti
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Shimmer } from '../../components/ui/motion';
 import { Message } from '../../data/content';
+import { displayTitle, displaySubtitle } from '../../utils/contentGrouping';
 import { buildMessage } from '../../data/contentModel';
 import { PRIMARY_BRANCH_ID } from '../../data/branches';
 import { usePlayback } from '../../providers/PlaybackProvider';
@@ -177,7 +178,7 @@ export default function PlaylistScreen() {
           ) : (
             items.map((m, i) => (
               <FadeInUp key={m.id} delay={staggerDelay(i)}>
-                <PressableScale style={styles.trackRow} onPress={() => play(m)} accessibilityRole="button" accessibilityLabel={`Play ${m.title}, ${m.duration}`}>
+                <PressableScale style={styles.trackRow} onPress={() => play(m)} accessibilityRole="button" accessibilityLabel={`Play ${displayTitle(m.title)}, ${m.duration}`}>
                   <Text style={styles.trackNum}>{i + 1}</Text>
                   <View style={styles.trackThumb}>
                     <SmartImage uri={m.thumbnail} style={StyleSheet.absoluteFill} />
@@ -188,8 +189,14 @@ export default function PlaylistScreen() {
                     ) : null}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.trackTitle} numberOfLines={2}>{m.title}</Text>
-                    <Text style={styles.trackMeta} numberOfLines={1}>{m.speaker}</Text>
+                    <Text style={styles.trackTitle} numberOfLines={2}>{displayTitle(m.title)}</Text>
+                    {/* The instalment ("Day 2") rather than the speaker: every
+                        row on a church playlist shares a speaker, so that line
+                        distinguished nothing while the thing that DID — which
+                        day this is — sat buried in the raw title. */}
+                    <Text style={styles.trackMeta} numberOfLines={1}>
+                      {displaySubtitle(m.title) ?? m.speaker}
+                    </Text>
                   </View>
                   <Ionicons name="play-circle" size={26} color={theme.colors.grayIcon} />
                 </PressableScale>

@@ -16,6 +16,7 @@ import { MessageCard } from '../components/ui/MessageCard';
 import { ScreenWithWatermark } from '../components/ui/ScreenWithWatermark';
 import { getRecentlyAdded } from '../data/content';
 import { useMessages } from '../hooks/useMessages';
+import { shortDate } from '../utils/collections';
 import { SkeletonList } from '../components/ui/Skeletons';
 import { usePlayback } from '../providers/PlaybackProvider';
 
@@ -79,7 +80,7 @@ export default function SearchScreen() {
                   duration={msg.duration}
                   series={msg.series}
                   type={msg.type}
-                  publishedAt={msg.publishedAt}
+                  publishedAt={shortDate(msg.publishedAt)}
                   thumbnail={msg.thumbnail}
                   onPress={() => play(msg)}
                 />
@@ -98,7 +99,7 @@ export default function SearchScreen() {
                 duration={msg.duration}
                 series={msg.series}
                 type={msg.type}
-                publishedAt={msg.publishedAt}
+                publishedAt={shortDate(msg.publishedAt)}
                 thumbnail={msg.thumbnail}
                 onPress={() => play(msg)}
               />

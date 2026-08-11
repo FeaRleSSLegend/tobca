@@ -1,4 +1,5 @@
 import React from 'react';
+import { displayTitle } from '../../utils/contentGrouping';
 import { View, Text, StyleSheet } from 'react-native';
 import { PressableScale } from './motion';
 import { SmartImage } from './SmartImage';
@@ -50,7 +51,7 @@ export const GridCard = React.memo(({
       containerStyle={styles.cardSlot}
       style={styles.card}
       accessibilityRole="button"
-      accessibilityLabel={`${title}${speaker ? `, ${speaker}` : ''}, ${duration}`}
+      accessibilityLabel={`${displayTitle(title)}${speaker ? `, ${speaker}` : ''}, ${duration}`}
     >
       <View style={styles.thumbnail}>
         {thumbnail ? (
@@ -71,7 +72,7 @@ export const GridCard = React.memo(({
       </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={2}>
-          {title}
+          {displayTitle(title)}
         </Text>
         {speaker && (
           <Text style={styles.speaker} numberOfLines={1}>
