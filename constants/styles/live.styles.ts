@@ -89,7 +89,9 @@ export const liveStyles = StyleSheet.create({
     color: theme.colors.white,
     fontWeight: theme.fontWeight.semibold,
     textTransform: 'uppercase',
-  },
+    // Was fontWeight with no fontFamily -> fell back to the system font.
+    fontFamily: theme.fontFamily.bodySemibold,
+},
 
   // This Week's Services strip
   servicePill: {

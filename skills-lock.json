@@ -1,0 +1,653 @@
+{
+  "version": 1,
+  "skills": {
+    "37signals-way": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "37signals-way/SKILL.md",
+      "computedHash": "d6f21c60e52eeccc32a41880192a9833670f9843b7e240be44448c14b96a0544"
+    },
+    "Agentic UX Design - Relationship-Centric Interfaces": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "relationship-design/skills/relationship-design/SKILL.md",
+      "computedHash": "73ac671127891854f2bfb4aff991a822d270cf0b7879fc6cfa01e6be78e5cf25"
+    },
+    "adaptive-communication": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "adaptive-communication/skills/adaptive-communication/SKILL.md",
+      "computedHash": "3a7e873a456d0a84eae3d82494c64b4284ba20d9e3fb69064b69a8ebecf8f939"
+    },
+    "app-store": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/app-store/SKILL.md",
+      "computedHash": "a662645a7b285ac3380591d844e913511a99fd76e777ac2e31c655173e87d78a"
+    },
+    "apple-intelligence": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/apple-intelligence/SKILL.md",
+      "computedHash": "cef41e19c3d394092e7a1110b87bb11cb5022e79d6472992ad735bbde8c8fd8d"
+    },
+    "bencium-aeo": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "bencium-aeo/skills/bencium-aeo/SKILL.md",
+      "computedHash": "b673cd1d7cb3cadb4afdd7887d7981658e916545eedfd5f0cc8f45cc3753ed31"
+    },
+    "bencium-code-conventions": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "bencium-code-conventions/skills/bencium-code-conventions/SKILL.md",
+      "computedHash": "15c48722fb855060db3cdccdb9600d22b98b092c1b0ec58891d52c3f20ae8f96"
+    },
+    "bencium-controlled-ux-designer": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "bencium-controlled-ux-designer/skills/bencium-controlled-ux-designer/SKILL.md",
+      "computedHash": "0221b3cc4cbc393a8ecc823cce9eb07ed369fe38c45e65c42fde41b257c481b1"
+    },
+    "bencium-impact-designer": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "bencium-impact-designer/skills/bencium-impact-designer/SKILL.md",
+      "computedHash": "7dcc22fcd80743f57faed3984a9ca7617868e8b1adda3fafdcd7894471d8914a"
+    },
+    "bencium-innovative-ux-designer": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "bencium-innovative-ux-designer/skills/bencium-innovative-ux-designer/SKILL.md",
+      "computedHash": "6d5de8eb29c8a3a86683b16031a36c84e132d541c24a3c261efd40e1409305f1"
+    },
+    "blue-ocean-strategy": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "blue-ocean-strategy/SKILL.md",
+      "computedHash": "8b2943fdb4a7de9749b6218fefd0181dc5e95c904ca77c27a624b68488432cc3"
+    },
+    "clean-architecture": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "clean-architecture/SKILL.md",
+      "computedHash": "41bc54cd69d52698ca747529a148d971e23587cc872db58f715b59de95ef51e6"
+    },
+    "clean-code": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "clean-code/SKILL.md",
+      "computedHash": "af6b8adde1281493c8a55d5505efc739a2a5ed851ca467b7b6d35c2d2b2f9cea"
+    },
+    "cold-start-problem": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "cold-start-problem/SKILL.md",
+      "computedHash": "5d3d40de56c4ebf79e50985775a4019680c0d085021cda9eaf0dea3646560833"
+    },
+    "contagious": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "contagious/SKILL.md",
+      "computedHash": "c5acba5e230748a2a441ecfd432862ac11977044e755def1148b9aaf0c20cf4e"
+    },
+    "continuous-discovery": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "continuous-discovery/SKILL.md",
+      "computedHash": "35104b8763f431a7db04a446a48c9fdf9a2d6a95ae0f69ba7d62f060d6d1ee05"
+    },
+    "core-ml": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/core-ml/SKILL.md",
+      "computedHash": "67e21de1bc19c540ff2d2cea507a36f978edfb2bf85a8ede30c8ff21e53ae347"
+    },
+    "create-app": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "create-app/SKILL.md",
+      "computedHash": "92cc2a1c22749749d1f05254c5a0f0c87fdde6dbde5c12e6c7b36dbb7cee9a6d"
+    },
+    "create-business": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "create-business/SKILL.md",
+      "computedHash": "05506479f181894ebd945c51833a198b1afc4c9099eee914a10def984fb350dc"
+    },
+    "create-website": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "create-website/SKILL.md",
+      "computedHash": "0a4adf7059ea4be4df016622afb3bf7a6953ff1a309e775d6285a484dd68b230"
+    },
+    "cro-methodology": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "cro-methodology/SKILL.md",
+      "computedHash": "74bb2d30798b9f78cb86d78687724bf537884bb5b7200f38c039026aecd1d06f"
+    },
+    "crossing-the-chasm": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "crossing-the-chasm/SKILL.md",
+      "computedHash": "d8ec06952db00327ee3c7723e62adf42e2f57d34ce7e215488013f6585ddd359"
+    },
+    "ddia-systems": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "ddia-systems/SKILL.md",
+      "computedHash": "060c37b63f2a01847c9782839f7178d686884737e8a553c811cc36687605b20f"
+    },
+    "design": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/design/SKILL.md",
+      "computedHash": "e597016ecdf4bd449c7b53cb1b361ac2e0dc3049c3dc11d2c8171f9abd38daba"
+    },
+    "design-audit": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "design-audit/skills/design-audit/SKILL.md",
+      "computedHash": "be4427bc445752b11968a22ded63f16a756235e24cef2c06a5d723f8102287dd"
+    },
+    "design-code-architecture": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "design-code-architecture/SKILL.md",
+      "computedHash": "7272847da541cf05b45ba939d9d19b4c34f04ee03320c96a25c1a978ad4f2294"
+    },
+    "design-everyday-things": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "design-everyday-things/SKILL.md",
+      "computedHash": "7c278fe0753e5d3e48c1e079749f74fc4db33ff25bff9cd1cfdc698af2e09877"
+    },
+    "design-sprint": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "design-sprint/SKILL.md",
+      "computedHash": "001661cc3c775c17f7c8d904243a3094c8730f2a751cd2ffd2f62b66fc7f7907"
+    },
+    "domain-driven-design": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "domain-driven-design/SKILL.md",
+      "computedHash": "59c101a9dc2e7b4cb1d20287bd2f0e9e5ef69315b7c25f477dd5cafb414f57cb"
+    },
+    "drive-motivation": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "drive-motivation/SKILL.md",
+      "computedHash": "14d9e4db4a27a32be76618b5979aab24a7cdfcc4265a889223c33f708873e142"
+    },
+    "eas-workflows": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/eas-workflows/SKILL.md",
+      "computedHash": "8767c86a2c7a5af438f23f1ffa3c1a975c71ad08966cb1fff64bedd36dbbc787"
+    },
+    "expo-native-ui": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-native-ui/SKILL.md",
+      "computedHash": "60e465eead0773c55193f6f8f1b097bd21206ebb0be5efe811dd89eba50a98c2"
+    },
+    "expo-router": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-router/SKILL.md",
+      "computedHash": "1cc6bb6852cf44bb51e6f4cb50efb3bed48b486c7f8ba3ac8e06b6b82be2cd78"
+    },
+    "foundation": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/foundation/SKILL.md",
+      "computedHash": "dd73b5f2f009f92de129917c450609168a8ce9f4d2a37ea6b492c8076c55d0a8"
+    },
+    "generators": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/generators/SKILL.md",
+      "computedHash": "b7b78ca50bebfe4188a8a92d93c007d03c42c2d8fca238dfae837d1f4eb731e8"
+    },
+    "good-strategy-bad-strategy": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "good-strategy-bad-strategy/SKILL.md",
+      "computedHash": "5f73a3d2c896f11afe136b001092bfe77870208c72ef3ee79396070e0ad09c63"
+    },
+    "grow-app": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "grow-app/SKILL.md",
+      "computedHash": "829111dfb711df1cde1cbd29cdf399aa8c82360d32665bbecfd20c336da512f4"
+    },
+    "grow-business": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "grow-business/SKILL.md",
+      "computedHash": "1dd375af4ae7a81373df02d88ff40886aa711d077028857e5e6fd4d9a0662d5c"
+    },
+    "grow-website": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "grow-website/SKILL.md",
+      "computedHash": "ed3e9710bc28384f5ba20fcb73a9955ef0caf941b851d3ffae647f86afdd98fb"
+    },
+    "growth": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/growth/SKILL.md",
+      "computedHash": "70c6df7692b6c41296cb54018520c58d3efa882f542e381c248344bc8c2fe439"
+    },
+    "high-end-visual-design": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/soft-skill/SKILL.md",
+      "computedHash": "f730e4132775f13eea19e3dc39afc6bb453cfc0498872b127ad8f0d47cfd802d"
+    },
+    "high-output-management": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "high-output-management/SKILL.md",
+      "computedHash": "ec012d144cd3b4a7e96cf528c82dad8a4662253d2cd9617390dea0bd39252c11"
+    },
+    "high-perf-browser": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "high-perf-browser/SKILL.md",
+      "computedHash": "e4c44e2ae5aefb392933a37be1c0b14ae4d83f5c99a1d443d1616222b3c7b789"
+    },
+    "hooked-ux": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "hooked-ux/SKILL.md",
+      "computedHash": "59d351841bfc2901ff44abbc2619ce4c1f5c96fcfe2e06b28198b642991dde6a"
+    },
+    "human-architect-mindset": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "human-architect-mindset/skills/human-architect-mindset/SKILL.md",
+      "computedHash": "59f31549dfcbd65569a9ddebc2840161a560f6a80844e0046da75f298d340437"
+    },
+    "hundred-million-offers": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "hundred-million-offers/SKILL.md",
+      "computedHash": "946ffa8b23079019a9fe3ce56228fae6c91a4c1975a70a8778e2314a3e950819"
+    },
+    "hungarian-humanizer": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "hungarian-humanizer/skills/hungarian-humanizer/SKILL.md",
+      "computedHash": "61237de39bde86b185e43a54ef9044fa3a3199787f115b86ed3b1e63911848f2"
+    },
+    "image-to-code": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/image-to-code-skill/SKILL.md",
+      "computedHash": "3d2ac14d956fdafc5500d2108b90895e134d847f9f199e7f1d18bf1f814cf7c8"
+    },
+    "improve-app": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "improve-app/SKILL.md",
+      "computedHash": "c9773977267dc17fc24e297fb9d652952046285e51e7c15f469b26ecaa8e8218"
+    },
+    "improve-business": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "improve-business/SKILL.md",
+      "computedHash": "27abb347b971ffd93d25732a4edf463fe29e17c5893cfd9bd115db13d4b4431a"
+    },
+    "improve-code-quality": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "improve-code-quality/SKILL.md",
+      "computedHash": "290f1baf3bf3c32df41b7ca6554f7cdabfad2c3ce274215d1fd04ea999b84ef9"
+    },
+    "improve-retention": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "improve-retention/SKILL.md",
+      "computedHash": "5caf4f77516968bff3c83038b0253b188fee4bceb91b25677866e02a401e0e95"
+    },
+    "improve-website": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "improve-website/SKILL.md",
+      "computedHash": "582bc0b7b3ceadd8bdf4bb8c64240c49c61665ecad8d6ef95a807028b1ae01e3"
+    },
+    "influence-psychology": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "influence-psychology/SKILL.md",
+      "computedHash": "61d05428a0136dd72f88d419e616fdfa1145838094004eb5bc755ce0f7727b33"
+    },
+    "inspired-product": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "inspired-product/SKILL.md",
+      "computedHash": "e135379706785c39dabbb7b3f9070bc2a70bdb8722a5c52901feb2695821ce65"
+    },
+    "insurgent-campaign": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "insurgent-campaign/skills/insurgent-campaign/SKILL.md",
+      "computedHash": "292c053fa9cb71ae99fdd55a61f81546ddf9db7e5e908aa78321cdfc64c46f43"
+    },
+    "ios-development": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ios/SKILL.md",
+      "computedHash": "1b0c97941634fe0292df5276e80f89b82088f7dfb979b74ebb73ed5ccf3ee572"
+    },
+    "ios-hig-design": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "ios-hig-design/SKILL.md",
+      "computedHash": "6483e15378366d4f3eb535450d2406e3926b8e3ec7fcfde290e4373e1ceb89d1"
+    },
+    "jobs-to-be-done": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "jobs-to-be-done/SKILL.md",
+      "computedHash": "74b0174a7766cf198415e50bc5c235f865315d7f1b0d5ddc65303b148106e915"
+    },
+    "lean-analytics": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "lean-analytics/SKILL.md",
+      "computedHash": "a7c8f40a78c32b3d2f9cfb0598d9577605418ddef8847c7dabd6db8023539f20"
+    },
+    "lean-startup": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "lean-startup/SKILL.md",
+      "computedHash": "1a70cac4df1d24898a3d4496b2be740ff7b710e6978651533e1575b94dbfcf1d"
+    },
+    "lean-ux": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "lean-ux/SKILL.md",
+      "computedHash": "5bd395608dc5762d39c9d569753cd1f01b6ec7234cf0c506a506348087c4034e"
+    },
+    "legal": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/legal/SKILL.md",
+      "computedHash": "95fcd51b06f5d06e94ebf3fdc9d7483c89f5ed6015e58e56d1ebb16546ea60a7"
+    },
+    "macos-development": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/macos/SKILL.md",
+      "computedHash": "3b11422207efa9229fe183675535a86bd5dff1dceac716f38da9269fc242a36b"
+    },
+    "made-to-stick": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "made-to-stick/SKILL.md",
+      "computedHash": "b3c71bded80afd7b28274833639063cf0e36ff67ac6290d9fcbf3c868e8dae21"
+    },
+    "mapkit": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/mapkit/SKILL.md",
+      "computedHash": "3c58b4cdc19ad8eec8311121cf9f87d8514bb2362dc42aa6bebf40021c0c0023"
+    },
+    "microinteractions": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "microinteractions/SKILL.md",
+      "computedHash": "ea3179480ecf165792629015f2faebbe8bc60c8b169c0860e4702e668e002324"
+    },
+    "minimalist-ui": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/minimalist-skill/SKILL.md",
+      "computedHash": "7e88897e0371184e97a82b8d9ef080323c13f21eb067b58ef71eb05173a08ac2"
+    },
+    "mom-test": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "mom-test/SKILL.md",
+      "computedHash": "786ba35845322d0ac2854a587dc1ff621c7eb59287c2ecfc2eb57ccd38ba8901"
+    },
+    "monetization": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/monetization/SKILL.md",
+      "computedHash": "60b519b957ffe5e8ca08517847e3182d0384d9ec3bbc9aba3082c634143b1861"
+    },
+    "monetizing-innovation": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "monetizing-innovation/SKILL.md",
+      "computedHash": "c13000c44839ff7ca7faf4fe39adc02219209298083bba9e76bc1d9e26b1630e"
+    },
+    "negentropy-lens": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "negentropy-lens/skills/negentropy-lens/SKILL.md",
+      "computedHash": "3a52d747edbf1aad667cc07ad26c1982779e9617aab82907713100be17ff2504"
+    },
+    "negotiation": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "negotiation/SKILL.md",
+      "computedHash": "c754b8b6589b3f52fff435a08d3bfd8a6e16117143064fec50f56e3756fb6749"
+    },
+    "obviously-awesome": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "obviously-awesome/SKILL.md",
+      "computedHash": "2cd01c542e646f2137dc4327022b868bd0fbeec53eafcd19af1ff770d067a964"
+    },
+    "one-page-marketing": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "one-page-marketing/SKILL.md",
+      "computedHash": "19eb65d70f5f6652a00b4c99f373e04d759136e41917fccfe7ac6217a6f1ca95"
+    },
+    "performance": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/performance/SKILL.md",
+      "computedHash": "e4f868097bea2d9adc993d88751e070775daf60b4dbef0d741e4b338f8cbe111"
+    },
+    "pragmatic-programmer": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "pragmatic-programmer/SKILL.md",
+      "computedHash": "ca808589ff9e63a264a3e174930e73b6e5e4a309af00d807e6c988fb9d5d289d"
+    },
+    "predictable-revenue": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "predictable-revenue/SKILL.md",
+      "computedHash": "64706d0681cc87cac27339708aa100eb18ac7e2e9c24f948e88ec478b2152cdf"
+    },
+    "product-development": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/product/SKILL.md",
+      "computedHash": "196780385cee31e96f8a42b7be17ea986dc53f828c4a7e1c2dd7daddced35dbb"
+    },
+    "redesign-existing-projects": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/redesign-skill/SKILL.md",
+      "computedHash": "47eced3e960a2c961d3cbee11fa1216264f589344b586a5cbd03967cd6b9c54b"
+    },
+    "refactoring-patterns": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "refactoring-patterns/SKILL.md",
+      "computedHash": "5372f40d0b83f20713f7cb8436466280e234cc1b2a5e3c956ece457724c7b3a4"
+    },
+    "refactoring-ui": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "refactoring-ui/SKILL.md",
+      "computedHash": "ae02c7c2b3685df24ca66836dff7a01efac1ed213b9d6963273c354cd9fe57b1"
+    },
+    "release-it": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "release-it/SKILL.md",
+      "computedHash": "41a5a9a238dc2cbb3d7390773d755d58a841a4293544ecf04e10a7e1420c3f9d"
+    },
+    "release-review": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/release-review/SKILL.md",
+      "computedHash": "5934f0ee65e2117746356e8b709d74356d8087b49731acb4a1d44da0e36c5f65"
+    },
+    "remove-technical-debt": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "remove-technical-debt/SKILL.md",
+      "computedHash": "1c61c95d8a1ee3297f12759f84a48e1635afed177ef6ab9e8206671aaa9e8eab"
+    },
+    "renaissance-architecture": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "renaissance-architecture/skills/renaissance-architecture/SKILL.md",
+      "computedHash": "42905d0716cdb3a4e3474a1c52e15b40f6a605885edce035b70d78d11ad0eba8"
+    },
+    "scorecard-marketing": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "scorecard-marketing/SKILL.md",
+      "computedHash": "69b21ab47fe9821a8192f103319d94470b8fe800cf69fab76d0c300ecfe5b718"
+    },
+    "security": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security/SKILL.md",
+      "computedHash": "aec196b4011f30aebfe4605cf537d0b68307773ecfff172364de83ea7a558e4f"
+    },
+    "shared": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/shared/SKILL.md",
+      "computedHash": "3aab5864b2b81e98612c21944aeb05e1fdc9571666d770c894f6649325a60ec4"
+    },
+    "software-design-philosophy": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "software-design-philosophy/SKILL.md",
+      "computedHash": "c09bcdecd3981c12f9e4461e2428f4bcea13c674bfee097f8f8c4fb9d89598cc"
+    },
+    "steve-jobs-design-review": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "steve-jobs-design-review/SKILL.md",
+      "computedHash": "d44c6d36c20a22f3b5bc01b05b78c4a8bfea700a938cde24beb353e827f19f89"
+    },
+    "storybrand-messaging": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "storybrand-messaging/SKILL.md",
+      "computedHash": "61910cd8310010cf08dd6ee3f1d20b92e52948785686391ad0d2c2b9c7a0ee6d"
+    },
+    "swift-development": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/swift/SKILL.md",
+      "computedHash": "3e579c2388f7c63d2d0c1839208dc520ddf4e22883c96861453d6af5ff0a9942"
+    },
+    "swiftdata": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/swiftdata/SKILL.md",
+      "computedHash": "b3f7ac6c6794a2c368cdb7e6cdeb3bb5359e26bbcb7d5f929ebf05df2c8aa531"
+    },
+    "swiftui": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/swiftui/SKILL.md",
+      "computedHash": "6bb9b7041d49a57a79dba4a3f531f8c641a9cc231cde731f848e9486e94ba2bb"
+    },
+    "system-design": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "system-design/SKILL.md",
+      "computedHash": "6b952b824a92dbda8eb7e47902c25e844f9dbfa52cb2a6c59a970918aa6d26b9"
+    },
+    "team-topologies": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "team-topologies/SKILL.md",
+      "computedHash": "d94f1c75fe55af22610ab53dc9e78f8802e04a319e36e0fb4a6bfcbb99adf82e"
+    },
+    "testing": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/testing/SKILL.md",
+      "computedHash": "c1f933f1c6432789d398354d88140864e9ed2af233effa681b25582d2703fbaf"
+    },
+    "top-design": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "top-design/SKILL.md",
+      "computedHash": "915c4743240d9e4d8512c3500feb5235c04669feae81a994912ee0143c80a987"
+    },
+    "traction-eos": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "traction-eos/SKILL.md",
+      "computedHash": "b41b6979409e999f8d9237619c66388e533f0df4fa86e4a29d4731e76a21e0fe"
+    },
+    "ui-refactor": {
+      "source": "LovroPodobnik/refactoring-ui-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-refactor/SKILL.md",
+      "computedHash": "7936dbea76cbc360338b58745edf8f6bd0242a050b16057848ac1df2ad8aac51"
+    },
+    "ui-typography": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "typography/skills/typography/SKILL.md",
+      "computedHash": "148e35f41f0a4b317fb83b4efdf7308a829e6dc153f1377d963807ce7b85304e"
+    },
+    "ux-heuristics": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "ux-heuristics/SKILL.md",
+      "computedHash": "25e39fa1e5d800ed9ac6a85bb65181eecb3248e5b8d2f77ba351d2621285fa89"
+    },
+    "vanity-engineering-review": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "skillPath": "vanity-engineering-review/skills/vanity-engineering-review/SKILL.md",
+      "computedHash": "fb3c6ba844a36a5a6cc0190ce4675e142ba26a30228c879f50d7cebe8c3c68c0"
+    },
+    "visionos": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/visionos/SKILL.md",
+      "computedHash": "2368bd30e2147c43b99c7070073ea15aa2c6448c74b45a417566b2f9db0bf4b8"
+    },
+    "watchOS": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/watchos/SKILL.md",
+      "computedHash": "aa5d4baf92c8ecab3e133c2f7c3569d1acf81929d4c69ef75acab22db40980b5"
+    },
+    "web-typography": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "web-typography/SKILL.md",
+      "computedHash": "f5843942cd3c22ad0d68046d08120fb2be56ce74423053f0527cd21a1467c17d"
+    },
+    "working-with-legacy-code": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "working-with-legacy-code/SKILL.md",
+      "computedHash": "88decd4342ad273f3d79eac9981c86110f73f01805c77be82adb05a2cbc87f2e"
+    }
+  }
+}

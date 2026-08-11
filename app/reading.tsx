@@ -31,7 +31,7 @@ import { HIGHLIGHT_COLORS, colorValue, verseKey, getAllHighlights, setHighlight 
 import { compactReference } from '../utils/referenceParser';
 import { markReadingUnlocked, markDayAsRead, getDayByDate } from '../utils/biblePlan.utils';
 import { BibleQuickNav, QuickNavItem } from '../components/bible/BibleQuickNav';
-import { PopIn } from '../components/ui/motion';
+import { PopIn, FadeInUp } from '../components/ui/motion';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
 const scrollKey = (date: string, readingKey: string) => `@bible_scroll_${date}_${readingKey}`;
@@ -281,8 +281,16 @@ export default function ReadingScreen() {
             ebook gesture. A Pressable wrapper (not an overlay) so scrolls
             and text selection keep working untouched. */}
         <Pressable onPress={() => setNavVisible(v => !v)} accessible={false}>
-          <Text style={styles.eyebrow}>{label?.toUpperCase()}</Text>
-          <Text style={styles.title}>{compactReference(reference)}</Text>
+          {/* MASTHEAD. The references all open a passage the same way: a small
+              tracked label, then the reference set large and centred, then a
+              lot of air before the first verse. Centring is the change that
+              matters — left-aligned it read as another screen header; centred
+              with space above and below it reads as a title page, and the
+              scroll that follows feels like a book rather than a feed. */}
+          <View style={styles.masthead}>
+            <Text style={styles.eyebrow}>{label?.toUpperCase()}</Text>
+            <Text style={styles.title}>{compactReference(reference)}</Text>
+          </View>
 
           {/* Visible only during a translation switch with old text still
               on screen — a one-line whisper, not a loading screen. */}
@@ -320,7 +328,13 @@ export default function ReadingScreen() {
             // stray blank screen with only a title is worse than a word.
             <Text style={styles.loadingText}>No verses to display for this passage.</Text>
           ) : (
-            verses.map((verse, index) => {
+            // The passage SETTLES in rather than cutting. The key restarts it
+            // on every reference/translation change, so switching version or
+            // tapping through the quick-nav lands softly instead of snapping.
+            // 6pt of travel, not the default 8 — long text needs less movement
+            // than a card to read as arriving, and more would look like a jolt.
+            <FadeInUp key={`${reference}:${translation}`} offset={6}>
+            {verses.map((verse, index) => {
               const chapterKey = `${verse.book ?? ''}|${verse.chapter ?? ''}`;
               const isNewChapter = showChapterDividers && chapterKey !== prevChapterKey;
               prevChapterKey = chapterKey;
@@ -343,18 +357,23 @@ export default function ReadingScreen() {
                     onPress={() => setActiveVerse(verse)}
                     style={[
                       styles.verse,
-                      { fontSize, lineHeight: fontSize * 1.7 },
+                      { fontSize, lineHeight: fontSize * theme.editorial.readingLineHeight },
                       colorValue(highlights[verseKey(verse.book, verse.chapter, verse.number)]) != null && {
                         backgroundColor: colorValue(highlights[verseKey(verse.book, verse.chapter, verse.number)]),
                       },
                     ]}
                   >
-                    <Text style={styles.verseNumber}>{verse.number} </Text>
+                    {/* Superscript, muted — see styles.verseNumber. */}
+                    <Text style={[styles.verseNumber, { fontSize: Math.round(fontSize * 0.62) }]}>
+                      {verse.number}
+                    </Text>
+                    <Text>  </Text>
                     {verse.text}
                   </Text>
                 </View>
               );
-            })
+            })}
+            </FadeInUp>
           )}
         </Pressable>
       </ScrollView>
@@ -471,24 +490,42 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.caption,
     fontWeight: '700',
     color: theme.colors.slate,
-  },
+    // Was fontWeight with no fontFamily -> fell back to the system font.
+    fontFamily: theme.fontFamily.bodyBold,
+},
   scrollContent: {
     paddingHorizontal: theme.layout.screenPadding,
     paddingTop: theme.spacing.xl,
     paddingBottom: theme.spacing.xxxl * 2,
   },
+  // Generous, deliberately. The refs give the title block roughly a third of
+  // the first screen before any body text — that pause is what signals
+  // "settle in and read" instead of "scan this".
+  masthead: {
+    alignItems: 'center',
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxxl,
+    paddingHorizontal: theme.spacing.md,
+  },
   eyebrow: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
+    // Brand pink, restored by request. The eyebrow is one small element per
+    // screen, not a repeated run, so it brands the reader without the
+    // repetition problem the verse numbers had.
     color: theme.colors.pink,
-    letterSpacing: 1,
-    marginBottom: theme.spacing.xs,
+    letterSpacing: theme.editorial.trackLabel,
+    marginBottom: theme.spacing.md,
   },
   title: {
     fontFamily: theme.fontFamily.serifSemibold,
-    fontSize: 28,
+    fontSize: theme.editorial.mastheadTitle,
+    // Large serif set at 0 tracking reads loose; pulling it in is what makes
+    // it look typeset rather than merely big.
+    letterSpacing: theme.editorial.trackTight,
+    lineHeight: theme.editorial.mastheadTitle * 1.15,
     color: theme.colors.navy,
-    marginBottom: theme.spacing.xl,
+    textAlign: 'center',
   },
   loadingText: {
     fontFamily: theme.fontFamily.body,
@@ -641,11 +678,15 @@ const styles = StyleSheet.create({
   verse: {
     fontFamily: theme.fontFamily.serif,
     color: '#2C3E50',
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.editorial.verseGap,
   },
+  // Pink, restored by request — it is what makes the reader feel like OUR
+  // reader rather than a generic Bible view. Kept SUPERSCRIPT and ratio-sized
+  // (the two fixes worth keeping): at a fixed 13pt they stopped scaling when
+  // the reader bumped the font, and set at body size they broke the line.
+  // Small + pink brands the page; large + pink fought the text.
   verseNumber: {
-    fontFamily: theme.fontFamily.serifSemibold,
-    fontSize: 13,
+    fontFamily: theme.fontFamily.bodySemibold,
     color: theme.colors.pink,
   },
 });

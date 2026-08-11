@@ -10,7 +10,7 @@ import { DocCard } from '../../components/ui/DocCard';
 import { AudioPlayer } from '../../components/ui/AudioPlayer';
 import { currentFocus, prayerResources, archivedFocuses } from '../../data/prayer';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
-import { TabTransition } from '../../components/ui/motion';
+import { TabTransition, FadeInUp, staggerDelay } from '../../components/ui/motion';
 
 export default function PrayerScreen() {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -20,9 +20,7 @@ export default function PrayerScreen() {
         <ScreenWithWatermark style={sharedStyles.container}>
             <ScrollView contentContainerStyle={prayerStyles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={sharedStyles.headerRow}>
-                    <Text style={{ fontSize: theme.fontSize.heroTitle, fontFamily: theme.fontFamily.display }}>
-                        Prayer
-                    </Text>
+                    <Text style={sharedStyles.screenTitle}>Prayer</Text>
                     <View style={sharedStyles.avatar}>
                         <Text style={{ fontSize: theme.fontSize.body, fontFamily: theme.fontFamily.display, color: theme.colors.white }}>
                             JN
@@ -48,18 +46,22 @@ export default function PrayerScreen() {
 
                 <SectionLabel label="Prayer Resources" />
                 <HScroll>
-                    {prayerResources.map((r) => (
-                        <DocCard key={r.id} name={r.name} subtitle={`${r.pages} pages`} />
+                    {prayerResources.map((r, i) => (
+                        <FadeInUp key={r.id} delay={staggerDelay(i)}>
+                            <DocCard name={r.name} subtitle={`${r.pages} pages`} />
+                        </FadeInUp>
                     ))}
                 </HScroll>
 
                 <SectionLabel label="Archive" />
                 <HScroll>
-                    {archivedFocuses.map((f) => (
+                    {archivedFocuses.map((f, i) => (
                         // Distinct icon from the resource guides above — same
                         // DocCard, but these represent past focuses, not PDFs,
                         // and looked identical to the row above at a glance.
-                        <DocCard key={f.month} name={f.title} subtitle={`${f.pages} pages`} icon="archive-outline" />
+                        <FadeInUp key={f.month} delay={staggerDelay(i)}>
+                            <DocCard name={f.title} subtitle={`${f.pages} pages`} icon="archive-outline" />
+                        </FadeInUp>
                     ))}
                 </HScroll>
             </ScrollView>

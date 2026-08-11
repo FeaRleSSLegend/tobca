@@ -100,7 +100,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.caption,
     fontWeight: '700',
     color: theme.colors.slate,
-  },
+    // Was fontWeight with no fontFamily -> fell back to the system font.
+    fontFamily: theme.fontFamily.bodyBold,
+},
   scriptureScroll: {
     maxHeight: 350,
   },
@@ -115,7 +117,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.pink,
     marginRight: theme.spacing.xs,
-  },
+    // Was fontWeight with no fontFamily -> fell back to the system font.
+    fontFamily: theme.fontFamily.bodyBold,
+},
   continueBtn: {
     flexDirection: 'row',
     alignItems: 'center',

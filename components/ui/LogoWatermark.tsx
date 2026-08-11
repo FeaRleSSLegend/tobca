@@ -37,14 +37,20 @@ const styles = StyleSheet.create({
     // forcing it into a square box. Bumped from 340 for more presence as
     // a background element, still well clear of screen-width overflow on
     // any real device size.
-    width: 420,
-    height: 420 / (768 / 273),
-    // Was 0.06 — measured against the actual page background
+    width: 300,
+    height: 300 / (768 / 273),
+    // AUDIT (on-device): at 420pt / 0.1 the wordmark was plainly READABLE
+    // through the Plan screen — "OLIVEBROOK CHURCH" ran straight across the
+    // "TODAY'S READING" label and the streak row, so two pieces of type
+    // occupied the same space and neither won. That is a figure/ground
+    // failure, not a subtle-branding choice. Dropped to 300pt / 0.035: still
+    // present as a texture, no longer competing for the same glance.
+    // Previously: 420 / 0.1. Was 0.06 — measured against the actual page background
     // (theme.colors.bg, ~#F7F8F9) blended with the logo's own pink/navy/
     // purple, that landed within ~5-15 RGB units of the plain background
     // color across the board, i.e. genuinely at the edge of perceptible.
     // 0.1 keeps it clearly subordinate to foreground text while actually
     // registering as a mark rather than page-color noise.
-    opacity: 0.1,
+    opacity: 0.035,
   } satisfies ViewStyle,
 });

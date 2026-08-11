@@ -85,9 +85,7 @@ export default function LiveScreen() {
             <Text style={{ fontSize: theme.fontSize.caption, color: theme.colors.graySecondary }}>
               {greetingForNow()}
             </Text>
-            <Text style={{ fontSize: theme.fontSize.heroTitle, fontFamily: theme.fontFamily.display }}>
-              OliveBrook
-            </Text>
+            <Text style={sharedStyles.screenTitle}>OliveBrook</Text>
           </View>
 
           <View style={sharedStyles.avatar}>

@@ -192,7 +192,7 @@ export default function PlanScreen() {
     <ScreenWithWatermark style={sharedStyles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={sharedStyles.headerRow}>
-          <Text style={styles.pageTitle}>Reading Plan</Text>
+          <Text style={sharedStyles.screenTitle}>Reading Plan</Text>
           <View style={sharedStyles.avatar}>
             <Text style={styles.avatarText}>JN</Text>
           </View>
@@ -267,11 +267,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: theme.fontFamily.body,
     color: theme.colors.graySecondary,
-  },
-  pageTitle: {
-    fontSize: theme.fontSize.pageTitle,
-    fontFamily: theme.fontFamily.display,
-    color: theme.colors.navy,
   },
   avatarText: {
     fontSize: theme.fontSize.body,

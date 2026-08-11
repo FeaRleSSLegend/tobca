@@ -53,6 +53,33 @@ export const spacing = {
   xxxl: 32,
 };
 
+// ---------------------------------------------------------------------------
+// SPACING SCALE (Refactoring UI).
+//
+// The scale above is linear-ish through its middle — 12, 16, 20, 24 are all
+// within 4pt of a neighbour. Refactoring UI's point is that a scale whose
+// adjacent steps are barely distinguishable forces ARBITRARY choices: there is
+// no meaningful reason to pick 20 over 24, so different screens picked
+// differently and the app's vertical rhythm ended up looking random rather
+// than composed. The audit found exactly that on Home (gaps of 90/35/55/90
+// between stacked blocks) and on Plan.
+//
+// These are the LAYOUT steps — deliberately few, deliberately far apart, so
+// each one means something and two of them can never be confused:
+//   tight    relationship: label to the thing it labels
+//   related  same group, different element
+//   section  one section to the next
+//   major    a change of subject on the page
+// Component-internal padding still uses `spacing`; this governs the gaps
+// BETWEEN blocks, which is what the eye reads as rhythm.
+// ---------------------------------------------------------------------------
+export const space = {
+  tight: 8,
+  related: 16,
+  section: 32,
+  major: 48,
+} as const;
+
 export const radius = {
   sm: 12,   // small cards, pills
   md: 14,   // standard cards
@@ -105,6 +132,38 @@ export const layout = {
   cardBorderWidth: 1,
 };
 
+
+// ---------------------------------------------------------------------------
+// EDITORIAL SCALE — added in the taste pass.
+//
+// The reference readers (Hebrews 11, Apple Books, the dark chapter-pill Bible)
+// share one move: scripture is set like a BOOK, not like app UI. That needs
+// three things the app's UI scale doesn't carry, because they'd be wrong for a
+// card label:
+//   - display sizes far larger than `display: 23`, for a masthead you meet
+//     before you start reading;
+//   - NEGATIVE tracking on those large sizes (type set large looks loose at
+//     0 tracking) and POSITIVE tracking on small caps labels (set small it
+//     looks cramped) — the opposite corrections, which is why one token can't
+//     serve both;
+//   - a measured line-height for long-form reading, looser than UI text.
+//
+// Kept as a separate group rather than extending fontSize so nothing existing
+// re-renders: these are additive.
+// ---------------------------------------------------------------------------
+export const editorial = {
+  // Masthead sizes for the reader.
+  mastheadLabel: 13,   // "OLD TESTAMENT" — small caps, tracked open
+  mastheadTitle: 34,   // "Psalm 13-15"  — the thing you actually came for
+  // Tracking. Large type tightens, small caps opens up.
+  trackTight: -0.6,
+  trackLabel: 1.6,
+  // Long-form reading. 1.7 was already close; 1.75 with a slightly wider
+  // paragraph gap is the difference between "readable" and "restful".
+  readingLineHeight: 1.75,
+  verseGap: 18,
+} as const;
+
 // Bundled export so you can do: import { theme } from '@/constants/theme'
 export const theme = {
   colors,
@@ -115,6 +174,8 @@ export const theme = {
   fontWeight,
   fontFamily,
   layout,
+  editorial,
+  space,
 };
 
 export default theme;

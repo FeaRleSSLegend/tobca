@@ -61,7 +61,15 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
   },
   bg: {
-    minHeight: 260,
+    // AUDIT (on-device): at 260 this card rendered ~500px tall on a 2856px
+    // screen — a third of the viewport for one short verse, most of it empty
+    // dark image. Two consequences, both Refactoring UI hierarchy problems:
+    // it created a SECOND maximum-weight element directly under the gradient
+    // hero (two focal points = no focal point), and it pushed Today's Reading
+    // — the action this screen exists to drive — below the fold.
+    // 200 keeps it a real photographic moment while letting the hero lead and
+    // the reading row surface without scrolling.
+    minHeight: 200,
     justifyContent: 'space-between',
     padding: theme.spacing.lg,
   },

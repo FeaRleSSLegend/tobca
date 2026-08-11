@@ -99,9 +99,7 @@ export default function LibraryScreen() {
         <TabTransition>
         <ScreenWithWatermark style={sharedStyles.container}>
             <View style={sharedStyles.headerRow}>
-                <Text style={{ fontSize: theme.fontSize.heroTitle, fontFamily: theme.fontFamily.display }}>
-                    Library
-                </Text>
+                <Text style={sharedStyles.screenTitle}>Library</Text>
                 <View style={sharedStyles.avatar}>
                     <Text style={{ fontSize: theme.fontSize.body, fontFamily: theme.fontFamily.display, color: theme.colors.white }}>
                         JN

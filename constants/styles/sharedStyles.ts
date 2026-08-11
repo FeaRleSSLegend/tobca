@@ -18,6 +18,20 @@ export const sharedStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    // Air under the tab title before content starts. The references all give
+    // the page title its own band rather than butting the first card against
+    // it — cheapest possible way to make a screen feel unhurried.
+    paddingBottom: theme.spacing.lg,
+  },
+  // One title treatment for all four tabs. Previously each screen declared its
+  // own inline { fontSize: heroTitle, fontFamily: display } — same intent,
+  // four copies, and Plan had drifted to a different size. Set large with
+  // negative tracking: display type at 0 tracking reads loose.
+  screenTitle: {
+    fontFamily: theme.fontFamily.display,
+    fontSize: 28,
+    letterSpacing: -0.5,
+    color: theme.colors.navy,
   },
   avatar: {
     width: 32,
@@ -32,15 +46,27 @@ export const sharedStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: theme.spacing.xxl,
+    // 24 -> 32. Section separation is the single biggest lever on "does this
+    // screen feel calm", and it was the one place the app was still tight.
+    marginTop: theme.spacing.xxxl,
+    marginBottom: theme.spacing.xs,
   },
   sectionTitle: {
-    fontSize: theme.fontSize.bodyLg,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.slate,
+    // BUG FIX: this set fontWeight with NO fontFamily, so every section label
+    // on every tab fell back to the SYSTEM font while the rest of the app used
+    // Inter — a mismatch visible on all four screens at once.
+    fontFamily: theme.fontFamily.bodyBold,
+    // 14 -> 12. These are labels, not headings: the reference apps set section
+    // labels small, tracked and quiet ("DAILY REFRESH"), and let the content
+    // below carry the weight. At 14 uppercase with no tracking it read as
+    // shouting and, set solid, as cramped.
+    fontSize: theme.fontSize.caption,
+    letterSpacing: theme.editorial.trackLabel,
+    color: theme.colors.graySecondary,
     textTransform: 'uppercase',
   },
   seeAllLink: {
+    fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
     color: theme.colors.graySecondary,
   },
@@ -48,9 +74,13 @@ export const sharedStyles = StyleSheet.create({
   // (e.g. "NEXT SERVICE", a day label in a pill). Pink was flagged as a
   // possible bug earlier — it's a deliberate design choice, kept as-is.
   overlineText: {
-    fontSize: theme.fontSize.bodyLg,
+    // Same missing-fontFamily bug as sectionTitle, same fix. Also dropped from
+    // 14 to 12 with tracking: an eyebrow that competes with the headline it
+    // introduces is doing the headline's job.
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: theme.fontSize.caption,
+    letterSpacing: theme.editorial.trackLabel,
     color: theme.colors.pink,
-    fontWeight: theme.fontWeight.semibold,
     textTransform: 'uppercase',
   },
 });
