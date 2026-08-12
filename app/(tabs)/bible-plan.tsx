@@ -24,7 +24,7 @@ import {
   isReadingUnlocked,
   ReadingProgress 
 } from '../../utils/biblePlan.utils';
-import { DayPlan } from '../../data/biblePlan';
+import { DayPlan, totalDays } from '../../data/biblePlan';
 import { compactReference } from '../../utils/referenceParser';
 import { TranslationCode, getSavedTranslation } from '../../services/bibleVersions';
 import { getVersesForReference, Verse } from '../../services/bibleApi';
@@ -212,6 +212,8 @@ export default function PlanScreen() {
         <StreakSummary
           streak={effectiveStreak}
           percentage={percentage}
+          completedCount={progress?.completedDays.length ?? 0}
+          totalDays={totalDays}
           onPress={() => setStreakModalVisible(true)}
         />
 

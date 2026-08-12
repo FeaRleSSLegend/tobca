@@ -29,13 +29,10 @@ export interface SocialAccount {
   handle: string | null;
 }
 
-// ---------------------------------------------------------------------------
-// >>> REPLACE ME <<<
-// TODO: replace with Pastor Abu Jibril's real Instagram handle (bare, no @)
-// Until then his card renders in a disabled "coming soon" state rather than
-// linking somewhere wrong.
-// ---------------------------------------------------------------------------
-export const ABU_INSTAGRAM_PLACEHOLDER = null;
+// All four handles are now real — no placeholders remain in this file.
+// Note Abu's is "officialabujibril", not "abujibril": the shorter name is a
+// different account, so don't shorten it.
+export const ABU_INSTAGRAM = 'officialabujibril';
 
 export const socialAccounts: SocialAccount[] = [
   {
@@ -64,7 +61,7 @@ export const socialAccounts: SocialAccount[] = [
     name: 'Pastor Abu Jibril',
     role: 'Pastor',
     platform: 'instagram',
-    handle: ABU_INSTAGRAM_PLACEHOLDER,
+    handle: ABU_INSTAGRAM,
   },
 ];
 

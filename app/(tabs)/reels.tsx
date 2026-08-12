@@ -40,6 +40,7 @@ import { Message } from '../../data/contentModel';
 import { useShorts } from '../../hooks/useShorts';
 import { SmartImage } from '../../components/ui/SmartImage';
 import { BrandLoader } from '../../components/ui/BrandLoader';
+import { PressableScale } from '../../components/ui/motion';
 import { displayTitle } from '../../utils/contentGrouping';
 
 export default function ReelsScreen() {
@@ -50,6 +51,15 @@ export default function ReelsScreen() {
   const [itemWidth, setItemWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
+  // MUTED BY DEFAULT — this is what makes autoplay work at all, not a
+  // preference. Android's WebView refuses programmatic playback of UNMUTED
+  // media without a user gesture; the request is denied, the iframe stays on
+  // its poster frame, and YouTube paints its branded "Watch on YouTube" card
+  // over it. That card was never a consent prompt we could configure away — it
+  // was the visible symptom of a refused autoplay. Muted playback is exempt
+  // from the gesture requirement, so the video actually starts, and the user
+  // trades one tap for sound instead of one tap for anything at all.
+  const [muted, setMuted] = useState(true);
   // Leaving the tab must stop audio. Without this the feed keeps talking over
   // whatever screen you moved to, which is the single most obvious way a
   // video feed feels broken.
@@ -120,6 +130,7 @@ export default function ReelsScreen() {
                 height={Math.round(itemWidth * 9 / 16)}
                 width={itemWidth}
                 play={playing && focused}
+                mute={muted}
                 videoId={item.videoId}
                 // No chrome: the feed IS the control surface. controls:0 also
                 // stops YouTube's own UI fighting the overlay below.
@@ -144,6 +155,26 @@ export default function ReelsScreen() {
             </View>
           )}
 
+          {/* SOUND TOGGLE. Its own control rather than a tap-anywhere gesture:
+              tapping the frame already means play/pause, and overloading one
+              gesture with two meanings makes both feel unreliable. Placed top-
+              right, the conventional spot, so it is findable without a hint. */}
+          {isActive && (
+            <PressableScale
+              containerStyle={[styles.soundSlot, { top: insets.top + theme.spacing.md }]}
+              style={styles.soundBtn}
+              onPress={() => setMuted((m) => !m)}
+              accessibilityRole="button"
+              accessibilityLabel={muted ? 'Unmute video' : 'Mute video'}
+            >
+              <Ionicons
+                name={muted ? 'volume-mute' : 'volume-high'}
+                size={18}
+                color={theme.colors.white}
+              />
+            </PressableScale>
+          )}
+
           {/* Attribution sits at the bottom over a scrim, the one piece of
               chrome the feed needs: which channel am I watching, and what is
               this. */}
@@ -154,7 +185,7 @@ export default function ReelsScreen() {
         </View>
       );
     },
-    [activeIndex, armed, itemHeight, itemWidth, playing, focused, insets.bottom]
+    [activeIndex, armed, itemHeight, itemWidth, playing, focused, muted, insets.bottom, insets.top]
   );
 
   return (
@@ -220,6 +251,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10,22,33,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  soundSlot: {
+    position: 'absolute',
+    right: theme.spacing.lg,
+    zIndex: 5,
+  },
+  soundBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Translucent dark disc rather than a bare glyph: over a bright frame a
+    // white icon alone disappears, and this is the only control on screen.
+    backgroundColor: 'rgba(10,22,33,0.55)',
   },
   caption: {
     position: 'absolute',

@@ -225,7 +225,7 @@ export default function LibraryScreen() {
                 {yinkaFeed.episodes.length > 0 && (
                     <>
                         <SectionLabel
-                            label="Pastor Yinka Jibril"
+                            label="Pastor Yinka's Teachings"
                             onPress={() => push({ pathname: '/see-all', params: { channel: 'yinka', title: 'Pastor Yinka Jibril' } })}
                         />
                         <HScroll>

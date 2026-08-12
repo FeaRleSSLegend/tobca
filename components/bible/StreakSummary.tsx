@@ -7,6 +7,9 @@ import { theme } from '../../constants/theme';
 interface StreakSummaryProps {
   streak: number;
   percentage: number;
+  /** Days actually read, and the plan's length — see the note below. */
+  completedCount: number;
+  totalDays: number;
   onPress: () => void;
 }
 
@@ -15,7 +18,19 @@ interface StreakSummaryProps {
 // that's secondary to the actual reading. A big streak hero belongs on a
 // home/dashboard screen; here it just needs to be visible enough to feel
 // good and tappable enough to dig into.
-export const StreakSummary = ({ streak, percentage, onPress }: StreakSummaryProps) => {
+// A NOTE ON THE NUMBER SHOWN
+// This used to read "1% of plan" beside "4 Day Streak", which looks like a
+// contradiction and is actually just arithmetic: 4/365 = 1.096%, rounded. The
+// maths was verified correct — both figures read from the same completedDays
+// array — but a percentage is the wrong unit for a year-long plan. Early on it
+// rounds every real day of effort down to 0% or 1%, so the number a reader is
+// most likely to see is the one that makes four days of work look like nothing.
+//
+// "4 of 365 days" carries the same fact and counts UP: every day read moves a
+// number that visibly changes, instead of one that will sit on "1%" for another
+// fortnight. The gradient bar still encodes the true proportion, so the honest
+// smallness of early progress is not hidden — just not the headline.
+export const StreakSummary = ({ streak, percentage, completedCount, totalDays, onPress }: StreakSummaryProps) => {
   return (
     <PressableScale onPress={onPress} style={styles.card}>
       <View style={styles.flameWrap}>
@@ -38,7 +53,7 @@ export const StreakSummary = ({ streak, percentage, onPress }: StreakSummaryProp
             style={[styles.fill, { width: `${Math.max(percentage, 2)}%` }]}
           />
         </View>
-        <Text style={styles.progressLabel}>{percentage}% of plan</Text>
+        <Text style={styles.progressLabel}>{completedCount} of {totalDays} days</Text>
       </View>
 
       <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />

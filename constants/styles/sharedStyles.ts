@@ -46,10 +46,14 @@ export const sharedStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    // 24 -> 32. Section separation is the single biggest lever on "does this
-    // screen feel calm", and it was the one place the app was still tight.
-    marginTop: theme.spacing.xxxl,
-    marginBottom: theme.spacing.xs,
+    // 32 -> 24, reversing my own earlier change. I widened this for "calm",
+    // but on a hub screen that is five stacked rails the gaps started reading
+    // as gaps rather than as structure — the page felt stretched instead of
+    // composed, and you lost roughly a section per screenful of scrolling.
+    // 24 still separates cleanly at this type size; the label's own tracking
+    // and weight are doing more of that work now than raw distance is.
+    marginTop: theme.spacing.xxl,
+    marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
     // BUG FIX: this set fontWeight with NO fontFamily, so every section label

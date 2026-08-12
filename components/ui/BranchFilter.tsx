@@ -43,7 +43,13 @@ export const BranchFilter = ({ value, onChange }: BranchFilterProps) => {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
+    // The row sat mid-way between the search bar and the content with no
+    // clear allegiance to either, which is what made it read as floating.
+    // Tied to the search bar above it (which is what it modifies) and given a
+    // full section gap below, so it groups upward instead of drifting.
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.xs,
   },
 });
