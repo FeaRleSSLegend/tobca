@@ -1,6 +1,8 @@
 import { View, Text, ScrollView } from 'react-native';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
@@ -14,15 +16,15 @@ import { GridCard } from '../../components/ui/GridCard';
 import { PlaylistCircle } from '../../components/ui/PlaylistCircle';
 import { getCurrentlyStreaming, getRecentlyAdded } from '../../data/content';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
-import { TabTransition, FadeInUp, staggerDelay, Shimmer } from '../../components/ui/motion';
+import { TabTransition, FadeInUp, staggerDelay, Shimmer, PressableScale } from '../../components/ui/motion';
 import { useMessages, filterByBranch, BranchFilter as BranchFilterValue } from '../../hooks/useMessages';
 import { SkeletonRow } from '../../components/ui/Skeletons';
 import { BranchFilter } from '../../components/ui/BranchFilter';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { getBranch } from '../../data/branches';
+import { getBranch, isPlaceholderChannel } from '../../data/branches';
 import { featuredChannels } from '../../data/channels';
 import { useFeaturedChannel } from '../../hooks/useFeaturedChannel';
-import { FeaturedChannelRow } from '../../components/ui/FeaturedChannelRow';
+
 import { usePlaylists } from '../../hooks/usePlaylists';
 import { usePlayback } from '../../providers/PlaybackProvider';
 import { classifyMessages } from '../../utils/contentGrouping';
@@ -115,12 +117,28 @@ export default function LibraryScreen() {
                 {/* A branch with no content is a fact worth stating. Without
                     this the screen would just render as a blank scroll and
                     read as broken rather than as "nothing here yet". */}
+                {/* Two DIFFERENT empty states, because they are two different
+                    facts and the old single message told a lie about one of
+                    them. A branch whose channel id is still a placeholder is
+                    NOT "a channel that hasn't published yet" — it is a branch
+                    the app has not been pointed at. Saying "messages will
+                    appear once this channel starts publishing" about Wuse 2
+                    implied we were watching an empty channel, when in truth we
+                    were watching nothing at all. */}
                 {ready && messages.length === 0 && (
-                    <EmptyState
-                        icon="tv-outline"
-                        title={`Nothing from ${branch === 'all' ? 'any branch' : getBranch(branch)?.shortName ?? 'this branch'} yet`}
-                        subtitle="Messages will appear here once this channel starts publishing."
-                    />
+                    branch !== 'all' && isPlaceholderChannel(getBranch(branch)?.channelId ?? '') ? (
+                        <EmptyState
+                            icon="link-outline"
+                            title={`${getBranch(branch)?.shortName ?? 'This branch'} isn't connected yet`}
+                            subtitle="This branch's YouTube channel hasn't been linked to the app. Once it is, its messages appear here."
+                        />
+                    ) : (
+                        <EmptyState
+                            icon="tv-outline"
+                            title={`Nothing from ${branch === 'all' ? 'any branch' : getBranch(branch)?.shortName ?? 'this branch'} yet`}
+                            subtitle="Messages will appear here once this channel starts publishing."
+                        />
+                    )
                 )}
 
                 {/* SKELETON PHASE — the whole church-content block at once.
@@ -195,18 +213,35 @@ export default function LibraryScreen() {
                     </>
                 )}
 
-                {/* Her own framed card rather than another SectionLabel row —
-                    see FeaturedChannelRow for why. Rendered regardless of the
-                    branch filter: this is not a branch, so branch selection
-                    has no bearing on it. */}
-                <FeaturedChannelRow
-                    channel={yinka}
-                    episodes={yinkaFeed.episodes}
-                    loading={yinkaFeed.loading}
-                    pending={yinkaFeed.pending}
-                    failed={yinkaFeed.failed}
-                    onPlay={play}
-                />
+                {/* PASTOR YINKA'S VIDEOS — kept in-app, restyled.
+                    The framed "channel card" that used to live here became the
+                    Socials link-out, but her VIDEOS are church-app content and
+                    must not leave with it. They now use the same
+                    SectionLabel + poster-row language as Series and Services,
+                    which is a better fit than the bespoke card was: it is one
+                    more shelf of things to watch, and giving it a unique frame
+                    made it read as an advert rather than a section. The
+                    chevron goes to her full list, same as every other shelf. */}
+                {yinkaFeed.episodes.length > 0 && (
+                    <>
+                        <SectionLabel
+                            label="Pastor Yinka Jibril"
+                            onPress={() => push({ pathname: '/see-all', params: { channel: 'yinka', title: 'Pastor Yinka Jibril' } })}
+                        />
+                        <HScroll>
+                            {yinkaFeed.episodes.slice(0, PREVIEW_COUNT).map((m, i) => (
+                                <FadeInUp key={m.id} delay={staggerDelay(i)}>
+                                    <PosterCard
+                                        title={m.title}
+                                        subtitle={m.duration}
+                                        thumbnail={m.thumbnail}
+                                        onPress={() => play(m)}
+                                    />
+                                </FadeInUp>
+                            ))}
+                        </HScroll>
+                    </>
+                )}
 
                 {ready && recentlyAdded.length > 0 && (
                     <>
@@ -234,6 +269,32 @@ export default function LibraryScreen() {
                     </>
                 )}
                 <View style={{ height: theme.spacing.xxxl }} />
+                {/* CHURCH SOCIALS — the only row here that leaves the app,
+                    so it sits last. Putting a link-out above in-app content
+                    would invite people out of the app before they had seen
+                    what is in it. */}
+                <SectionLabel label="Connect" />
+                <PressableScale
+                    style={LibraryStyles.socialsRow}
+                    onPress={() => push('/socials')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Church socials, follow us on Instagram"
+                >
+                    <LinearGradient
+                        colors={theme.gradient.colors}
+                        start={theme.gradient.start}
+                        end={theme.gradient.end}
+                        style={LibraryStyles.socialsBadge}
+                    >
+                        <Ionicons name="logo-instagram" size={20} color={theme.colors.white} />
+                    </LinearGradient>
+                    <View style={{ flex: 1 }}>
+                        <Text style={LibraryStyles.socialsTitle}>Church Socials</Text>
+                        <Text style={LibraryStyles.socialsMeta}>Follow us on Instagram</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+                </PressableScale>
+
             </ScrollView>
         </ScreenWithWatermark>
         </TabTransition>

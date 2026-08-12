@@ -38,20 +38,27 @@ export interface Branch {
  *
  *   "Location: IGNOBIS HOTELS, Kubwa, Abuja - Nigeria"
  *
- * So the existing content belongs to Kubwa. Wuse 2 is the branch still
- * awaiting a channel id.
+ * So the existing content belongs to Kubwa — it is the larger, older channel
+ * (1,314 videos vs Wuse 2's 34) and the one every "which channel do we mean by
+ * default" call resolves to. Wuse 2 is a real, separate, active channel; it is
+ * simply not the default.
  */
 export const PRIMARY_BRANCH_ID: BranchId = 'kubwa';
 
-// ---------------------------------------------------------------------------
-// >>> REPLACE ME <<<
-// Wuse 2's real YouTube channel id. Until this is a genuine "UC…" id, every
-// fetch for that branch fails fast (see isPlaceholderChannel) and the branch
-// shows an empty state — deliberately, so a placeholder can never be mistaken
-// for "this branch has published nothing".
-// TODO: replace with real Wuse 2 YouTube channel ID
-// ---------------------------------------------------------------------------
-export const WUSE2_CHANNEL_ID_PLACEHOLDER = 'WUSE2_CHANNEL_ID_PLACEHOLDER';
+// RESOLVED — no placeholder needed.
+// Found the same way as Yinka's, via channels.list `forHandle`:
+//
+//   GET /youtube/v3/channels?part=id,snippet&forHandle=@tobcwuse2
+//   -> id "UCZX06EZgl__7eIMn25xOE_A", title "The OliveBrook Church Wuse2"
+//      (34 videos, most recent 2026-08-10)
+//
+// Cross-checked with search.list for "TOBC Wuse 2", which returns the same id
+// alongside Kubwa's — so this is the right channel, not a similarly-named one.
+//
+// NOTE the handle asymmetry: YouTube is @tobcwuse2 (no underscore) while
+// Instagram is @tobc_wuse2 (with one). They are not typos of each other; don't
+// "fix" either to match the other.
+export const WUSE2_CHANNEL_ID = 'UCZX06EZgl__7eIMn25xOE_A';
 
 // Kubwa's channel. EXPO_PUBLIC_YT_CHANNEL_ID stays supported as an override —
 // it previously existed here while services/youtube.ts ignored it and used its
@@ -74,7 +81,7 @@ export const branches: Branch[] = [
     name: 'The OliveBrook Church, Wuse 2',
     shortName: 'Wuse 2',
     city: 'Abuja',
-    channelId: WUSE2_CHANNEL_ID_PLACEHOLDER,
+    channelId: WUSE2_CHANNEL_ID,
     // Empty rather than a copy of Kubwa's: the two branches stream at their
     // own times, and inventing a schedule here would make the live-status
     // fallback confidently wrong about when Wuse 2 is on.

@@ -42,6 +42,7 @@ import { buildRelatedSections } from '../../utils/relatedContent';
 import { primaryVariant, hasAudio, hasVideo, Message } from '../../data/contentModel';
 import { getPosition, savePosition } from '../../utils/playbackProgress';
 import { shortDate } from '../../utils/collections';
+import { displayTitle, displaySubtitle } from '../../utils/contentGrouping';
 import { FadeInUp, PressableScale, staggerDelay } from '../ui/motion';
 import { SmartImage } from '../ui/SmartImage';
 
@@ -414,7 +415,7 @@ export function PlayerHost() {
             <Text style={styles.eyebrow}>
               {message.type === 'service' ? 'SERVICE' : message.series ? 'FROM THE SERIES' : 'MESSAGE'}
             </Text>
-            <Text style={styles.title}>{message.title}</Text>
+            <Text style={styles.title}>{displayTitle(message.title)}</Text>
             <View style={styles.metaChips}>
               <MetaChip icon="person-circle-outline" label={message.speaker} />
               <MetaChip icon="calendar-outline" label={shortDate(message.publishedAt)} />
@@ -533,7 +534,7 @@ export function PlayerHost() {
           style={[StyleSheet.absoluteFill, { opacity: miniChromeOpacity }]}
           pointerEvents={expanded ? 'none' : 'box-none'}
         >
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => expandRef.current()} accessibilityRole="button" accessibilityLabel={`Expand player: ${message.title}`} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => expandRef.current()} accessibilityRole="button" accessibilityLabel={`Expand player: ${displayTitle(message.title)}`} />
           <Pressable onPress={close} hitSlop={8} style={styles.miniClose} accessibilityRole="button" accessibilityLabel="Close player">
             <Ionicons name="close" size={16} color={theme.colors.white} />
           </Pressable>
@@ -600,7 +601,7 @@ function ModeChip({ label, icon, active, onPress }: { label: string; icon: keyof
 
 function RelatedRow({ message, onPress }: { message: Message; onPress: () => void }) {
   return (
-    <PressableScale style={styles.relatedRow} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Play ${message.title}, ${message.duration}`}>
+    <PressableScale style={styles.relatedRow} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Play ${displayTitle(message.title)}, ${message.duration}`}>
       <View style={styles.relatedThumb}>
         <SmartImage uri={message.thumbnail} style={StyleSheet.absoluteFill} />
         {/* Duration on the artwork, the way every video product does it —
@@ -613,9 +614,9 @@ function RelatedRow({ message, onPress }: { message: Message; onPress: () => voi
         ) : null}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.relatedRowTitle} numberOfLines={2}>{message.title}</Text>
+        <Text style={styles.relatedRowTitle} numberOfLines={2}>{displayTitle(message.title)}</Text>
         <Text style={styles.relatedRowMeta} numberOfLines={1}>
-          {message.speaker} · {shortDate(message.publishedAt)}
+          {displaySubtitle(message.title) ?? message.speaker} · {shortDate(message.publishedAt)}
         </Text>
       </View>
     </PressableScale>

@@ -51,4 +51,35 @@ export const LibraryStyles = StyleSheet.create({
         borderRadius: 14,
         overflow: 'hidden',
     },
+    // The one row on Library that leaves the app. Styled as a utility row,
+    // not a content card — it is a door, not a thing to watch.
+    socialsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 16,
+        marginTop: 8,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#E9EDF0',
+        backgroundColor: '#FFFFFF',
+    },
+    socialsBadge: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    socialsTitle: {
+        fontSize: 14,
+        fontFamily: 'Inter_600SemiBold',
+        color: '#1A3247',
+    },
+    socialsMeta: {
+        fontSize: 12,
+        fontFamily: 'Inter_400Regular',
+        color: '#5C6F80',
+        marginTop: 2,
+    },
 });

@@ -34,6 +34,16 @@ export default function TabLayout() {
         />
 
         <Tabs.Screen
+        name="reels"
+        options={{
+            title: 'Reels',
+            tabBarIcon: ({ focused }) => (
+                <TabIcon icon="play-circle" label="Reels" focused={focused} />
+                ),
+            }}
+        />
+
+       <Tabs.Screen
         name="prayer"
         options={{
             title: 'Prayer',
