@@ -23,12 +23,17 @@ import { buildMessage } from '../../data/contentModel';
 import { PRIMARY_BRANCH_ID } from '../../data/branches';
 import { usePlayback } from '../../providers/PlaybackProvider';
 import { fetchPlaylistItems } from '../../services/youtube';
+import { useStackBottomClearance } from '../../hooks/useBottomClearance';
 
 export default function PlaylistScreen() {
   const { id, title } = useLocalSearchParams<{ id: string; title?: string }>();
   const router = useRouter();
   const { play } = usePlayback();
   const { height: screenHeight } = useWindowDimensions();
+  // The outer container is a plain View (the masthead applies the TOP inset
+  // itself), so nothing was guarding the bottom edge and the last track sat
+  // under the home indicator.
+  const bottomClearance = useStackBottomClearance();
   // Proportional, not the old fixed 300: a cinematic hero has to hold its
   // share of the screen on a tall phone and still leave the list visible on a
   // short one. Clamped so it can never eat the whole viewport.
@@ -83,7 +88,7 @@ export default function PlaylistScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: theme.spacing.xxxl * 2 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomClearance }}>
         {/* MASTHEAD — large artwork with a scrim the title sits on. */}
         <View style={[styles.masthead, { height: heroHeight }]}>
           {cover ? (
@@ -165,7 +170,7 @@ export default function PlaylistScreen() {
               <View key={i} style={styles.trackRow}>
                 <Shimmer style={styles.trackNumSkeleton} width={24} />
                 <Shimmer style={styles.trackThumb} width={80} />
-                <View style={{ flex: 1, gap: 6 }}>
+                <View style={{ flex: 1, gap: theme.space.tight }}>
                   <Shimmer style={{ height: 12, borderRadius: 4, width: '80%' }} width={220} />
                   <Shimmer style={{ height: 10, borderRadius: 4, width: '40%' }} width={110} />
                 </View>
@@ -282,10 +287,10 @@ const styles = StyleSheet.create({
   trackThumb: { width: 80, height: 45, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
   trackDuration: {
     position: 'absolute', right: 3, bottom: 3,
-    paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4,
+    paddingHorizontal: theme.space.micro, paddingVertical: theme.space.hairline, borderRadius: 4,
     backgroundColor: 'rgba(10,22,33,0.82)',
   },
   trackDurationText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 9, color: theme.colors.white, includeFontPadding: false },
   trackTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.navy, lineHeight: 18 },
-  trackMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, marginTop: 2 },
+  trackMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, marginTop: theme.space.hairline },
 });

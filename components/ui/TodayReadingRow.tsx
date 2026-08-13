@@ -126,7 +126,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: theme.radius.lg,
     padding: theme.spacing.lg,
-    marginTop: theme.spacing.xl,
+    // Section step, matching the verse card above it — see the note there.
+    marginTop: theme.space.section,
   },
   cardDone: {
     backgroundColor: '#F1F9F5',
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1,
     color: theme.colors.pink,
-    marginBottom: 5,
+    marginBottom: theme.space.micro,
   },
   passages: {
     fontFamily: theme.fontFamily.serifSemibold,
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
   bottomLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: theme.space.micro,
     marginTop: 8,
   },
   timeText: {
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
     backgroundColor: theme.colors.grayIcon,
-    marginHorizontal: 3,
+    marginHorizontal: theme.space.micro,
   },
   readCta: {
     fontFamily: theme.fontFamily.bodyBold,

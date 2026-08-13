@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: theme.radius.full,
-    backgroundColor: '#FDF2F7',
+    backgroundColor: theme.colors.pinkWash,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   dots: {
     flexDirection: 'row',
-    gap: 6,
+    gap: theme.space.tight,
   },
   dot: {
     width: 6,

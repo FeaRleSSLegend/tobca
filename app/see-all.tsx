@@ -43,6 +43,7 @@ import { SkeletonGrid, SkeletonList } from '../components/ui/Skeletons';
 import { Message, getRecentlyAdded } from '../data/content';
 import { useMessages } from '../hooks/useMessages';
 import { usePlaylists } from '../hooks/usePlaylists';
+import { useStackBottomClearance } from '../hooks/useBottomClearance';
 import { classifyMessages, ContentGroup } from '../utils/contentGrouping';
 import {
   groupByMonth,
@@ -117,6 +118,7 @@ function SeriesCollection({ groups, loading, onOpenGroup }: {
 }) {
   const [query, setQuery] = useState('');
   const [pill, setPill] = useState('All');
+  const bottomClearance = useStackBottomClearance();
 
   const rows = useMemo<SeriesRow[]>(() => {
     const q = query.trim().toLowerCase();
@@ -170,7 +172,7 @@ function SeriesCollection({ groups, loading, onOpenGroup }: {
           data={rows}
           keyExtractor={(r) => r.key}
           style={{ flex: 1 }}
-          contentContainerStyle={seeAllStyles.listContent}
+          contentContainerStyle={[seeAllStyles.listContent, { paddingBottom: bottomClearance }]}
           {...listPerfProps}
           ItemSeparatorComponent={() => <View style={{ height: theme.spacing.md }} />}
           renderItem={({ item, index }) =>
@@ -253,6 +255,7 @@ function MessageListCollection({
   const { play } = usePlayback();
   const [query, setQuery] = useState('');
   const [pill, setPill] = useState('All');
+  const bottomClearance = useStackBottomClearance();
 
   const { sections, visibleCount } = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -283,7 +286,7 @@ function MessageListCollection({
           sections={sections}
           keyExtractor={(m, index) => `${m.id}:${index}`}
           style={{ flex: 1 }}
-          contentContainerStyle={seeAllStyles.listContent}
+          contentContainerStyle={[seeAllStyles.listContent, { paddingBottom: bottomClearance }]}
           stickySectionHeadersEnabled={false}
           {...listPerfProps}
           renderSectionHeader={({ section }) => (
@@ -324,6 +327,7 @@ function PlaylistsCollection() {
   const push = useGuardedPush();
   const { playlists, loading } = usePlaylists();
   const [query, setQuery] = useState('');
+  const bottomClearance = useStackBottomClearance();
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -344,7 +348,7 @@ function PlaylistsCollection() {
           data={visible}
           keyExtractor={(p) => p.id}
           style={{ flex: 1 }}
-          contentContainerStyle={seeAllStyles.listContent}
+          contentContainerStyle={[seeAllStyles.listContent, { paddingBottom: bottomClearance }]}
           {...listPerfProps}
           renderItem={({ item }) => (
             <PlaylistListRow

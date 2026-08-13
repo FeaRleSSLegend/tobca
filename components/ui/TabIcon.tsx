@@ -15,6 +15,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MOTION } from './motion';
 import { theme } from '../../constants/theme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -58,7 +59,7 @@ export default function TabIcon({ icon, label, focused }: TabIconProps) {
   useEffect(() => {
     const settle = Animated.timing(active, {
       toValue: focused ? 1 : 0,
-      duration: 180,
+      duration: MOTION.fast,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     });
@@ -77,7 +78,9 @@ export default function TabIcon({ icon, label, focused }: TabIconProps) {
     if (focused) pop.setValue(0);
     const bounce = Animated.timing(pop, {
       toValue: focused ? 1 : 0,
-      duration: focused ? 300 : 140,
+      // Asymmetric on purpose: growing into the selected state is the part
+      // worth seeing, shrinking out of it is not.
+      duration: focused ? MOTION.base : MOTION.fast,
       easing: focused ? Easing.out(Easing.cubic) : Easing.out(Easing.quad),
       useNativeDriver: true,
     });
@@ -143,7 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 6,
+    paddingVertical: theme.space.tight,
     paddingHorizontal: 10,
     borderRadius: 14,
   },
@@ -167,6 +170,6 @@ const styles = StyleSheet.create({
     width: 16,
     height: 3,
     borderRadius: 100,
-    marginTop: 1,
+    marginTop: theme.space.hairline,
   },
 });

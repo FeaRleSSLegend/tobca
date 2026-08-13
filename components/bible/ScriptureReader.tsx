@@ -141,7 +141,9 @@ const styles = StyleSheet.create({
   verse: {
     fontFamily: theme.fontFamily.body,
     lineHeight: 26,
-    color: '#2C3E50',
+    // Was #2C3E50, an off-palette slate that existed nowhere else in the
+    // app and sat a shade cooler than everything around it.
+    color: theme.colors.navy,
     marginBottom: theme.spacing.sm,
   },
   verseNumber: {

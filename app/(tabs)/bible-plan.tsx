@@ -18,7 +18,7 @@ import {
   getTomorrowReading,
   getProgress, 
   markDayAsRead,
-  getCompletionPercentage,
+  MAX_FREEZES,
   getWeekProgress,
   getEffectiveStreak,
   isReadingUnlocked,
@@ -171,8 +171,7 @@ export default function PlanScreen() {
     );
   }
 
-  const percentage = progress ? getCompletionPercentage(progress.completedDays) : 0;
-  const weekProgress = getWeekProgress(progress?.completedDays || []);
+  const weekProgress = getWeekProgress(progress?.completedDays || [], progress?.frozenDays || []);
   const todayNumber = new Date().getDate();
   // Displayed streak is DERIVED, not the raw stored value — the stored
   // number goes stale after missed days (it only updates on a mark), and
@@ -203,8 +202,6 @@ export default function PlanScreen() {
           isRead={isRead}
           canMarkAsRead={hasReadSomething}
           onMarkAsRead={handleMarkAsRead}
-          planProgress={percentage / 100}
-          completedCount={progress?.completedDays.length ?? 0}
           // progress === null means stored data is still in flight, so
           // isRead/canMarkAsRead are defaults rather than facts.
           loading={progress === null}
@@ -215,14 +212,15 @@ export default function PlanScreen() {
           week={weekProgress}
           completedCount={progress?.completedDays.length ?? 0}
           totalDays={totalDays}
+          freezes={progress?.freezes ?? MAX_FREEZES}
+          maxFreezes={MAX_FREEZES}
           onPress={() => setStreakModalVisible(true)}
         />
 
-        {/* Deliberate pause before the actual content — TodayCard + streak
-            status above are secondary framing, the reading carousel below
-            is why someone opened this screen. Don't let them run together. */}
-        <View style={{ height: theme.spacing.lg }} />
-
+        {/* No manual spacer here. There used to be a 24pt one "to mark the
+            pause" — but SectionLabel already carries its own section-sized
+            top margin, so the two stacked into a hole roughly twice the size
+            of every other gap on the screen. One owner per gap. */}
         <SectionLabel label="Today's Reading" />
 
         <ReadingCarousel readings={readings} onPressCard={openReading} />
@@ -239,7 +237,6 @@ export default function PlanScreen() {
           </View>
         )}
 
-        <View style={styles.bottomPadding} />
       </ScrollView>
 
       <StreakModal
@@ -248,7 +245,8 @@ export default function PlanScreen() {
         streak={effectiveStreak}
         longestStreak={progress?.longestStreak || 0}
         completedCount={progress?.completedDays.length || 0}
-        percentage={percentage}
+        freezes={progress?.freezes ?? MAX_FREEZES}
+        maxFreezes={MAX_FREEZES}
         week={weekProgress}
         todayNumber={todayNumber}
       />
@@ -260,7 +258,7 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: theme.layout.screenPadding,
-    paddingBottom: theme.spacing.xxxl,
+    paddingBottom: theme.layout.scrollClearance.tab,
   },
   centerContent: {
     flex: 1,
@@ -275,9 +273,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.display,
     color: theme.colors.white,
-  },
-  bottomPadding: {
-    height: theme.spacing.xxxl,
   },
   tomorrowRow: {
     flexDirection: 'row',

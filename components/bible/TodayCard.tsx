@@ -1,7 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle } from 'react-native-svg';
 import { theme } from '../../constants/theme';
 import { PressableScale, PopIn } from '../ui/motion';
 import { BrandLoader } from '../ui/BrandLoader';
@@ -16,12 +15,11 @@ interface TodayCardProps {
   // means the card briefly claims "not read" for a day that IS read, then
   // flips. The loader holds that space until the truth arrives.
   loading?: boolean;
-  // Overall plan completion 0..1, drawn as a ring — turns the hero into a
-  // quiet progress indicator, the way the reference cards carry a "days" chip.
-  planProgress?: number;
-  /** Days read, shown in the ring instead of a percentage. See note below. */
-  completedCount?: number;
 }
+
+// NOTE: planProgress / completedCount used to live here, feeding a progress
+// ring in the top-right corner. Both props and the ring are gone. See the
+// header comment below for why.
 
 // The Reading Plan hero, redesigned from a flat white status box into an
 // immersive, editorial card in the spirit of the reference study-plan
@@ -32,7 +30,17 @@ interface TodayCardProps {
 // depth. It's the strongest thing on the screen without a photo library
 // behind it — the gradient does the immersive work church-stock imagery
 // would otherwise carry.
-export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgress = 0, completedCount = 0, loading = false }: TodayCardProps) => {
+//
+// THE PROGRESS RING IS GONE, deliberately.
+// It began as "1% of plan", was softened to a raw day count, and neither
+// belonged. This card sits directly above the streak, so whatever the ring
+// showed was read as part of the streak — and a 365-day plan means that
+// number spends its first month rounding to nothing, which is the single most
+// discouraging thing the screen can say to a new reader. The streak card
+// below already carries "N of 365 days read" as quiet context, in one place,
+// at the right weight. Removing the ring also lets "Day N" sit alone on the
+// top row, which is a cleaner corner than a chip fighting a dial.
+export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = false }: TodayCardProps) => {
   return (
     <View style={styles.card}>
       <LinearGradient
@@ -56,7 +64,6 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgre
           <Ionicons name="calendar-outline" size={13} color={theme.colors.white} />
           <Text style={styles.dayChipText}>Day {day}</Text>
         </View>
-        <ProgressRing progress={planProgress} label={`${completedCount}`} />
       </View>
 
       <View style={styles.body}>
@@ -108,42 +115,21 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgre
   );
 };
 
-function ProgressRing({ progress, label }: { progress: number; label: string }) {
-  const size = 44;
-  const stroke = 3;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const clamped = Math.max(0, Math.min(1, progress));
-  return (
-    <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.3)" strokeWidth={stroke} fill="none" />
-        <Circle
-          cx={size / 2} cy={size / 2} r={r}
-          stroke={theme.colors.white} strokeWidth={stroke} fill="none" strokeLinecap="round"
-          strokeDasharray={`${c * clamped} ${c}`}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-      <View style={styles.ringInner}>
-        {/* The COUNT, not the percentage. Removing "1% of plan" from the
-            streak card while leaving "1%" in this ring directly above it would
-            have moved the discouraging number rather than fixed it — and the
-            two sat within a hundred points of each other on screen. The arc
-            still encodes the true proportion; the label counts up. */}
-        <Text style={styles.ringText}>{label}</Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   card: {
     borderRadius: theme.radius.lg,
     padding: theme.spacing.xl,
     overflow: 'hidden',
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    // NO top margin. This card is the first thing under the screen title, and
+    // sharedStyles.headerRow already ends with a 16pt paddingBottom — the 12
+    // that used to be here landed on top of it for a 28pt gap, wider than any
+    // other gap on the screen and for no stated reason. The header owns the
+    // space beneath itself.
+    marginTop: 0,
+    // The gap to the streak card below. `related`, not `header`: these are two
+    // cards in one group ("today"), so 16 sits deliberately between the 8 used
+    // inside a card and the 24 that separates sections.
+    marginBottom: theme.space.related,
     minHeight: 200,
     justifyContent: 'space-between',
   },
@@ -155,10 +141,10 @@ const styles = StyleSheet.create({
   dayChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: theme.space.tight,
     backgroundColor: 'rgba(10,22,33,0.28)',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 7,
+    paddingVertical: theme.space.tight,
     borderRadius: theme.radius.full,
   },
   dayChipText: {
@@ -166,10 +152,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.caption,
     color: theme.colors.white,
   },
-  ringInner: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  // 10 -> 14: "1%" needed the room, a 1-3 digit count does not, and at 10pt
-  // inside a 44pt ring the label was the smallest type on the screen.
-  ringText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14, color: theme.colors.white },
   body: {
     marginTop: theme.spacing.xl,
     marginBottom: theme.spacing.lg,
@@ -179,7 +161,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     color: 'rgba(255,255,255,0.85)',
-    marginBottom: 6,
+    marginBottom: theme.space.tight,
   },
   headline: {
     fontFamily: theme.fontFamily.serifSemibold,

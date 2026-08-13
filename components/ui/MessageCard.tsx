@@ -49,7 +49,7 @@ export const MessageCard = ({title, speaker, duration, series, type, publishedAt
                   <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
                 )}
                 <View style={liveStyles.latestMessagePlayCircle}>
-                  <Ionicons name={icon} size={13} color="#FFFFFF" style={icon === 'play' ? { marginLeft: 2 } : undefined} />
+                  <Ionicons name={icon} size={13} color="#FFFFFF" style={icon === 'play' ? { marginLeft: theme.space.hairline } : undefined} />
                 </View>
                 {duration && (
                   <View style={liveStyles.latestMessageDurationBadge}>

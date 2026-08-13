@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { PressableScale } from './motion';
 import { theme } from '../../constants/theme';
 
 interface EmptyStateProps {
@@ -30,14 +31,14 @@ export const EmptyState = ({ icon, title, subtitle, actionLabel, onAction }: Emp
     <Text style={styles.title}>{title}</Text>
     {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     {actionLabel && onAction ? (
-      <Pressable
+      <PressableScale
         onPress={onAction}
         style={styles.actionBtn}
         accessibilityRole="button"
         accessibilityLabel={actionLabel}
       >
         <Text style={styles.actionText}>{actionLabel}</Text>
-      </Pressable>
+      </PressableScale>
     ) : null}
   </View>
 );

@@ -53,6 +53,35 @@ interface PressableScaleProps extends PressableProps {
   activeScale?: number;
 }
 
+// ---------------------------------------------------------------------------
+// MOTION DURATIONS
+//
+// Every animation in the app used to name its own number: 340 for a content
+// entrance, 260 for a confirmation, 300 and 140 for the two halves of a tab
+// icon, 200 for the quick-nav. Nothing was wrong individually, but nothing
+// agreed either, and inconsistent timing is felt before it is noticed - the
+// app reads as if different parts of it were built by different people.
+//
+// Two durations, because there are two kinds of moment:
+//   fast - a control acknowledging a tap. Must land almost before you notice
+//          it started, or it reads as lag rather than feedback.
+//   base - content arriving, or the app confirming something happened. Long
+//          enough to be seen as movement, short enough never to be waited on.
+//
+// Both sit inside the 150-250ms band where motion registers without costing
+// the user time. Anything longer belongs to a surface large enough to justify
+// it (the player expanding across the whole screen), and those state their own
+// reason locally.
+//
+// All of these run on the NATIVE driver. The exceptions in the app are the two
+// SVG animations, which animate a prop rather than a view style and physically
+// cannot - both say so at the call site.
+// ---------------------------------------------------------------------------
+export const MOTION = {
+  fast: 180,
+  base: 240,
+} as const;
+
 export const PressableScale = ({
   children,
   style,
@@ -118,7 +147,7 @@ export const FadeInUp = ({ children, style, delay = 0, offset = 8 }: FadeInUpPro
   useEffect(() => {
     Animated.timing(progress, {
       toValue: 1,
-      duration: 340,
+      duration: MOTION.base,
       delay,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
@@ -138,7 +167,7 @@ export const FadeInUp = ({ children, style, delay = 0, offset = 8 }: FadeInUpPro
 // TabTransition — the entrance for a bottom-tab screen. Bottom tabs swap
 // instantly by default, which reads as a hard cut; a small scale-up paired
 // with a fade gives the incoming screen a sense of arriving without costing
-// anyone time. Deliberately quicker than FadeInUp (170ms vs 340ms) and with
+// anyone time. Deliberately the FAST duration rather than the base one, and
 // no travel: a tab switch is a jump between peers, not content settling into
 // place, so it should land almost before you notice it started.
 //
@@ -175,7 +204,7 @@ export const TabTransition = ({ children, style }: TabTransitionProps) => {
       progress.setValue(0);
       const anim = Animated.timing(progress, {
         toValue: 1,
-        duration: 180,
+        duration: MOTION.fast,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       });
@@ -226,7 +255,7 @@ export const PopIn = ({ children, style }: PopInProps) => {
   useEffect(() => {
     const anim = Animated.timing(progress, {
       toValue: 1,
-      duration: 260,
+      duration: MOTION.base,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     });

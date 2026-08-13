@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
     color: theme.colors.graySecondary,
-    marginBottom: 2,
+    marginBottom: theme.space.hairline,
   },
   duration: {
     fontSize: theme.fontSize.caption,

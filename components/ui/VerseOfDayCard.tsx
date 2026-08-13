@@ -58,7 +58,12 @@ const styles = StyleSheet.create({
   wrapper: {
     borderRadius: theme.radius.lg,
     overflow: 'hidden',
-    marginTop: theme.spacing.md,
+    // The three stacked blocks on Home (live card, verse, reading row) each
+    // picked their own top margin — 20, 12 and 20 — so the page had no
+    // rhythm at all: two near-identical gaps that weren't identical, and a
+    // third that was half the size. All three are section boundaries, so all
+    // three now use the section step.
+    marginTop: theme.space.section,
   },
   bg: {
     // AUDIT (on-device): at 260 this card rendered ~500px tall on a 2856px

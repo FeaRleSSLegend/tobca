@@ -1,12 +1,16 @@
 import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import { WeekView } from './WeekView';
 import { StatBox } from '../ui/StatBox';
+import type { WeekDayStatus } from '../../utils/biblePlan.utils';
+import { sheetStyles } from '../../constants/styles/sharedStyles';
+import { PressableScale } from '../ui/motion';
 
 interface WeekDay {
   day: string;
-  status: 'completed' | 'today' | 'pending';
+  status: WeekDayStatus;
 }
 
 interface StreakModalProps {
@@ -15,7 +19,9 @@ interface StreakModalProps {
   streak: number;
   longestStreak: number;
   completedCount: number;
-  percentage: number;
+  /** Freezes banked, and the cap. Replaces the old "% of plan" stat. */
+  freezes: number;
+  maxFreezes: number;
   week: WeekDay[];
   todayNumber: number;
 }
@@ -26,20 +32,29 @@ export const StreakModal = ({
   streak,
   longestStreak,
   completedCount,
-  percentage,
+  freezes,
+  maxFreezes,
   week,
   todayNumber,
 }: StreakModalProps) => {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <Pressable style={sheetStyles.scrim} onPress={onClose} accessibilityLabel="Close streak details" />
 
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
+      {/* Bottom padding composes the safe-area inset in: with a fixed value,
+          the stats row sat under the home indicator on gesture-bar devices. */}
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + theme.spacing.xxl }]}>
+        <View style={sheetStyles.handle} />
 
-        <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
+        <PressableScale
+          onPress={onClose}
+          containerStyle={sheetStyles.closeBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
           <Ionicons name="close" size={22} color={theme.colors.graySecondary} />
-        </Pressable>
+        </PressableScale>
 
         <View style={styles.hero}>
           <View style={styles.flameCircle}>
@@ -50,6 +65,14 @@ export const StreakModal = ({
           <Text style={styles.subtext}>
             {streak > 0 ? "You're building something — keep it going." : 'Read today to start a new streak.'}
           </Text>
+          {/* Says what the freezes are FOR. The chip on the card shows the
+              count; this is the one place with room to explain it, and it
+              only appears when there is cover to explain. */}
+          {freezes > 0 && (
+            <Text style={styles.freezeNote}>
+              {freezes === 1 ? 'One freeze banked' : `${freezes} freezes banked`} — miss a day and your streak survives.
+            </Text>
+          )}
         </View>
 
         <View style={styles.weekSection}>
@@ -60,7 +83,13 @@ export const StreakModal = ({
         <View style={styles.statsRow}>
           <StatBox value={longestStreak} label="Best Streak" />
           <StatBox value={completedCount} label="Days Read" />
-          <StatBox value={`${percentage}%`} label="Of Plan" />
+          {/* Was "N% Of Plan". Removed: across a 365-day plan that figure
+              reads 0% or 1% for the first five weeks, so the streak sheet
+              ended on the most discouraging number available. The freeze bank
+              is the useful thing to know here instead — it answers "what
+              happens if I miss tomorrow?", which is the actual question
+              someone opening this sheet has. */}
+          <StatBox value={`${freezes}/${maxFreezes}`} label="Freezes" />
         </View>
       </View>
     </Modal>
@@ -68,34 +97,19 @@ export const StreakModal = ({
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(10, 22, 33, 0.4)', // theme.colors.black at low opacity
-  },
+  // Scrim, handle and close button come from sheetStyles now. What stays local
+  // is the POSITIONING, and it is load-bearing: the old scrim was a `flex: 1`
+  // view whose job — undocumented — was to push this sheet to the bottom of
+  // the screen. The shared scrim is absoluteFill, so it no longer pushes
+  // anything, and without this the sheet rendered pinned to the TOP. Anchoring
+  // it explicitly says what the layout depends on instead of relying on a
+  // sibling's flex to imply it.
   sheet: {
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: theme.radius.lg,
-    borderTopRightRadius: theme.radius.lg,
-    paddingHorizontal: theme.layout.screenPadding,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.xxl,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.grayBorder,
-    alignSelf: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  closeBtn: {
+    ...sheetStyles.sheet,
     position: 'absolute',
-    top: theme.spacing.md,
-    right: theme.layout.screenPadding,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   hero: {
     alignItems: 'center',
@@ -106,7 +120,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: theme.radius.full,
-    backgroundColor: '#FFE4EE',
+    backgroundColor: theme.colors.pinkTint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
@@ -129,6 +143,15 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.body,
     color: theme.colors.graySecondary,
     textAlign: 'center',
+  },
+  freezeNote: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.frost,
+    textAlign: 'center',
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    lineHeight: 19,
   },
   weekSection: {
     marginBottom: theme.spacing.xl,

@@ -31,7 +31,31 @@ export interface ReadingProgress {
   lastReadDate: string | null;
   currentStreak: number;
   longestStreak: number;
+
+  // ---- Streak freezes ----
+  /** Freezes in the bank right now, 0..MAX_FREEZES. */
+  freezes: number;
+  /** toDateString() of the last day the bank was topped up. */
+  lastFreezeRegenDate: string | null;
+  /** Plan-date keys ("August 13") the streak survived on a spent freeze. */
+  frozenDays: string[];
 }
+
+/**
+ * STREAK FREEZES
+ *
+ * A missed day normally resets the streak to zero. That is honest but brutal
+ * for a 365-day plan: one busy Wednesday erases six weeks, and the usual
+ * response is to stop entirely rather than start again from 1. A small bank of
+ * automatic freezes absorbs the ordinary misses without making the streak
+ * meaningless — capped at 2, so it can cover a bad day or a bad weekend, never
+ * a month of not reading.
+ *
+ * Deliberately AUTOMATIC rather than a button. Asking someone to spend a freeze
+ * means telling them they failed and then asking them to file paperwork about
+ * it; the point is that a life-happens day does not become a decision.
+ */
+export const MAX_FREEZES = 2;
 
 // data/biblePlan.ts keys every entry by an ENGLISH month name ("August 6").
 // `toLocaleString('default', { month: 'long' })` returns the DEVICE's locale
@@ -94,7 +118,80 @@ const emptyProgress = (): ReadingProgress => ({
   lastReadDate: null,
   currentStreak: 0,
   longestStreak: 0,
+  // New readers start with a full bank. Handing over the safety net before it
+  // is needed is what makes it a safety net rather than a reward.
+  freezes: MAX_FREEZES,
+  lastFreezeRegenDate: null,
+  frozenDays: [],
 });
+
+/** Whole days between two dates, ignoring clock time. */
+function daysBetween(from: Date, to: Date): number {
+  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+  const b = new Date(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
+  return Math.round((b - a) / 86_400_000);
+}
+
+/**
+ * Bring a stored progress record up to date with the calendar.
+ *
+ * This is the heart of freezes, and it runs on READ rather than on write —
+ * because the event that matters (a day passing with nothing read) is the
+ * absence of an action, and absences never fire callbacks. Nothing happens at
+ * midnight; the reckoning happens the next time the app is opened, by looking
+ * at how many days have gone by since the last read.
+ *
+ * Each fully-missed day between the last read and today consumes one freeze.
+ * The moment the bank cannot cover a missed day, the streak breaks and no
+ * further freezes are spent on it. Today is NEVER treated as missed — it is
+ * still in progress.
+ *
+ * REGEN DOES NOT HAPPEN HERE, and that is the whole point.
+ * The first cut refilled the bank +1 for every elapsed DAY, which sounds right
+ * and is broken: spending is also 1 per missed day, so the bank drained and
+ * refilled at exactly the same rate and the streak became mathematically
+ * unbreakable. A test with an EMPTY bank and a missed day still came back with
+ * the streak alive, which is how it was caught.
+ *
+ * So freezes accrue on days you actually READ (see markDayAsRead). You earn
+ * cover by showing up, and missed days only spend it. That keeps the bank
+ * finite, keeps the streak losable, and still means a regular reader is nearly
+ * always carrying a full net.
+ */
+export function reconcileStreak(progress: ReadingProgress, now: Date = new Date()): ReadingProgress {
+  const p = { ...progress, frozenDays: [...progress.frozenDays] };
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (!p.lastReadDate || p.currentStreak === 0) return p;
+
+  const last = new Date(p.lastReadDate);
+  // gap of 1 means "read yesterday" — nothing missed, streak intact.
+  const gap = daysBetween(last, today);
+  if (gap <= 1) return p;
+
+  // Days strictly between the last read and today are the missed ones.
+  const missed = gap - 1;
+  for (let i = 1; i <= missed; i++) {
+    if (p.freezes <= 0) {
+      // Out of cover: the streak genuinely breaks here.
+      p.currentStreak = 0;
+      return p;
+    }
+    p.freezes -= 1;
+    const d = new Date(last);
+    d.setDate(d.getDate() + i);
+    const key = planDateKey(d);
+    if (!p.frozenDays.includes(key)) p.frozenDays.push(key);
+  }
+
+  // Every missed day was covered, so the streak survives. lastReadDate moves to
+  // yesterday so the next completed read continues the run rather than
+  // restarting it — the freeze has to stand in for the read it replaced.
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  p.lastReadDate = yesterday.toDateString();
+  return p;
+}
 
 /**
  * Coerce whatever is on disk into a valid ReadingProgress.
@@ -126,12 +223,20 @@ function normalizeProgress(raw: unknown): ReadingProgress {
     : [];
 
   const currentStreak = num(p.currentStreak);
+  const frozen = Array.isArray(p.frozenDays)
+    ? Array.from(new Set(p.frozenDays.filter((d): d is string => typeof d === 'string')))
+    : [];
   return {
     completedDays: days,
     lastReadDate: typeof p.lastReadDate === 'string' ? p.lastReadDate : null,
     currentStreak,
     // Longest can never be less than current, whatever the stored value says.
     longestStreak: Math.max(num(p.longestStreak), currentStreak),
+    // Records written before freezes existed have no bank; they get a full one
+    // rather than zero, so upgrading the app never costs someone their streak.
+    freezes: p.freezes === undefined ? MAX_FREEZES : Math.min(MAX_FREEZES, num(p.freezes)),
+    lastFreezeRegenDate: typeof p.lastFreezeRegenDate === 'string' ? p.lastFreezeRegenDate : null,
+    frozenDays: frozen,
   };
 }
 
@@ -139,7 +244,9 @@ export async function getProgress(): Promise<ReadingProgress> {
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEY);
     if (!data) return emptyProgress();
-    return normalizeProgress(JSON.parse(data));
+    // Reconciled on the way out: a day passing with nothing read produces no
+    // event, so the only place to notice it is the next read.
+    return reconcileStreak(normalizeProgress(JSON.parse(data)));
   } catch (error) {
     console.error('Error loading progress:', error);
     return emptyProgress();
@@ -173,6 +280,15 @@ export async function markDayAsRead(dateString: string): Promise<void> {
         
         progress.longestStreak = Math.max(progress.longestStreak, progress.currentStreak);
         progress.lastReadDate = today;
+
+        // Earn cover by showing up: +1 per DAY READ, capped. Guarded on the
+        // date so two readings marked on the same day only ever bank one.
+        if (progress.lastFreezeRegenDate !== today) {
+          progress.freezes = Math.min(MAX_FREEZES, progress.freezes + 1);
+          progress.lastFreezeRegenDate = today;
+        }
+        // Reading today supersedes any freeze that had covered it.
+        progress.frozenDays = progress.frozenDays.filter((d) => d !== dateString);
       }
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
@@ -186,10 +302,16 @@ export function getCompletionPercentage(completedDays: string[]): number {
   return Math.round((completedDays.length / totalDays) * 100);
 }
 
-export function getWeekProgress(completedDays: string[]): { day: string; status: 'completed' | 'today' | 'pending' }[] {
+/** The four states a day in the week strip can be in. */
+export type WeekDayStatus = 'completed' | 'frozen' | 'today' | 'pending';
+
+export function getWeekProgress(
+  completedDays: string[],
+  frozenDays: string[] = [],
+): { day: string; status: WeekDayStatus }[] {
   const today = new Date();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const result: { day: string; status: 'completed' | 'today' | 'pending' }[] = [];
+  const result: { day: string; status: WeekDayStatus }[] = [];
   
   // Get the start of the week (Sunday)
   const startOfWeek = new Date(today);
@@ -208,9 +330,15 @@ export function getWeekProgress(completedDays: string[]): { day: string; status:
     // Completed wins over the "today" highlight — today's dot flipping to
     // the done state the moment it's marked is the immediate feedback the
     // strip exists to give; the old order overwrote it back to neutral.
-    let status: 'completed' | 'today' | 'pending' = 'pending';
+    // Order matters. Completed outranks frozen (a day that was covered and
+    // then actually read is read, not frozen), and both outrank the "today"
+    // highlight — today's dot flipping to done the moment it's marked is the
+    // immediate feedback the strip exists to give.
+    let status: WeekDayStatus = 'pending';
     if (completedDays.includes(dateString)) {
       status = 'completed';
+    } else if (frozenDays.includes(dateString)) {
+      status = 'frozen';
     } else if (isToday) {
       status = 'today';
     }

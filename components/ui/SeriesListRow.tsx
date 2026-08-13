@@ -84,9 +84,9 @@ const styles = StyleSheet.create({
     bottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    gap: theme.space.micro,
+    paddingHorizontal: theme.space.tight,
+    paddingVertical: theme.space.micro,
     borderRadius: theme.radius.full,
     backgroundColor: 'rgba(10,22,33,0.62)',
   },
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
+    gap: theme.space.tight,
+    marginTop: theme.space.hairline,
   },
   statusDot: {
     width: 6,

@@ -78,7 +78,13 @@ export default function LiveScreen() {
   return (
     <TabTransition>
     <ScreenWithWatermark style={sharedStyles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* Same missing clearance as Library: the message list ended on a bare
+          32pt margin, which is less than the 83pt tab bar, so the last card
+          was permanently half-hidden behind it. */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: theme.layout.scrollClearance.tab }}
+      >
         {/* Header row: greeting + avatar */}
         <View style={sharedStyles.headerRow}>
           <View>
@@ -153,9 +159,11 @@ export default function LiveScreen() {
           />
         )}
 
-        {/* Extra breathing room marks the shift from the hero moments
-            above into the everyday utility list below. */}
-        <View style={{ height: theme.spacing.sm }} />
+        {/* No manual spacer here. A 24pt View used to sit in this slot to mark
+            the shift from hero cards into the utility list — but SectionLabel
+            already carries a 24pt section margin of its own, so the two added
+            up to a 48pt hole, twice every other gap on the screen and the
+            single biggest spacing error on this tab. One owner per gap. */}
 
         {/* This Week's Services — the schedule strip below shows upcoming
             slots; the chevron leads to the Services COLLECTION (past
@@ -166,7 +174,11 @@ export default function LiveScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ marginTop: theme.spacing.xl, maxHeight: 110 }}
+          // No marginTop: SectionLabel's own 12pt bottom margin is the
+          // label-to-content gap. The 20 that was here made it 32 — wider than
+          // the gap between the label and the SECTION above it, so the header
+          // visually grouped upward, away from the pills it labels.
+          style={{ maxHeight: 110 }}
           contentContainerStyle={{ gap: theme.spacing.md }}
         >
           {services.map((s) => {
@@ -185,7 +197,12 @@ export default function LiveScreen() {
             elsewhere" across both tabs. */}
         <SectionLabel label="Latest Messages" onPress={() => push({ pathname: '/see-all', params: { section: 'latest', title: 'Latest Messages' } })}/>
 
-        <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.md, marginBottom: theme.spacing.xxxl }}>
+        {/* Same two corrections as the services strip: no marginTop (the
+            label's 12 is the label-to-content gap; adding 12 here made it 24,
+            identical to the SECTION gap above the label) and no marginBottom
+            (end-of-scroll clearance is the ScrollView's job now, and 32 was
+            never enough to clear the tab bar anyway). */}
+        <View style={{ gap: theme.spacing.md }}>
           {!messagesReady ? (
             <SkeletonList rows={2} />
           ) : latestMessages.length === 0 ? (

@@ -21,7 +21,7 @@ import { PressableScale, PopIn } from '../ui/motion';
 
 export interface WeekDay {
   day: string;
-  status: 'completed' | 'today' | 'pending';
+  status: 'completed' | 'frozen' | 'today' | 'pending';
 }
 
 interface StreakHeroProps {
@@ -29,11 +29,15 @@ interface StreakHeroProps {
   week: WeekDay[];
   completedCount: number;
   totalDays: number;
+  /** Freezes currently banked, 0..MAX_FREEZES. */
+  freezes: number;
+  maxFreezes: number;
   onPress: () => void;
 }
 
 const DayCircle = ({ day, status }: WeekDay) => {
   const done = status === 'completed';
+  const frozen = status === 'frozen';
   const today = status === 'today';
 
   return (
@@ -42,6 +46,12 @@ const DayCircle = ({ day, status }: WeekDay) => {
         style={[
           styles.circle,
           done && styles.circleDone,
+          // A frozen day is NOT a checkmark. It has to be legible as a
+          // different kind of day at a glance — the streak survived, but
+          // nothing was read — so it gets its own frost treatment rather than
+          // borrowing the completed green. Claiming credit for a day that was
+          // covered would make every green circle mean less.
+          frozen && styles.circleFrozen,
           // Today is marked with a RING rather than a fill. A fill would read
           // as "done", which is exactly the wrong message on a day that is
           // still open — the ring says "you are here" without claiming credit.
@@ -52,6 +62,8 @@ const DayCircle = ({ day, status }: WeekDay) => {
           <PopIn>
             <Ionicons name="checkmark" size={15} color={theme.colors.white} />
           </PopIn>
+        ) : frozen ? (
+          <Ionicons name="snow" size={14} color={theme.colors.frost} />
         ) : (
           <Text style={[styles.dayDot, today && styles.dayDotToday]}>·</Text>
         )}
@@ -61,13 +73,18 @@ const DayCircle = ({ day, status }: WeekDay) => {
   );
 };
 
-export const StreakHero = ({ streak, week, completedCount, totalDays, onPress }: StreakHeroProps) => {
+export const StreakHero = ({ streak, week, completedCount, totalDays, freezes, maxFreezes, onPress }: StreakHeroProps) => {
   return (
     <PressableScale
       style={styles.card}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={streak > 0 ? `${streak} day streak. ${completedCount} of ${totalDays} days read. View streak details.` : `No active streak. ${completedCount} of ${totalDays} days read. View streak details.`}
+      accessibilityLabel={[
+        streak > 0 ? `${streak} day streak.` : 'No active streak.',
+        `${completedCount} of ${totalDays} days read.`,
+        `${freezes} of ${maxFreezes} streak freezes banked.`,
+        'View streak details.',
+      ].join(' ')}
     >
       <View style={styles.headRow}>
         <View style={styles.flame}>
@@ -97,6 +114,16 @@ export const StreakHero = ({ streak, week, completedCount, totalDays, onPress }:
           )}
         </View>
 
+        {/* The freeze bank sits beside the streak, not under it: it is a
+            property OF the streak (what is protecting it), and separating
+            them would turn one fact into two competing ones. Muted frost
+            against the pink flame so it reads as support, never as a rival
+            headline — the app keeps a single accent. */}
+        <View style={styles.freezeChip}>
+          <Ionicons name="snow" size={14} color={theme.colors.frost} />
+          <Text style={styles.freezeCount}>{freezes}</Text>
+        </View>
+
         <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
       </View>
 
@@ -108,6 +135,10 @@ export const StreakHero = ({ streak, week, completedCount, totalDays, onPress }:
 
       <Text style={styles.context}>
         {completedCount} of {totalDays} days read
+        {/* Only explained when the bank is not full, i.e. exactly when a
+            reader might wonder where a freeze went. A permanent line of
+            instructions would be noise on every other day. */}
+        {freezes < maxFreezes ? `  ·  ${freezes === 0 ? 'No freezes left' : `${freezes} freeze left`}` : ''}
       </Text>
     </PressableScale>
   );
@@ -121,7 +152,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.grayBorder,
     paddingVertical: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.xxl,
+    // On the shared scale, and NOT larger than it: the SectionLabel below
+    // already contributes its own section gap, so a big margin here stacked
+    // with that one and opened a hole between the streak and Today's Reading.
+    marginBottom: 0,
   },
   headRow: {
     flexDirection: 'row',
@@ -163,6 +197,21 @@ const styles = StyleSheet.create({
     color: theme.colors.graySecondary,
   },
 
+  freezeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.micro,
+    paddingHorizontal: theme.spacing.sm,
+    height: 26,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.frostFill,
+  },
+  freezeCount: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.frost,
+  },
+
   week: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -170,7 +219,7 @@ const styles = StyleSheet.create({
   },
   dayCol: {
     alignItems: 'center',
-    gap: 6,
+    gap: theme.space.tight,
   },
   circle: {
     width: 32,
@@ -185,6 +234,10 @@ const styles = StyleSheet.create({
   circleDone: {
     backgroundColor: theme.colors.success,
     borderColor: theme.colors.success,
+  },
+  circleFrozen: {
+    backgroundColor: theme.colors.frostFill,
+    borderColor: theme.colors.frostBorder,
   },
   circleToday: {
     borderWidth: 2,

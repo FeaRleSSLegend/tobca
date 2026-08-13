@@ -1,11 +1,12 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import type { WeekDayStatus } from '../../utils/biblePlan.utils';
 
 interface DayChipProps {
   day: string;
   dayNumber?: number;
-  status: 'completed' | 'today' | 'pending';
+  status: WeekDayStatus;
 }
 
 export const DayChip = ({ day, dayNumber, status }: DayChipProps) => {
@@ -14,10 +15,15 @@ export const DayChip = ({ day, dayNumber, status }: DayChipProps) => {
       <View style={[
         styles.circle,
         status === 'completed' && styles.circleCompleted,
+        status === 'frozen' && styles.circleFrozen,
         status === 'today' && styles.circleToday,
       ]}>
         {status === 'completed' && (
           <Ionicons name="checkmark" size={14} color={theme.colors.white} />
+        )}
+        {/* A snowflake, never a checkmark: the day was protected, not read. */}
+        {status === 'frozen' && (
+          <Ionicons name="snow" size={16} color={theme.colors.frost} />
         )}
         {status === 'today' && dayNumber && (
           <Text style={styles.todayText}>{dayNumber}</Text>
@@ -52,6 +58,9 @@ const styles = StyleSheet.create({
   },
   circleCompleted: {
     backgroundColor: theme.colors.navy,
+  },
+  circleFrozen: {
+    backgroundColor: theme.colors.frostFill,
   },
   circleToday: {
     backgroundColor: theme.colors.surface,

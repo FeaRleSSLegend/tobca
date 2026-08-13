@@ -19,13 +19,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
-import { socialAccounts, SocialAccount, appUrl, webUrl } from '../data/socials';
+import { useStackBottomClearance } from '../hooks/useBottomClearance';
+import { socialAccounts, SocialAccount, SocialSection, SECTION_TITLES, appUrl, webUrl } from '../data/socials';
 import { PressableScale, FadeInUp, PopIn, staggerDelay } from '../components/ui/motion';
 
-// Instagram's brand colour. Used ONLY on the small platform glyph, never as a
-// surface: the app has one accent (pink) and letting a second brand colour
-// fill a card would make every row compete with the church's own identity.
-const INSTAGRAM = '#C13584';
+// Platform brand colours, used ONLY on the small glyph and its tinted disc —
+// never as a card surface. The app has one accent (pink); letting two more
+// brand colours fill cards would make every row compete with the church's own
+// identity. At 10% they identify the destination without shouting.
+const PLATFORM = {
+  instagram: { colour: '#C13584', tint: 'rgba(193,53,132,0.10)', icon: 'logo-instagram' },
+  youtube: { colour: '#FF0000', tint: 'rgba(255,0,0,0.10)', icon: 'logo-youtube' },
+} as const;
 
 /**
  * Open the Instagram app on the profile, fall back to the browser.
@@ -36,12 +41,12 @@ const INSTAGRAM = '#C13584';
  * send everyone to the browser on most modern Androids. Attempting the deep
  * link and catching the rejection is the check.
  */
-async function openProfile(handle: string) {
+async function openProfile(account: SocialAccount) {
   try {
-    await Linking.openURL(appUrl(handle));
+    await Linking.openURL(appUrl(account));
   } catch {
     try {
-      await Linking.openURL(webUrl(handle));
+      await Linking.openURL(webUrl(account));
     } catch {
       // No Instagram app and no browser is a real device state; there is
       // nothing useful to say about it, so fail quietly.
@@ -58,23 +63,23 @@ const SocialCard = ({
   copied: boolean;
   onCopy: (handle: string) => void;
 }) => {
-  if (!account.handle) return null;
   const handle = account.handle;
+  const brand = PLATFORM[account.platform];
 
   return (
     <PressableScale
       style={styles.card}
-      onPress={() => openProfile(handle)}
+      onPress={() => openProfile(account)}
       // Long-press copies. A secondary action on a card whose primary action
       // leaves the app entirely — useful when you want to share the handle
       // rather than follow it right now.
-      onLongPress={() => onCopy(handle)}
+      onLongPress={() => onCopy(account.display)}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${account.name} on Instagram, @${handle}`}
-      accessibilityHint="Double tap to open Instagram. Long press to copy the handle."
+      accessibilityLabel={`Open ${account.name} on ${account.platform === 'youtube' ? 'YouTube' : 'Instagram'}, ${account.display}`}
+      accessibilityHint="Double tap to open the app. Long press to copy the handle."
     >
-      <View style={styles.glyph}>
-        <Ionicons name="logo-instagram" size={22} color={INSTAGRAM} />
+      <View style={[styles.glyph, { backgroundColor: brand.tint }]}>
+        <Ionicons name={brand.icon} size={22} color={brand.colour} />
       </View>
 
       <View style={styles.cardBody}>
@@ -84,7 +89,7 @@ const SocialCard = ({
             <Text style={styles.cardCopied}>Handle copied</Text>
           </PopIn>
         ) : (
-          <Text style={styles.cardHandle} numberOfLines={1}>@{handle}</Text>
+          <Text style={styles.cardHandle} numberOfLines={1}>{account.display}</Text>
         )}
       </View>
 
@@ -99,6 +104,11 @@ const SocialCard = ({
 export default function SocialsScreen() {
   const router = useRouter();
   const [copiedHandle, setCopiedHandle] = useState<string | null>(null);
+  // Runtime value, so it can't live in the StyleSheet: this screen's
+  // SafeAreaView deliberately guards only the top edge (content must be able
+  // to scroll under the home indicator), which is exactly why the last card
+  // was sitting flush against the bottom of the display.
+  const bottomClearance = useStackBottomClearance();
 
   const copy = (handle: string) => {
     // Expo Go bundles no clipboard module and adding expo-clipboard would mean
@@ -109,7 +119,7 @@ export default function SocialsScreen() {
     setTimeout(() => setCopiedHandle((h) => (h === handle ? null : h)), 1600);
   };
 
-  const accounts = socialAccounts.filter((a) => a.handle);
+  const accounts = socialAccounts;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
@@ -124,7 +134,10 @@ export default function SocialsScreen() {
         </PressableScale>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* PROFILE BLOCK. Centred — one of the few places the skill's
             "left-align by default" rule gives way, because this is a single
             subject introducing itself, which is exactly the hero/empty-state
@@ -148,20 +161,33 @@ export default function SocialsScreen() {
           </View>
         </FadeInUp>
 
-        <Text style={styles.sectionLabel}>FOLLOW US</Text>
-
-        {accounts.map((a, i) => (
-          <FadeInUp key={a.id} delay={staggerDelay(i)}>
-            <SocialCard
-              account={a}
-              copied={copiedHandle === a.handle}
-              onCopy={copy}
-            />
-          </FadeInUp>
-        ))}
+        {(['pastors', 'church'] as SocialSection[]).map((section) => {
+          const rows = accounts.filter((a) => a.section === section);
+          if (rows.length === 0) return null;
+          return (
+            // `gap` rather than a marginBottom on the card itself. The card
+            // carried its own 12pt bottom margin, which meant the LAST card in
+            // a group contributed 12 on top of the next section label's 24 —
+            // a 36pt gap where every other section boundary on the screen was
+            // 24. A gap only ever falls BETWEEN siblings, so the group spaces
+            // its own rows and contributes nothing past its last one.
+            <View key={section} style={styles.sectionGroup}>
+              <Text style={styles.sectionLabel}>{SECTION_TITLES[section].toUpperCase()}</Text>
+              {rows.map((a, i) => (
+                <FadeInUp key={a.id} delay={staggerDelay(i)}>
+                  <SocialCard
+                    account={a}
+                    copied={copiedHandle === a.display}
+                    onCopy={copy}
+                  />
+                </FadeInUp>
+              ))}
+            </View>
+          );
+        })}
 
         <Text style={styles.disclosure}>
-          These open Instagram — posts and video stay there.
+          These open Instagram and YouTube — posts and video stay there.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -187,13 +213,18 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xxxl * 2,
+    // paddingBottom is applied at the call site, not here: it has to add the
+    // device's bottom safe-area inset, which is only known at runtime. A
+    // constant 64 here was the bug — on a phone with a home indicator the
+    // last card still ended underneath it.
   },
 
   // ---- Profile block ----
   profile: {
     alignItems: 'center',
-    paddingTop: theme.spacing.sm,
+    // The back-button header above already ends in 8pt of padding; adding 8
+    // here made it 16. The header owns it.
+    paddingTop: 0,
     paddingBottom: theme.spacing.xxxl,
   },
   avatarRing: {
@@ -229,7 +260,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.bodyLg,
     color: theme.colors.graySecondary,
-    marginTop: 6,
+    marginTop: theme.space.tight,
     textAlign: 'center',
   },
   glyphRow: {
@@ -238,13 +269,22 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.lg,
   },
 
+  // One gap value for everything INSIDE a section — label to first card, and
+  // card to card. The section boundary is owned solely by sectionLabel's
+  // marginTop, so the two can never add together.
+  sectionGroup: {
+    gap: theme.spacing.md,
+  },
   sectionLabel: {
+    marginTop: theme.space.section,
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
     letterSpacing: theme.editorial.trackLabel,
     color: theme.colors.graySecondary,
     textTransform: 'uppercase',
-    marginBottom: theme.spacing.md,
+    // The group's `gap` supplies this now — leaving the margin here as well
+    // would have made label-to-first-card 24 while card-to-card stayed 12.
+    marginBottom: 0,
   },
 
   // ---- Link cards ----
@@ -258,7 +298,7 @@ const styles = StyleSheet.create({
     // 16 top and bottom puts each card comfortably over the 44pt target too.
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
+    // Inter-card spacing is the group's `gap` — see sectionGroup.
     borderWidth: 1,
     borderColor: theme.colors.grayBorder,
     shadowColor: theme.colors.navy,
@@ -289,13 +329,13 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.bodyLg,
     color: theme.colors.graySecondary,
-    marginTop: 2,
+    marginTop: theme.space.hairline,
   },
   cardCopied: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.bodyLg,
     color: theme.colors.success,
-    marginTop: 2,
+    marginTop: theme.space.hairline,
   },
 
   disclosure: {
@@ -303,7 +343,10 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.body,
     color: theme.colors.grayIcon,
     textAlign: 'center',
-    marginTop: theme.spacing.xl,
+    // Section step, same as every other block boundary on this screen — it
+    // was 20, close enough to 24 to read as an inconsistency rather than a
+    // distinction.
+    marginTop: theme.space.section,
     paddingHorizontal: theme.spacing.xl,
     lineHeight: 19,
   },

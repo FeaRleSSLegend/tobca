@@ -1,84 +1,143 @@
 // data/socials.ts
 // The one place social handles live.
 //
-// LINK-OUT ONLY. Instagram content is never fetched, embedded or replayed in
-// this app: Meta only permits that through a business-verified, app-reviewed
-// Graph API setup, and the unofficial endpoints that appear to work are both
-// against their terms and liable to break without warning. So every entry here
-// is a destination, not a data source.
+// LINK-OUT ONLY for Instagram. Meta only permits fetching or embedding IG
+// content through a business-verified, app-reviewed Graph API setup, and the
+// unofficial endpoints that appear to work are both against their terms and
+// liable to break without warning. YouTube is different — the app genuinely
+// plays that content in-app — but the links here are still just links: a way
+// to go and SUBSCRIBE, which is a different job from watching.
 //
-// Handles are stored BARE (no URL, no query string). Two reasons:
-//   - the share sheet hands out links like
-//     instagram.com/theolivebrookchurch?igsh=MWx5…  — that igsh parameter is a
-//     share-attribution token tied to whoever copied it. Storing it would
-//     attribute every tap in the app to one person's share, forever.
-//   - the app link (instagram://user?username=…) and the web link
-//     (https://www.instagram.com/…) need the handle in different positions, so
-//     one canonical handle beats storing two URLs that can drift apart.
+// Handles are stored BARE (no URL, no query string). The share sheet hands out
+// links like instagram.com/theolivebrookchurch?igsh=MWx5… and that igsh
+// parameter is a share-attribution token tied to whoever copied it — storing it
+// would attribute every tap in the app to one person's share, forever.
 
-export type SocialPlatform = 'instagram';
+import { KUBWA_CHANNEL_ID, WUSE2_CHANNEL_ID } from './branches';
+import { YINKA_CHANNEL_ID } from './channels';
+
+export type SocialPlatform = 'instagram' | 'youtube';
+
+/** Which group a row belongs to on the Socials screen. */
+export type SocialSection = 'pastors' | 'church';
 
 export interface SocialAccount {
   id: string;
   /** Who the account belongs to. */
   name: string;
-  /** What they are, one line — used as the card's second line. */
-  role: string;
   platform: SocialPlatform;
-  /** Bare handle, no @, no URL, no query params. */
-  handle: string | null;
+  section: SocialSection;
+  /**
+   * Instagram: bare handle, no @, no URL.
+   * YouTube: the channel ID (UC…), because a channel's @handle can be changed
+   * by its owner while the id never can.
+   */
+  handle: string;
+  /** Shown under the name. For YouTube this is the @handle, which is friendlier
+   *  to read than a UC… id. */
+  display: string;
 }
 
-// All four handles are now real — no placeholders remain in this file.
-// Note Abu's is "officialabujibril", not "abujibril": the shorter name is a
-// different account, so don't shorten it.
-export const ABU_INSTAGRAM = 'officialabujibril';
+// ---------------------------------------------------------------------------
+// >>> CHECK ME <<<
+// Instagram shows this account as "official_abujibril" (with an underscore) in
+// the app's own search results. The brief gave it as "officialabujibril"
+// without one. Instagram's search is the more authoritative source of the two,
+// so that is what is stored — but the two spellings are different accounts, and
+// if the no-underscore form is the real one this single constant is the fix.
+// ---------------------------------------------------------------------------
+export const ABU_INSTAGRAM = 'official_abujibril';
 
 export const socialAccounts: SocialAccount[] = [
+  // ---- Pastors ----
   {
-    id: 'tobc',
-    name: 'The OliveBrook Church',
-    role: 'Kubwa, Abuja',
-    platform: 'instagram',
-    handle: 'theolivebrookchurch',
-  },
-  {
-    id: 'tobc-wuse2',
-    name: 'TOBC Wuse 2',
-    role: 'Wuse 2, Abuja',
-    platform: 'instagram',
-    handle: 'tobc_wuse2',
-  },
-  {
-    id: 'yinka',
+    id: 'yinka-ig',
     name: 'Pastor Yinka Jibril',
-    role: 'Pastor',
     platform: 'instagram',
+    section: 'pastors',
     handle: 'yinkajibril',
+    display: '@yinkajibril',
   },
   {
-    id: 'abu',
+    id: 'yinka-yt',
+    name: 'Pastor Yinka Jibril',
+    platform: 'youtube',
+    section: 'pastors',
+    handle: YINKA_CHANNEL_ID,
+    display: '@yinkajibril',
+  },
+  {
+    id: 'abu-ig',
     name: 'Pastor Abu Jibril',
-    role: 'Pastor',
     platform: 'instagram',
+    section: 'pastors',
     handle: ABU_INSTAGRAM,
+    display: `@${ABU_INSTAGRAM}`,
+  },
+  // No YouTube row for Pastor Abu — he has no channel. Omitted entirely rather
+  // than shown disabled: a greyed-out row invites "when is this coming?", and
+  // the honest answer is "never", which a placeholder cannot say.
+
+  // ---- Church channels ----
+  {
+    id: 'tobc-ig',
+    name: 'The OliveBrook Church',
+    platform: 'instagram',
+    section: 'church',
+    handle: 'theolivebrookchurch',
+    display: '@theolivebrookchurch',
+  },
+  {
+    id: 'tobc-yt',
+    name: 'The OliveBrook Church, Kubwa',
+    platform: 'youtube',
+    section: 'church',
+    handle: KUBWA_CHANNEL_ID,
+    display: '@theolivebrookchurch',
+  },
+  {
+    id: 'wuse2-ig',
+    name: 'TOBC Wuse 2',
+    platform: 'instagram',
+    section: 'church',
+    handle: 'tobc_wuse2',
+    display: '@tobc_wuse2',
+  },
+  {
+    id: 'wuse2-yt',
+    name: 'TOBC Wuse 2',
+    platform: 'youtube',
+    section: 'church',
+    handle: WUSE2_CHANNEL_ID,
+    // Note the asymmetry: YouTube is @tobcwuse2 (no underscore), Instagram is
+    // @tobc_wuse2 (with one). Not a typo — don't "correct" either to match.
+    display: '@tobcwuse2',
   },
 ];
 
-/** Canonical public profile URL — the fallback when the app isn't installed. */
-export function webUrl(handle: string): string {
-  return `https://www.instagram.com/${handle}`;
+export const SECTION_TITLES: Record<SocialSection, string> = {
+  pastors: 'Pastors',
+  church: 'Church Channels',
+};
+
+/** Canonical public URL — the fallback when the native app isn't installed. */
+export function webUrl(a: SocialAccount): string {
+  return a.platform === 'instagram'
+    ? `https://www.instagram.com/${a.handle}`
+    : `https://www.youtube.com/channel/${a.handle}`;
 }
 
 /**
  * The native-app deep link.
  *
- * `instagram://user?username=…` is Instagram's documented scheme and lands on
- * the profile inside the app. Linking.openURL rejects when no handler exists,
- * which is what the caller uses to fall back to the web URL — checking with
- * canOpenURL first would be wrong on Android 11+, where queries for schemes not
- * declared in the manifest return false even when the app IS installed.
+ * Instagram documents `instagram://user?username=…`. YouTube's `vnd.youtube://`
+ * scheme accepts a channel id directly. Linking.openURL REJECTS when no handler
+ * exists, and that rejection is the check — calling canOpenURL first would be
+ * wrong on Android 11+, where a query for a scheme the manifest doesn't declare
+ * returns false even when the app IS installed.
  */
-export function appUrl(handle: string): string {
-  return `instagram://user?username=${handle}`;
+export function appUrl(a: SocialAccount): string {
+  return a.platform === 'instagram'
+    ? `instagram://user?username=${a.handle}`
+    : `vnd.youtube://www.youtube.com/channel/${a.handle}`;
 }

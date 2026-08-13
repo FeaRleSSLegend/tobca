@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, Text, StyleSheet, View } from 'react-native';
+import { MOTION } from '../ui/motion';
 import { theme } from '../../constants/theme';
 
 export interface QuickNavItem {
@@ -33,7 +34,7 @@ export const BibleQuickNav = ({ items, activeKey, visible, onSelect }: BibleQuic
   useEffect(() => {
     Animated.timing(slide, {
       toValue: visible ? 0 : 1,
-      duration: 200,
+      duration: MOTION.base,
       useNativeDriver: true,
     }).start();
   }, [visible, slide]);

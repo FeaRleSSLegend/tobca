@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: '#FFE4EE', // light pink tint — same family as theme.colors.pink
+    backgroundColor: theme.colors.pinkTint,
     alignItems: 'center',
     justifyContent: 'center',
   },

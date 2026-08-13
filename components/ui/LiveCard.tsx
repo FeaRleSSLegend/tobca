@@ -135,7 +135,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail
         <Text style={liveStyles.heroTitle} numberOfLines={2}>
           {title ?? 'Sunday Service'}
         </Text>
-        <Text style={[liveStyles.heroCaption, { marginTop: 3 }]}>
+        <Text style={[liveStyles.heroCaption, { marginTop: theme.space.micro }]}>
           {source === 'youtube' ? 'Streaming live on YouTube' : 'Service in progress'}
         </Text>
 
@@ -147,7 +147,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail
           accessibilityRole="button"
           accessibilityLabel="Watch the live stream"
         >
-          <Ionicons name="play" size={16} color={theme.colors.pink} style={{ marginLeft: 1 }} />
+          <Ionicons name="play" size={16} color={theme.colors.pink} style={{ marginLeft: theme.space.hairline }} />
           <Text style={liveStyles.primaryBtnText}>Watch now</Text>
         </PressableScale>
       </View>

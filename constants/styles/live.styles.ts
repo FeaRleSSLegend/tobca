@@ -7,7 +7,10 @@ import { theme } from '../theme';
 
 export const liveStyles = StyleSheet.create({
   liveCard: {
-    marginTop: theme.spacing.xl,
+    // NO top margin. This is the first card under the greeting header, and
+    // sharedStyles.headerRow already ends in 16pt of padding — the 20 here
+    // stacked on it for a 36pt gap, the widest on the screen.
+    marginTop: 0,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.md,
@@ -44,7 +47,7 @@ export const liveStyles = StyleSheet.create({
   // the right place instead of margins scattered across four elements.
   liveTitleBlock: {
     marginTop: theme.spacing.sm,
-    gap: 3,
+    gap: theme.space.micro,
   },
   heroTitle: {
     fontSize: theme.fontSize.display,
@@ -158,8 +161,8 @@ export const liveStyles = StyleSheet.create({
     right: 4,
     backgroundColor: 'rgba(10,22,33,0.75)',
     borderRadius: theme.radius.sm,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    paddingHorizontal: theme.space.micro,
+    paddingVertical: theme.space.hairline,
   },
   latestMessageDurationText: {
     fontFamily: theme.fontFamily.bodyBold,

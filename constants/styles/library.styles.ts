@@ -19,7 +19,11 @@ export const LibraryStyles = StyleSheet.create({
     borderRadius: theme.radius.full,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    marginVertical: theme.spacing.lg,
+    // NO margins of its own. `marginVertical: 16` here was adding to BOTH
+    // neighbours: headerRow's 16pt paddingBottom above it (32pt gap under the
+    // title) and BranchFilter's 16pt marginTop below it (another 32). The
+    // header owns the gap above, the filter row owns the gap below.
+    marginVertical: 0,
     // Padding alone landed at ~39pt tall — minHeight gets it to the 44pt
     // floor without changing how dense the field looks.
     minHeight: 44,
@@ -37,7 +41,7 @@ export const LibraryStyles = StyleSheet.create({
   // HScroll it needs an explicit width. 148 ≈ one-and-a-bit visible past
   // two full cards on a 390pt screen, the "there's more to scroll" cue.
   hScrollCard: {
-    width: 148,
+    width: theme.layout.rowCard.width,
   },
   // NOTE: filterView / filterRow / filteredCountLabel / gridContainer /
   // gridItem were removed in the discovery-hub redesign — the pill row and
@@ -47,39 +51,41 @@ export const LibraryStyles = StyleSheet.create({
     // Same footprint as CurrentMessage so the swap doesn't shift the page.
     heroSkeleton: {
         height: 180,
-        marginTop: 20,
-        borderRadius: 14,
+        marginTop: theme.space.related,
+        borderRadius: theme.radius.md,
         overflow: 'hidden',
     },
     // The one row on Library that leaves the app. Styled as a utility row,
     // not a content card — it is a door, not a thing to watch.
+    // Was entirely hardcoded — gap 12, padding 16, marginTop 8, plus raw hex
+    // for border and background. Every value now comes from the tokens, so this
+    // row moves with the rest of the app instead of drifting from it.
     socialsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        padding: 16,
-        marginTop: 8,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: '#E9EDF0',
-        backgroundColor: '#FFFFFF',
+        gap: theme.space.related,
+        padding: theme.space.related,
+        borderRadius: theme.radius.md,
+        borderWidth: theme.layout.cardBorderWidth,
+        borderColor: theme.colors.grayBorder,
+        backgroundColor: theme.colors.surface,
     },
     socialsBadge: {
         width: 40,
         height: 40,
-        borderRadius: 12,
+        borderRadius: theme.radius.sm,
         alignItems: 'center',
         justifyContent: 'center',
     },
     socialsTitle: {
-        fontSize: 14,
-        fontFamily: 'Inter_600SemiBold',
-        color: '#1A3247',
+        fontSize: theme.fontSize.bodyLg,
+        fontFamily: theme.fontFamily.bodySemibold,
+        color: theme.colors.navy,
     },
     socialsMeta: {
-        fontSize: 12,
-        fontFamily: 'Inter_400Regular',
-        color: '#5C6F80',
-        marginTop: 2,
+        fontSize: theme.fontSize.caption,
+        fontFamily: theme.fontFamily.body,
+        color: theme.colors.graySecondary,
+        marginTop: theme.space.hairline,
     },
 });

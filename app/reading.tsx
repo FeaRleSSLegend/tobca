@@ -25,6 +25,7 @@ import { useGuardedPush } from '../hooks/useGuardedPush';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../constants/theme';
+import { sheetStyles } from '../constants/styles/sharedStyles';
 import { TranslationCode, getSavedTranslation } from '../services/bibleVersions';
 import { getVersesForReference, Verse } from '../services/bibleApi';
 import { HIGHLIGHT_COLORS, colorValue, verseKey, getAllHighlights, setHighlight } from '../utils/highlights';
@@ -393,9 +394,9 @@ export default function ReadingScreen() {
           Remove option clears it. */}
       {activeVerse && (
         <>
-          <Pressable style={styles.sheetScrim} onPress={() => setActiveVerse(null)} accessibilityLabel="Close highlight menu" />
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
-            <View style={styles.sheetHandle} />
+          <Pressable style={sheetStyles.scrim} onPress={() => setActiveVerse(null)} accessibilityLabel="Close highlight menu" />
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + theme.spacing.xxl }]}>
+            <View style={sheetStyles.handle} />
             <Text style={styles.sheetTitle} numberOfLines={1}>
               {activeVerse.book ? `${activeVerse.book} ` : ''}
               {activeVerse.chapter ? `${activeVerse.chapter}:` : ''}{activeVerse.number}
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg,
     borderRadius: theme.radius.full,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 5,
+    paddingVertical: theme.space.micro,
   },
   translationText: {
     fontFamily: theme.fontFamily.bodyBold,
@@ -495,15 +496,23 @@ const styles = StyleSheet.create({
 },
   scrollContent: {
     paddingHorizontal: theme.layout.screenPadding,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.xxxl * 2,
+    // No top padding here. The masthead below is always the first child and
+    // sets its own opening air deliberately (see its note); 20 here landed on
+    // top of the masthead's own 20 for 40pt from two owners, so any later
+    // change to "how much air before the title" would have moved only half of
+    // it. The masthead owns the whole thing now — the rendered distance is
+    // unchanged, this just makes it adjustable in one place.
+    paddingTop: 0,
+    paddingBottom: theme.layout.scrollClearance.stack,
   },
   // Generous, deliberately. The refs give the title block roughly a third of
   // the first screen before any body text — that pause is what signals
   // "settle in and read" instead of "scan this".
   masthead: {
     alignItems: 'center',
-    paddingTop: theme.spacing.xl,
+    // The sole owner of the space above the title — 40 (the `major` step,
+    // a change of subject) is the full opening pause, not half of it.
+    paddingTop: theme.space.major,
     paddingBottom: theme.spacing.xxxl,
     paddingHorizontal: theme.spacing.md,
   },
@@ -581,30 +590,14 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.body,
     color: theme.colors.navy,
   },
-  sheetScrim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(10,22,33,0.25)',
-  },
+  // Scrim and handle come from the shared sheet recipe now; the absolute
+  // positioning is what is specific here, since this sheet is not in a Modal.
   sheet: {
+    ...sheetStyles.sheet,
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: theme.radius.lg,
-    borderTopRightRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderColor: theme.colors.grayBorder,
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: theme.colors.grayBorder,
-    marginBottom: theme.spacing.lg,
   },
   sheetTitle: {
     fontFamily: theme.fontFamily.display,
@@ -616,7 +609,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1,
     color: theme.colors.grayIcon,
-    marginTop: 2,
+    marginTop: theme.space.hairline,
     marginBottom: theme.spacing.md,
   },
   swatchRow: {
@@ -632,8 +625,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(10,22,33,0.08)',
   },
+  // Selection has to survive being drawn on top of five different fills, so
+  // it is a heavy ring plus the checkmark rather than a colour change - the
+  // old 1pt-to-2pt border shift was nearly invisible on the darker swatches.
   swatchSelected: {
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: theme.colors.navy,
   },
   removeBtn: {
@@ -677,7 +673,9 @@ const styles = StyleSheet.create({
   },
   verse: {
     fontFamily: theme.fontFamily.serif,
-    color: '#2C3E50',
+    // Was #2C3E50, an off-palette slate a shade cooler than anything else
+    // in the app. Scripture body text is the last place that should drift.
+    color: theme.colors.navy,
     marginBottom: theme.editorial.verseGap,
   },
   // Pink, restored by request — it is what makes the reader feel like OUR

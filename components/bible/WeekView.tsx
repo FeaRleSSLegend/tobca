@@ -1,10 +1,11 @@
 import { View, StyleSheet } from 'react-native';
 import { DayChip } from './DayChip';
 import { theme } from '../../constants/theme';
+import type { WeekDayStatus } from '../../utils/biblePlan.utils';
 
 interface WeekDay {
   day: string;
-  status: 'completed' | 'today' | 'pending';
+  status: WeekDayStatus;
 }
 
 interface WeekViewProps {

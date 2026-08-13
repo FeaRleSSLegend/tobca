@@ -19,11 +19,13 @@ import { useMessages } from '../hooks/useMessages';
 import { shortDate } from '../utils/collections';
 import { SkeletonList } from '../components/ui/Skeletons';
 import { usePlayback } from '../providers/PlaybackProvider';
+import { useStackBottomClearance } from '../hooks/useBottomClearance';
 
 export default function SearchScreen() {
   const router = useRouter();
   const { play } = usePlayback();
   const [query, setQuery] = useState('');
+  const bottomClearance = useStackBottomClearance();
   const { messages, isBranchReady } = useMessages();
   const ready = isBranchReady('all');
   const recentlyAdded = getRecentlyAdded(messages);
@@ -58,7 +60,10 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={searchStyles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[searchStyles.scrollContent, { paddingBottom: bottomClearance }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {query.trim().length === 0 ? (
           // Nothing typed yet — a blank screen right after opening search
           // reads as broken, and research on search UX backs up showing

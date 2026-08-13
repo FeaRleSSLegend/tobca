@@ -42,8 +42,10 @@ export default function PrayerScreen() {
                     exists now, and this gap doubles as the breathing room
                     before the utility lists below, the same pause Live and
                     Plan both add after their hero moment. */}
-                <View style={{ height: theme.spacing.xl }} />
-
+                {/* The 24pt spacer that used to sit here is gone: SectionLabel
+                    below already carries a 24pt section margin of its own, so
+                    the two stacked into a 48pt hole — the same doubled gap
+                    Live had, from the same cause. One owner per gap. */}
                 <SectionLabel label="Prayer Resources" />
                 <HScroll>
                     {prayerResources.map((r, i) => (

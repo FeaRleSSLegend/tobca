@@ -19,8 +19,11 @@ interface PlaylistCircleProps {
 // fragments on the Library shelf. A 16:9 tile is the shape the asset actually
 // is, so nothing has to be cropped at all. Matches the Series/Services posters
 // directly above it, which makes the shelf read as one system.
-const TILE_WIDTH = 150;
-const TILE_HEIGHT = Math.round((TILE_WIDTH * 9) / 16);
+// Now taken from the shared shelf metric rather than declared here — this
+// tile sits directly below the Series/Services posters and any difference in
+// width between them shows up as a ragged left edge down the page.
+const TILE_WIDTH = theme.layout.rowCard.width;
+const TILE_HEIGHT = theme.layout.rowCard.height;
 
 export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: PlaylistCircleProps) => (
   <PressableScale
@@ -68,6 +71,6 @@ const styles = StyleSheet.create({
   count: {
     fontSize: theme.fontSize.caption,
     color: theme.colors.graySecondary,
-    marginTop: 2,
+    marginTop: theme.space.hairline,
   },
 });

@@ -49,7 +49,12 @@ const styles = StyleSheet.create({
     // clear allegiance to either, which is what made it read as floating.
     // Tied to the search bar above it (which is what it modifies) and given a
     // full section gap below, so it groups upward instead of drifting.
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.xs,
+    marginTop: theme.space.related,
+    // Nothing below. The 4pt that used to sit here was landing on top of
+    // CurrentMessage's own 24pt section margin for a 28pt gap — close enough
+    // to 24 to look like a mistake rather than a choice, and it meant the gap
+    // changed size depending on which card happened to render first. The next
+    // block owns the space above itself.
+    marginBottom: 0,
   },
 });

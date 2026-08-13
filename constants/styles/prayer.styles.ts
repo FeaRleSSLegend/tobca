@@ -11,6 +11,8 @@ export const prayerStyles = StyleSheet.create({
     // Clearance for the sticky AudioPlayer below. This used to be paired
     // with a second, separate 80pt spacer View at the end of the scroll
     // content doing the same job twice — one clearance mechanism is enough.
-    paddingBottom: 110,
+    // Was a bare 110 — a number picked by eye to clear the tab bar. Same job,
+    // same value class, now shared with every other tab.
+    paddingBottom: theme.layout.scrollClearance.tab,
   },
 });

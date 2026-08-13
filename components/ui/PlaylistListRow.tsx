@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    gap: 3,
+    gap: theme.space.micro,
   },
   title: {
     fontFamily: theme.fontFamily.bodySemibold,

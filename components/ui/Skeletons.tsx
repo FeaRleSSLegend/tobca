@@ -113,16 +113,22 @@ const styles = StyleSheet.create({
   },
   hRow: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    // Must be the SHELF gap, not a generic one: a skeleton row whose gap
+    // differs from the real row's shifts every card sideways at the moment
+    // content arrives.
+    gap: theme.layout.rowCard.gap,
     paddingHorizontal: theme.layout.screenPadding,
     paddingTop: theme.spacing.lg,
   },
   poster: {
-    width: 148,
+    width: theme.layout.rowCard.width,
     gap: theme.spacing.sm,
   },
+  // Was 148x96 against a real card of 148x83 — a 13pt drop on every shelf the
+  // instant the data landed. Both now derive from the same metric, so the
+  // skeleton occupies exactly the space its content will.
   posterThumb: {
-    width: 148,
-    height: 96,
+    width: theme.layout.rowCard.width,
+    height: theme.layout.rowCard.height,
   },
 });

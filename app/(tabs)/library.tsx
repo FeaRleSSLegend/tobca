@@ -113,7 +113,15 @@ export default function LibraryScreen() {
 
             <BranchFilter value={branch} onChange={setBranch} />
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Bottom clearance was missing entirely on this screen — every
+                other tab passed one and Library didn't, so the "Church
+                Socials" row (the LAST thing in the scroll) ended flush under
+                the tab bar with the docked mini-player sitting on top of it.
+                Same token every other tab uses. */}
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: theme.layout.scrollClearance.tab }}
+            >
                 {/* A branch with no content is a fact worth stating. Without
                     this the screen would just render as a blank scroll and
                     read as broken rather than as "nothing here yet". */}
@@ -268,7 +276,11 @@ export default function LibraryScreen() {
                         </HScroll>
                     </>
                 )}
-                <View style={{ height: theme.spacing.xxxl }} />
+                {/* No manual spacer here. There used to be a 32pt View sitting
+                    directly above the "Connect" SectionLabel, which already
+                    contributes its own 24pt section gap — 56pt total, and the
+                    reason this row looked detached from the page. Sections
+                    space themselves; nothing should hand-tune a gap on top. */}
                 {/* CHURCH SOCIALS — the only row here that leaves the app,
                     so it sits last. Putting a link-out above in-app content
                     would invite people out of the app before they had seen
@@ -278,7 +290,7 @@ export default function LibraryScreen() {
                     style={LibraryStyles.socialsRow}
                     onPress={() => push('/socials')}
                     accessibilityRole="button"
-                    accessibilityLabel="Church socials, follow us on Instagram"
+                    accessibilityLabel="Church socials, follow us on Instagram and YouTube"
                 >
                     <LinearGradient
                         colors={theme.gradient.colors}
@@ -290,7 +302,7 @@ export default function LibraryScreen() {
                     </LinearGradient>
                     <View style={{ flex: 1 }}>
                         <Text style={LibraryStyles.socialsTitle}>Church Socials</Text>
-                        <Text style={LibraryStyles.socialsMeta}>Follow us on Instagram</Text>
+                        <Text style={LibraryStyles.socialsMeta}>Instagram and YouTube</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
                 </PressableScale>

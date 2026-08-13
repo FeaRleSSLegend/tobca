@@ -36,11 +36,14 @@ export const PosterCard = ({ title, subtitle, thumbnail, onPress }: PosterCardPr
 
 const styles = StyleSheet.create({
   wrapper: {
-    width: 126,
+    width: theme.layout.rowCard.width,
   },
   thumb: {
-    width: 126,
-    height: 82,
+    // Shared shelf metric, and a DERIVED 16:9 height. Was 126x82, which is
+    // 16:10.4 — so every thumbnail was being cropped slightly top and bottom
+    // for no reason, since the source images are 16:9.
+    width: theme.layout.rowCard.width,
+    height: theme.layout.rowCard.height,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.slate,
     marginBottom: theme.spacing.sm,
@@ -61,6 +64,6 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     color: theme.colors.graySecondary,
-    marginTop: 2,
+    marginTop: theme.space.hairline,
   },
 });

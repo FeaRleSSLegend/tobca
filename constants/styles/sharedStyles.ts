@@ -7,10 +7,67 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
 
+// ---------------------------------------------------------------------------
+// BOTTOM SHEETS
+//
+// There are two sheets in the app - the streak detail and the verse highlight
+// picker - and they were built months apart with no shared recipe: different
+// corner radii, different handle sizes, different padding, one scrim at 25%
+// and one at 40%. They read as parts of two different apps.
+//
+// One recipe now, applied to both. The rules it encodes:
+//   - top corners at the LARGE radius (a sheet is a wide surface; the card
+//     radius looks timid across a full screen width)
+//   - a grab handle, always, even when the sheet is not draggable - it is what
+//     says the thing came up from the bottom and goes back down
+//   - generous horizontal padding, because a sheet is a focused context and
+//     should not feel like a cramped list
+//   - a scrim, so the sheet reads as OVER the page rather than part of it
+//
+// Bottom padding is deliberately NOT here: it has to add the device safe-area
+// inset, which is a runtime value, so each sheet composes that in itself.
+// ---------------------------------------------------------------------------
+export const sheetStyles = StyleSheet.create({
+  scrim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(10,22,33,0.35)',
+  },
+  sheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.lg,
+    borderTopRightRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: theme.layout.cardBorderWidth,
+    borderColor: theme.colors.grayBorder,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.grayBorder,
+    marginBottom: theme.space.related,
+  },
+  /** Close button in a sheet corner - a full 44pt target, not a bare glyph. */
+  closeBtn: {
+    position: 'absolute',
+    top: theme.spacing.sm,
+    right: theme.spacing.md,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
 export const sharedStyles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    padding: theme.layout.screenPadding,
+    // Zero on purpose: each screen's ScrollView owns its own bottom clearance
+    // (see layout.scrollClearance), and padding here as well would double it
+    // AND stop content scrolling under the tab bar.
     paddingBottom: 0,
     backgroundColor: theme.colors.bg
   },

@@ -40,7 +40,7 @@ export const seeAllStyles = StyleSheet.create({
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
     color: theme.colors.graySecondary,
-    marginTop: 1,
+    marginTop: theme.space.hairline,
   },
   // One-line context under the header — only rendered when a collection
   // actually passes one; screens where the title says it all skip it.
@@ -67,7 +67,7 @@ export const seeAllStyles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: theme.layout.screenPadding,
-    paddingBottom: theme.spacing.xxxl,
+    paddingBottom: theme.layout.scrollClearance.stack,
   },
   // "This Week" / "June 2026" / "Ongoing" group headers inside a list —
   // same uppercase-slate recipe as sharedStyles.sectionTitle, one size

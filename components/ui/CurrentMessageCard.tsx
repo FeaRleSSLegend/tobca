@@ -54,7 +54,7 @@ export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
       {/* Visual affordance only — the whole card is the tap target now, so
           a nested Pressable here would just swallow the press. */}
       <View style={styles.playButton}>
-        <Ionicons name="play" size={18} color={theme.colors.pink} style={{ marginLeft: 2 }} />
+        <Ionicons name="play" size={18} color={theme.colors.pink} style={{ marginLeft: theme.space.hairline }} />
       </View>
 
       <View>
@@ -77,7 +77,8 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     justifyContent: 'flex-end',
     overflow: 'hidden',
-    marginTop: theme.spacing.xxl,
+    // The one owner of the gap between the branch filter and the hero card.
+    marginTop: theme.space.section,
     backgroundColor: theme.colors.navy, // paints the frame while the image loads
   },
   playButton: {

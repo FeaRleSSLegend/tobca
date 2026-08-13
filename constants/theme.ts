@@ -25,6 +25,27 @@ export const colors = {
                        // #4CAF50; sits closer to the navy/pink palette than a
                        // generic framework green would
 
+  // ---- Accent tints ----
+  // The app has ONE accent (pink), and these are the light washes of it used
+  // for a tinted disc behind an icon or a soft callout card. They were being
+  // written as raw hex at five call sites - #FDF2F7 twice, #FFE4EE twice and
+  // #F8D6E6 once - which is how a single accent quietly becomes three.
+  pinkWash: '#FDF2F7',    // faintest: callout card backgrounds
+  pinkTint: '#FFE4EE',    // tinted disc behind a pink glyph
+  pinkTintEdge: '#F8D6E6', // border on a pink-washed card
+
+  // ---- Frost ----
+  // Streak freezes only. Deliberately a desaturated blue rather than a fourth
+  // brand colour: it has to be instantly distinguishable from the success
+  // green and the pink accent at a glance, in a 32pt circle, without becoming
+  // an identity of its own. Defined once here because it appears in three
+  // components (the hero chip, the week strip, the detail sheet) and they must
+  // agree exactly - a frozen day that looks slightly different in the sheet
+  // than on the card reads as a different kind of day.
+  frost: '#5B8DB8',
+  frostFill: 'rgba(91,141,184,0.12)',
+  frostBorder: 'rgba(91,141,184,0.35)',
+
   white: '#FFFFFF',
   black: '#0A1621',   // media viewport / video background
 } as const;
@@ -74,6 +95,10 @@ export const spacing = {
 // BETWEEN blocks, which is what the eye reads as rhythm.
 // ---------------------------------------------------------------------------
 export const space = {
+  /** Hairline offset — optical nudges only (a label off its value), not a gap. */
+  hairline: 2,
+  /** The smallest real gap: glyph to its own caption inside one element. */
+  micro: 4,
   /** Label to the thing it labels; icon to its text. */
   tight: 8,
   /** Same group, different element. */
@@ -153,6 +178,44 @@ export const layout = {
   tabBarHeight: 83,       // Apple HIG standard incl. safe-area clearance
   tabTapTarget: 48,       // minimum touch target, WCAG 2.2 AA
   cardBorderWidth: 1,
+
+  // ---- Horizontal shelf cards ----
+  // Every shelf on Library scrolls sideways, and every one of them used to
+  // pick its own card width: posters at 126, playlist tiles at 150, the
+  // Recently Added wrapper at 148. Three widths within 24pt of each other is
+  // the worst case — too close to read as deliberate variety, far enough that
+  // the left edges of successive shelves never line up as you scroll down.
+  //
+  // One width for all of them. The artwork is 16:9 in every case (they are all
+  // YouTube thumbnails), so the height is derived rather than declared, and
+  // the text stack below sits on a common baseline across shelves.
+  //
+  // 148 is chosen for the PEEK: at a 390pt screen with 16pt page padding and
+  // a 16pt gap, two cards and a clear slice of the third are visible, which is
+  // what tells you the shelf scrolls without needing an affordance.
+  rowCard: {
+    width: 148,
+    height: Math.round((148 * 9) / 16),
+    gap: 16,
+  },
+
+  // ---- Scroll clearance ----
+  // How much empty space a scroll view needs BELOW its last item. This was
+  // hardcoded per screen and every screen picked differently: 32 here, 64
+  // there, 110 on Prayer, 80 on Socials — so the last card sat at a different
+  // height above the bottom on every tab, and on some screens it sat flush
+  // under the tab bar with nothing behind it.
+  //
+  // Two values, because there are two situations and only two:
+  scrollClearance: {
+    /** Inside (tabs): must clear the tab bar AND the floating mini-player,
+     *  which is taller than the bar and overlaps the last row when docked. */
+    tab: 120,
+    /** A pushed screen: no tab bar, so this is just a generous end-of-content
+     *  margin. Safe-area insets are added on top where the content can scroll
+     *  under the home indicator. */
+    stack: 64,
+  },
 };
 
 

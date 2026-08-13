@@ -40,12 +40,12 @@ export const searchStyles = StyleSheet.create({
     color: theme.colors.navy,
   },
   clearBtn: {
-    padding: 2,
+    padding: theme.space.hairline,
   },
   scrollContent: {
     paddingHorizontal: theme.layout.screenPadding,
     paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.xxxl,
+    paddingBottom: theme.layout.scrollClearance.stack,
   },
   sectionLabel: {
     fontSize: theme.fontSize.body,

@@ -53,7 +53,10 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     padding: theme.spacing.lg,
     overflow: 'hidden',
-    marginTop: theme.spacing.md,
+    // NO top margin — headerRow's 16pt paddingBottom is the gap under the
+    // screen title. The 12 that was here made it 28 on Prayer while the same
+    // slot measured 28 on Plan and 36 on Live, all for the same relationship.
+    marginTop: 0,
   },
   eyebrow: {
     fontFamily: theme.fontFamily.bodyBold,

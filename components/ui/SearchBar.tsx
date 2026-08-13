@@ -1,4 +1,5 @@
 import { Text, Pressable } from 'react-native';
+import { PressableScale } from './motion';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from "../../constants/theme";
 import { LibraryStyles } from '../../constants/styles/library.styles';
@@ -15,9 +16,9 @@ export const SearchBar = () => {
     const push = useGuardedPush();
 
     return (
-        <Pressable style={LibraryStyles.searchBar} onPress={() => push('/search')}>
+        <PressableScale style={LibraryStyles.searchBar} onPress={() => push('/search')} accessibilityRole="search" accessibilityLabel="Search sermons, videos, and more">
             <Ionicons name="search" size={18} color={theme.colors.grayIcon} />
             <Text style={LibraryStyles.searchPlaceholder}>Search sermons, videos, and more</Text>
-        </Pressable>
+        </PressableScale>
     );
 };

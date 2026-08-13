@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     color: theme.colors.graySecondary,
-    marginTop: 2,
+    marginTop: theme.space.hairline,
   },
   stateBox: {
     alignItems: 'center',
