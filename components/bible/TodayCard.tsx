@@ -19,6 +19,8 @@ interface TodayCardProps {
   // Overall plan completion 0..1, drawn as a ring — turns the hero into a
   // quiet progress indicator, the way the reference cards carry a "days" chip.
   planProgress?: number;
+  /** Days read, shown in the ring instead of a percentage. See note below. */
+  completedCount?: number;
 }
 
 // The Reading Plan hero, redesigned from a flat white status box into an
@@ -30,7 +32,7 @@ interface TodayCardProps {
 // depth. It's the strongest thing on the screen without a photo library
 // behind it — the gradient does the immersive work church-stock imagery
 // would otherwise carry.
-export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgress = 0, loading = false }: TodayCardProps) => {
+export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgress = 0, completedCount = 0, loading = false }: TodayCardProps) => {
   return (
     <View style={styles.card}>
       <LinearGradient
@@ -54,7 +56,7 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgre
           <Ionicons name="calendar-outline" size={13} color={theme.colors.white} />
           <Text style={styles.dayChipText}>Day {day}</Text>
         </View>
-        <ProgressRing progress={planProgress} />
+        <ProgressRing progress={planProgress} label={`${completedCount}`} />
       </View>
 
       <View style={styles.body}>
@@ -106,7 +108,7 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, planProgre
   );
 };
 
-function ProgressRing({ progress }: { progress: number }) {
+function ProgressRing({ progress, label }: { progress: number; label: string }) {
   const size = 44;
   const stroke = 3;
   const r = (size - stroke) / 2;
@@ -124,7 +126,12 @@ function ProgressRing({ progress }: { progress: number }) {
         />
       </Svg>
       <View style={styles.ringInner}>
-        <Text style={styles.ringText}>{Math.round(clamped * 100)}%</Text>
+        {/* The COUNT, not the percentage. Removing "1% of plan" from the
+            streak card while leaving "1%" in this ring directly above it would
+            have moved the discouraging number rather than fixed it — and the
+            two sat within a hundred points of each other on screen. The arc
+            still encodes the true proportion; the label counts up. */}
+        <Text style={styles.ringText}>{label}</Text>
       </View>
     </View>
   );
@@ -160,7 +167,9 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
   },
   ringInner: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  ringText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, color: theme.colors.white },
+  // 10 -> 14: "1%" needed the room, a 1-3 digit count does not, and at 10pt
+  // inside a 44pt ring the label was the smallest type on the screen.
+  ringText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14, color: theme.colors.white },
   body: {
     marginTop: theme.spacing.xl,
     marginBottom: theme.spacing.lg,

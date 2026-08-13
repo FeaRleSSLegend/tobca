@@ -10,7 +10,7 @@ import { SectionLabel } from '../../components/ui/SectionLabel';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition } from '../../components/ui/motion';
 import { TodayCard } from '../../components/bible/TodayCard';
-import { StreakSummary } from '../../components/bible/StreakSummary';
+import { StreakHero } from '../../components/bible/StreakHero';
 import { StreakModal } from '../../components/bible/StreakModal';
 import { ReadingCarousel, ReadingCarouselItem } from '../../components/bible/ReadingCarousel';
 import { 
@@ -204,14 +204,15 @@ export default function PlanScreen() {
           canMarkAsRead={hasReadSomething}
           onMarkAsRead={handleMarkAsRead}
           planProgress={percentage / 100}
+          completedCount={progress?.completedDays.length ?? 0}
           // progress === null means stored data is still in flight, so
           // isRead/canMarkAsRead are defaults rather than facts.
           loading={progress === null}
         />
 
-        <StreakSummary
+        <StreakHero
           streak={effectiveStreak}
-          percentage={percentage}
+          week={weekProgress}
           completedCount={progress?.completedDays.length ?? 0}
           totalDays={totalDays}
           onPress={() => setStreakModalVisible(true)}

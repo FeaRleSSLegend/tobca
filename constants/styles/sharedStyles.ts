@@ -21,7 +21,7 @@ export const sharedStyles = StyleSheet.create({
     // Air under the tab title before content starts. The references all give
     // the page title its own band rather than butting the first card against
     // it — cheapest possible way to make a screen feel unhurried.
-    paddingBottom: theme.spacing.lg,
+    paddingBottom: theme.space.related,
   },
   // One title treatment for all four tabs. Previously each screen declared its
   // own inline { fontSize: heroTitle, fontFamily: display } — same intent,
@@ -52,8 +52,11 @@ export const sharedStyles = StyleSheet.create({
     // composed, and you lost roughly a section per screenful of scrolling.
     // 24 still separates cleanly at this type size; the label's own tracking
     // and weight are doing more of that work now than raw distance is.
-    marginTop: theme.spacing.xxl,
-    marginBottom: theme.spacing.sm,
+    // One value, one meaning: section-to-section everywhere in the app.
+    marginTop: theme.space.section,
+    // And a tighter, DIFFERENT value from header to its own content, so the
+    // header groups downward with what it labels instead of floating midway.
+    marginBottom: theme.space.header,
   },
   sectionTitle: {
     // BUG FIX: this set fontWeight with NO fontFamily, so every section label

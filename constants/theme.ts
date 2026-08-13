@@ -74,11 +74,34 @@ export const spacing = {
 // BETWEEN blocks, which is what the eye reads as rhythm.
 // ---------------------------------------------------------------------------
 export const space = {
+  /** Label to the thing it labels; icon to its text. */
   tight: 8,
+  /** Same group, different element. */
   related: 16,
-  section: 32,
-  major: 48,
+  /** A section header to its own content. */
+  header: 12,
+  /** One section to the next — the page's main rhythm. */
+  section: 24,
+  /** A change of subject. */
+  major: 40,
 } as const;
+
+// ---------------------------------------------------------------------------
+// WHY `space` EXISTS ALONGSIDE `spacing`
+//
+// `spacing` is 4/8/12/16/20/24/32 — its middle is nearly linear, so 12, 16 and
+// 20 are within 4pt of a neighbour and nothing distinguishes them at a glance.
+// Refactoring UI's point is that a scale whose steps are indistinguishable
+// forces ARBITRARY choices: there was no reason to pick 20 over 24, so
+// different screens picked differently and the page rhythm looked random.
+//
+// `space` is the LAYOUT scale: few steps, far apart, each with a stated
+// meaning, so "which gap goes here" has one answer. `spacing` stays for
+// component-internal padding, where fine steps are genuinely useful.
+//
+// The rule that matters most: space BETWEEN groups must exceed space WITHIN
+// them. section (24) > header (12) > tight (8) encodes that directly.
+// ---------------------------------------------------------------------------
 
 export const radius = {
   sm: 12,   // small cards, pills
