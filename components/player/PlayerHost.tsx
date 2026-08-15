@@ -49,9 +49,23 @@ import { SmartImage } from '../ui/SmartImage';
 const SAVE_INTERVAL_MS = 5000;
 const TAB_BAR_HEIGHT = 84;
 
-// Collapsed floating-window size. ~46% of screen width, 16:9 — big enough
+// Collapsed floating-window size. ~56% of screen width, 16:9 — big enough
 // to actually watch, small enough to leave the app usable behind it.
-const MINI_MARGIN = 12;
+//
+// EXPORTED because this window FLOATS over the tab screens, so every scrolling
+// tab has to end its content above it. hooks/useBottomClearance.ts derives that
+// clearance from these exact numbers rather than keeping a second copy — a
+// hardcoded guess is how the old flat 120pt clearance ended up simultaneously
+// too small when docked and pure dead space when not.
+export const MINI_MARGIN = 12;
+export const MINI_WIDTH_RATIO = 0.56;
+
+/** Vertical space the docked mini-window occupies at the bottom of a screen. */
+export function miniPlayerFootprint(screenWidth: number): number {
+  const miniW = Math.round(screenWidth * MINI_WIDTH_RATIO);
+  const miniH = Math.round((miniW * 9) / 16);
+  return miniH + MINI_MARGIN;
+}
 
 export function PlayerHost() {
   const { width, height } = useWindowDimensions();
@@ -110,7 +124,9 @@ export function PlayerHost() {
   // ---- Geometry ----
   const fullVideoHeight = (width * 9) / 16;
   const headerHeight = insets.top + 36;
-  const miniW = Math.round(width * 0.56);
+  // Same ratio the exported footprint helper uses, so the clearance every tab
+  // reserves can never drift from the window it is reserving space for.
+  const miniW = Math.round(width * MINI_WIDTH_RATIO);
   const miniH = Math.round((miniW * 9) / 16);
   // Resting position of the collapsed window: bottom-left, above the tab bar.
   const miniRestX = MINI_MARGIN;

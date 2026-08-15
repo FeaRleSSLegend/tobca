@@ -9,6 +9,14 @@ interface AudioPlayerProps {
   isPlaying?: boolean;
   onPress?: () => void;
   onPlayPause?: () => void;
+  /**
+   * Reports how much vertical space this bar actually occupies, so the screen
+   * behind it can end its scroll content above it. MEASURED rather than
+   * declared: this bar has no fixed height — it is padding plus whatever its
+   * tallest child is — so any constant a screen kept for it would be a guess
+   * that silently drifts the moment the bar's contents change.
+   */
+  onHeightChange?: (height: number) => void;
 }
 
 // This is sticky utility chrome, not a hero moment — it doesn't compete for
@@ -22,11 +30,19 @@ export const AudioPlayer = ({
   subtitle,
   isPlaying = false,
   onPress,
-  onPlayPause
+  onPlayPause,
+  onHeightChange
 }: AudioPlayerProps) => {
   return (
     <Pressable onPress={onPress} style={styles.container}>
-      <View style={styles.bar}>
+      <View
+        style={styles.bar}
+        // The bar carries its own 12pt margin, which onLayout does not include,
+        // so add it back on both sides to get the real occupied footprint.
+        onLayout={(e) =>
+          onHeightChange?.(Math.round(e.nativeEvent.layout.height) + theme.spacing.md * 2)
+        }
+      >
         <View style={styles.content}>
           <View style={styles.info}>
             <View style={styles.iconContainer}>

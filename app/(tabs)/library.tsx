@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
+import { useTabBottomClearance } from '../../hooks/useBottomClearance';
+import { useAutoHideOnScroll } from '../../hooks/useAutoHideOnScroll';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { SearchBar } from '../../components/ui/SearchBar';
@@ -58,6 +60,8 @@ export default function LibraryScreen() {
     const { messages: allMessages, isBranchReady, statusByBranch } = useMessages();
     const { playlists } = usePlaylists();
     const { play } = usePlayback();
+    const bottomClearance = useTabBottomClearance();
+    const { visible: filterVisible, onScroll: onFilterScroll } = useAutoHideOnScroll();
 
     // Defaults to 'all' so the screen looks exactly as it did before a second
     // branch existed: Wuse 2 currently contributes nothing, so 'all' is
@@ -111,16 +115,21 @@ export default function LibraryScreen() {
 
             <SearchBar />
 
-            <BranchFilter value={branch} onChange={setBranch} />
+            {/* Auto-hides while scrolling down, returns on scroll up — the
+                same rule as the Bible reader's quick-nav, shared via
+                useAutoHideOnScroll rather than reimplemented. */}
+            <BranchFilter value={branch} onChange={setBranch} visible={filterVisible} />
 
-            {/* Bottom clearance was missing entirely on this screen — every
-                other tab passed one and Library didn't, so the "Church
-                Socials" row (the LAST thing in the scroll) ended flush under
-                the tab bar with the docked mini-player sitting on top of it.
-                Same token every other tab uses. */}
+            {/* Content-driven clearance. The flat 120pt this used to pass is
+                what put the permanent gap under the "Church Socials" row —
+                nothing overlaps a tab screen by default, so that space was
+                never clearing anything. The hook adds the mini-player's real
+                footprint only while it is docked. */}
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: theme.layout.scrollClearance.tab }}
+                onScroll={onFilterScroll}
+                scrollEventThrottle={100}
+                contentContainerStyle={{ paddingBottom: bottomClearance }}
             >
                 {/* A branch with no content is a fact worth stating. Without
                     this the screen would just render as a blank scroll and

@@ -8,11 +8,10 @@ import { theme } from '../theme';
 
 export const prayerStyles = StyleSheet.create({
   scrollContent: {
-    // Clearance for the sticky AudioPlayer below. This used to be paired
-    // with a second, separate 80pt spacer View at the end of the scroll
-    // content doing the same job twice — one clearance mechanism is enough.
-    // Was a bare 110 — a number picked by eye to clear the tab bar. Same job,
-    // same value class, now shared with every other tab.
-    paddingBottom: theme.layout.scrollClearance.tab,
+    // No paddingBottom here. Prayer's clearance is the sum of two runtime
+    // facts — the MEASURED height of its own sticky AudioPlayer, and the
+    // mini-player's footprint when docked — so it is composed at the call
+    // site. The flat token that used to sit here was sized for a tab bar that
+    // never overlapped anything (see constants/theme.ts scrollClearance).
   },
 });

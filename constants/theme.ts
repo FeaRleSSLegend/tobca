@@ -200,17 +200,30 @@ export const layout = {
   },
 
   // ---- Scroll clearance ----
-  // How much empty space a scroll view needs BELOW its last item. This was
-  // hardcoded per screen and every screen picked differently: 32 here, 64
-  // there, 110 on Prayer, 80 on Socials — so the last card sat at a different
-  // height above the bottom on every tab, and on some screens it sat flush
-  // under the tab bar with nothing behind it.
+  // How much empty space a scroll view needs BELOW its last item.
   //
-  // Two values, because there are two situations and only two:
+  // CORRECTED after measuring the real layout. The previous value here was a
+  // flat `tab: 120`, justified in a comment as "must clear the tab bar AND the
+  // floating mini-player". The tab-bar half of that was simply not true:
+  // (tabs)/_layout.tsx styles the bar WITHOUT position:'absolute', so React
+  // Navigation reserves its space and lays each screen out above it. Content
+  // never passes under the tab bar and needs no clearance for it.
+  //
+  // The consequence was a constant that was wrong in both directions at once:
+  //   - nothing playing → 120pt of dead space at the bottom of every tab,
+  //     independent of content, which is what made short sections look like
+  //     they had a hole under them
+  //   - mini-player docked → 120 was too LITTLE. The floating window is
+  //     width*0.56 wide and 16:9, i.e. ~146pt of overlap on a 427pt viewport,
+  //     so the last row stayed clipped anyway
+  //
+  // So the only honest constant is end-of-content breathing room. Anything
+  // that FLOATS over the content is a runtime measurement and belongs in
+  // hooks/useBottomClearance.ts, which adds it only when it is actually there.
   scrollClearance: {
-    /** Inside (tabs): must clear the tab bar AND the floating mini-player,
-     *  which is taller than the bar and overlaps the last row when docked. */
-    tab: 120,
+    /** Inside (tabs): plain end-of-content margin. Nothing is overlapping by
+     *  default — see useTabBottomClearance() for the mini-player case. */
+    tabBase: 32,
     /** A pushed screen: no tab bar, so this is just a generous end-of-content
      *  margin. Safe-area insets are added on top where the content can scroll
      *  under the home indicator. */

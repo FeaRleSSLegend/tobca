@@ -22,6 +22,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Nativ
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useGuardedPush } from '../hooks/useGuardedPush';
+import { useAutoHideOnScroll } from '../hooks/useAutoHideOnScroll';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../constants/theme';
@@ -101,7 +102,11 @@ export default function ReadingScreen() {
     await setHighlight(key, colorId);
   }, [activeVerse]);
   const [fontSize, setFontSize] = useState(17);
-  const [navVisible, setNavVisible] = useState(true);
+  const {
+    visible: navVisible,
+    onScroll: autoHideOnScroll,
+    toggle: toggleNav,
+  } = useAutoHideOnScroll();
   const [retryCount, setRetryCount] = useState(0);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -109,7 +114,6 @@ export default function ReadingScreen() {
   const hasAutoCompleted = useRef(false);
   const saveOffsetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restoredRef = useRef(false);
-  const lastOffsetY = useRef(0);
   const lastFetchedReference = useRef<string | null>(null);
 
   const dayPlan = date ? getDayByDate(date) : null;
@@ -207,18 +211,11 @@ export default function ReadingScreen() {
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
 
-    // Auto-hide: scrolling down = reading, tuck the nav away; scrolling
-    // up or being near the top = navigating, bring it back. The ±12
-    // deadband keeps micro-jitters from flickering it.
-    const dy = contentOffset.y - lastOffsetY.current;
-    if (contentOffset.y < 40) {
-      setNavVisible(true);
-    } else if (dy > 12) {
-      setNavVisible(false);
-    } else if (dy < -12) {
-      setNavVisible(true);
-    }
-    lastOffsetY.current = contentOffset.y;
+    // Auto-hide: scrolling down = reading, tuck the nav away; scrolling up or
+    // being near the top = navigating, bring it back. The rule now lives in
+    // useAutoHideOnScroll so the Library filter row behaves identically —
+    // this screen keeps only the parts that are actually about reading.
+    autoHideOnScroll(e);
 
     if (date && readingKey) {
       if (saveOffsetTimer.current) clearTimeout(saveOffsetTimer.current);
@@ -281,7 +278,7 @@ export default function ReadingScreen() {
         {/* The page itself toggles the quick nav on tap — the standard
             ebook gesture. A Pressable wrapper (not an overlay) so scrolls
             and text selection keep working untouched. */}
-        <Pressable onPress={() => setNavVisible(v => !v)} accessible={false}>
+        <Pressable onPress={toggleNav} accessible={false}>
           {/* MASTHEAD. The references all open a passage the same way: a small
               tracked label, then the reference set large and centred, then a
               lot of air before the first verse. Centring is the change that

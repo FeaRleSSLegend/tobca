@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
+import { useTabBottomClearance } from '../../hooks/useBottomClearance';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
@@ -32,6 +33,7 @@ import { getVersesForReference, Verse } from '../../services/bibleApi';
 export default function PlanScreen() {
   const router = useRouter();
   const push = useGuardedPush();
+  const bottomClearance = useTabBottomClearance();
   const [translation, setTranslation] = useState<TranslationCode>('niv');
   const [todayReading, setTodayReading] = useState<DayPlan | null>(null);
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
@@ -189,7 +191,10 @@ export default function PlanScreen() {
   return (
     <TabTransition>
     <ScreenWithWatermark style={sharedStyles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      {/* Clearance is composed at the call site, not baked into scrollContent:
+          the mini-player's footprint is a runtime value. See the note in
+          hooks/useBottomClearance.ts. */}
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}>
         <View style={sharedStyles.headerRow}>
           <Text style={sharedStyles.screenTitle}>Reading Plan</Text>
           <View style={sharedStyles.avatar}>
@@ -258,7 +263,8 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: theme.layout.screenPadding,
-    paddingBottom: theme.layout.scrollClearance.tab,
+    // paddingBottom is applied at the call site — it depends on whether the
+    // mini-player is docked, which is a runtime fact.
   },
   centerContent: {
     flex: 1,

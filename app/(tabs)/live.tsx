@@ -22,6 +22,7 @@ import { buildMessage } from "../../data/contentModel";
 import { PRIMARY_BRANCH_ID } from "../../data/branches";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useGuardedPush } from '../../hooks/useGuardedPush';
+import { useTabBottomClearance } from '../../hooks/useBottomClearance';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -55,6 +56,7 @@ export default function LiveScreen() {
   // Home shows the whole church, so it waits on every branch settling.
   const messagesReady = isBranchReady('all');
   const { play } = usePlayback();
+  const bottomClearance = useTabBottomClearance();
   const latestMessages = getLatestMessages(messages);
 
   const todayReading = getTodayReading();
@@ -78,12 +80,14 @@ export default function LiveScreen() {
   return (
     <TabTransition>
     <ScreenWithWatermark style={sharedStyles.container}>
-      {/* Same missing clearance as Library: the message list ended on a bare
-          32pt margin, which is less than the 83pt tab bar, so the last card
-          was permanently half-hidden behind it. */}
+      {/* Content-driven clearance. This was a flat 120pt, which put a fixed
+          hole under Latest Messages whether or not anything needed clearing —
+          most visibly when the section was short. Nothing overlaps a tab
+          screen by default, so the hook returns plain breathing room and adds
+          the mini-player's footprint only while it is actually docked. */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: theme.layout.scrollClearance.tab }}
+        contentContainerStyle={{ paddingBottom: bottomClearance }}
       >
         {/* Header row: greeting + avatar */}
         <View style={sharedStyles.headerRow}>

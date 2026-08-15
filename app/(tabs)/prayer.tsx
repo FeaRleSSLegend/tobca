@@ -11,14 +11,27 @@ import { AudioPlayer } from '../../components/ui/AudioPlayer';
 import { currentFocus, prayerResources, archivedFocuses } from '../../data/prayer';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition, FadeInUp, staggerDelay } from '../../components/ui/motion';
+import { useTabBottomClearance } from '../../hooks/useBottomClearance';
 
 export default function PrayerScreen() {
     const [isPlaying, setIsPlaying] = useState(false);
+    // Prayer is the one tab with chrome of its OWN floating over the content:
+    // the sticky AudioPlayer. Its height is measured rather than assumed —
+    // see AudioPlayer's onHeightChange. The shared hook then adds the
+    // mini-player on top when that is docked too.
+    const [audioBarHeight, setAudioBarHeight] = useState(0);
+    const bottomClearance = useTabBottomClearance();
 
     return (
         <TabTransition>
         <ScreenWithWatermark style={sharedStyles.container}>
-            <ScrollView contentContainerStyle={prayerStyles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={[
+                    prayerStyles.scrollContent,
+                    { paddingBottom: bottomClearance + audioBarHeight },
+                ]}
+                showsVerticalScrollIndicator={false}
+            >
                 <View style={sharedStyles.headerRow}>
                     <Text style={sharedStyles.screenTitle}>Prayer</Text>
                     <View style={sharedStyles.avatar}>
@@ -69,11 +82,12 @@ export default function PrayerScreen() {
             </ScrollView>
 
             {/* Sticky Audio Player */}
-            <AudioPlayer 
+            <AudioPlayer
                 title="Prayer & Fasting: Live"
                 subtitle="Streaming audio · Tap to expand"
                 isPlaying={isPlaying}
                 onPlayPause={() => setIsPlaying(!isPlaying)}
+                onHeightChange={setAudioBarHeight}
             />
         </ScreenWithWatermark>
         </TabTransition>

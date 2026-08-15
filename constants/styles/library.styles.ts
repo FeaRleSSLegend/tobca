@@ -49,9 +49,13 @@ export const LibraryStyles = StyleSheet.create({
   // (see seeAll.styles.ts pillsView/pillsRow, which carry over the same
   // height-pinning fix documented on the old filterView).
     // Same footprint as CurrentMessage so the swap doesn't shift the page.
+    // It genuinely wasn't: this was 180 tall with a 16pt top margin against a
+    // real card of 160 with a 24pt top margin, so the page jumped 28pt the
+    // moment the hero loaded. Both values now come from the card they stand
+    // in for — change them together or not at all.
     heroSkeleton: {
-        height: 180,
-        marginTop: theme.space.related,
+        height: 160,
+        marginTop: theme.space.section,
         borderRadius: theme.radius.md,
         overflow: 'hidden',
     },

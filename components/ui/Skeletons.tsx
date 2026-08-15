@@ -70,10 +70,15 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
     overflow: 'hidden',
   },
+  // NO padding of its own. Every one of these skeletons is rendered inside a
+  // container that ALREADY applies screenPadding (sharedStyles.container on
+  // Live/Library, scrollContent on Search, listContent on See-all), so the
+  // 16pt this used to add made the loading state inset 32 while the real
+  // content it stands in for is inset 16 — a 16pt sideways jump at the exact
+  // moment data lands, which is precisely what a skeleton exists to prevent.
+  // Same for paddingTop, which stacked on SectionLabel's 12pt bottom margin.
   listWrap: {
     gap: theme.spacing.md,
-    paddingHorizontal: theme.layout.screenPadding,
-    paddingTop: theme.spacing.lg,
   },
   row: {
     flexDirection: 'row',
@@ -96,12 +101,11 @@ const styles = StyleSheet.create({
     height: 10,
     width: '50%',
   },
+  // See listWrap — the host container owns the padding.
   gridWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.md,
-    paddingHorizontal: theme.layout.screenPadding,
-    paddingTop: theme.spacing.lg,
   },
   tile: {
     width: '47%',
@@ -115,10 +119,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     // Must be the SHELF gap, not a generic one: a skeleton row whose gap
     // differs from the real row's shifts every card sideways at the moment
-    // content arrives.
+    // content arrives. Padding removed for the same reason — see listWrap.
     gap: theme.layout.rowCard.gap,
-    paddingHorizontal: theme.layout.screenPadding,
-    paddingTop: theme.spacing.lg,
   },
   poster: {
     width: theme.layout.rowCard.width,
