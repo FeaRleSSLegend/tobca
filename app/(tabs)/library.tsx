@@ -22,7 +22,7 @@ import { TabTransition, FadeInUp, staggerDelay, Shimmer, PressableScale } from '
 import { useMessages, filterByBranch, BranchFilter as BranchFilterValue } from '../../hooks/useMessages';
 import { SkeletonRow } from '../../components/ui/Skeletons';
 import { BranchFilter } from '../../components/ui/BranchFilter';
-import { SegmentedControl } from '../../components/ui/SegmentedControl';
+import { MediaModeSwitch } from '../../components/ui/MediaModeSwitch';
 import { AudioLibrary } from '../../components/library/AudioLibrary';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { getBranch, isPlaceholderChannel } from '../../data/branches';
@@ -39,9 +39,20 @@ import { classifyMessages } from '../../utils/contentGrouping';
 // every current phone, which is all a teaser needs to do.
 const PREVIEW_COUNT = 6;
 
-/** The two halves of the Library. Order here is the order they page in. */
-type LibraryPage = 'video' | 'audio';
-const PAGES: LibraryPage[] = ['video', 'audio'];
+/**
+ * The Library's MEDIA MODES. Not navigation and not a filter: a mode decides
+ * WHICH library you are in, and everything below the header — hero, shelves,
+ * section names, empty state — belongs to the mode rather than being reused
+ * across both. Order here is the order they page in.
+ *
+ * The branch filter (All / Kubwa / Wuse 2) is the level BELOW this one: it
+ * narrows whichever library the mode has already chosen. That is the whole
+ * hierarchy of this screen, in the order it is rendered:
+ *
+ *   Library (title) → Search → MODE → branch FILTER → content
+ */
+type LibraryMode = 'video' | 'audio';
+const MODES: LibraryMode[] = ['video', 'audio'];
 
 /**
  * Library is now a DISCOVERY HUB, not a browse-everything surface — the
@@ -81,17 +92,21 @@ export default function LibraryScreen() {
     const videoScroll = useAutoHideOnScroll();
     const audioScroll = useAutoHideOnScroll();
 
-    const [page, setPage] = useState<LibraryPage>('video');
-    const pagerRef = useRef<FlatList<LibraryPage>>(null);
+    const [mode, setMode] = useState<LibraryMode>('video');
+    const pagerRef = useRef<FlatList<LibraryMode>>(null);
 
-    const filterVisible = page === 'video' ? videoScroll.visible : audioScroll.visible;
+    const filterVisible = mode === 'video' ? videoScroll.visible : audioScroll.visible;
 
-    // Tapping a segment drives the same pager the swipe does, so the two input
-    // methods can never disagree about which page is showing.
-    const goToPage = useCallback((next: LibraryPage) => {
-        const index = PAGES.indexOf(next);
+    // Tapping a mode drives the same pager the swipe does, so the two input
+    // methods can never disagree about which mode is showing. The animated
+    // scroll IS the mode transition: the new library slides in while the old
+    // one leaves, which is why nothing here cross-fades or remounts — a mode
+    // change should read as moving between two places that both already
+    // exist, not as the screen being rebuilt.
+    const goToMode = useCallback((next: LibraryMode) => {
+        const index = MODES.indexOf(next);
         if (index < 0) return;
-        setPage(next);
+        setMode(next);
         pagerRef.current?.scrollToIndex({ index, animated: true });
     }, []);
 
@@ -152,19 +167,20 @@ export default function LibraryScreen() {
 
             <SearchBar />
 
-            {/* View switcher. Above the branch pills because it is the coarser
+            {/* MEDIA MODE. Above the branch pills because it is the coarser
                 choice: it decides WHICH library you are in, the pills below
-                then narrow it. Both stay put while you page — see the note on
-                the pager. */}
-            <View style={LibraryStyles.segmentRow}>
-                <SegmentedControl<LibraryPage>
-                    segments={[
-                        { value: 'video', label: 'Video' },
-                        { value: 'audio', label: 'Audio' },
+                then narrow it. Deliberately quieter than the pills too — it is
+                set once and left alone, while the pills are operated. Both
+                stay put while you page — see the note on the pager. */}
+            <View style={LibraryStyles.modeRow}>
+                <MediaModeSwitch<LibraryMode>
+                    modes={[
+                        { value: 'video', label: 'Video', icon: 'play' },
+                        { value: 'audio', label: 'Audio', icon: 'headset' },
                     ]}
-                    value={page}
-                    onChange={goToPage}
-                    accessibilityLabel="Library view"
+                    value={mode}
+                    onChange={goToMode}
+                    accessibilityLabel="Library media mode"
                 />
             </View>
 
@@ -190,26 +206,26 @@ export default function LibraryScreen() {
             <FlatList
                 ref={pagerRef}
                 style={{ flex: 1 }}
-                data={PAGES}
+                data={MODES}
                 keyExtractor={(p) => p}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
-                initialNumToRender={PAGES.length}
-                windowSize={PAGES.length}
+                initialNumToRender={MODES.length}
+                windowSize={MODES.length}
                 removeClippedSubviews={false}
                 getItemLayout={(_, index) => ({
                     length: pageWidth,
                     offset: pageWidth * index,
                     index,
                 })}
-                // Momentum end, not onScroll: committing the page mid-drag
-                // would flip the segmented control back and forth while the
-                // finger is still moving.
+                // Momentum end, not onScroll: committing the mode mid-drag
+                // would flip the mode switch back and forth while the finger
+                // is still moving.
                 onMomentumScrollEnd={(e) => {
                     const index = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
-                    const next = PAGES[index];
-                    if (next && next !== page) setPage(next);
+                    const next = MODES[index];
+                    if (next && next !== mode) setMode(next);
                 }}
                 // height:'100%' on the page wrapper so a page's child can
                 // resolve flex:1 against the pager's real height — without it

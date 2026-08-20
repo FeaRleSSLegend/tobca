@@ -40,15 +40,25 @@ export const LibraryStyles = StyleSheet.create({
   // — GridCard sizes itself flex-first for 2/3-col grids, so inside an
   // HScroll it needs an explicit width. 148 ≈ one-and-a-bit visible past
   // two full cards on a 390pt screen, the "there's more to scroll" cue.
-  // Sits between the search bar and the branch pills.
+  // THE MEDIA MODE ROW — search bar above, branch pills below.
   //
-  // Zero bottom margin, deliberately. This was 8 when the switcher was a
-  // filled capsule that needed air around it. As an underline tab set it is
-  // mostly whitespace already: it carries its own paddingBottom for the
-  // indicator, and BranchFilter below carries its own paddingTop. Adding a
-  // third gap between two elements that each already reserve their own space
-  // is what made the header feel like a stack of separate bars.
-  segmentRow: {
+  // The gaps here are the whole hierarchy argument, so they are not
+  // symmetrical on purpose:
+  //
+  //   above (12, space.header)  the switch belongs TO the header — it is the
+  //                             heading for everything under it, and a heading
+  //                             sits close to what it heads
+  //   below (8 own padding + 16 from BranchFilter's paddingTop = 24)
+  //                             a full section gap, which is what separates
+  //                             the MODE from the FILTERS and stops the two
+  //                             reading as one block of stacked controls
+  //
+  // Zero bottom margin of its own: the switch already reserves 8pt under its
+  // caps for the marker and BranchFilter carries its own top gap. A third
+  // hand-tuned gap between two elements that each reserve their own space is
+  // what made this area read as a stack of separate bars.
+  modeRow: {
+    marginTop: theme.space.header,
     marginBottom: 0,
   },
   hScrollCard: {
