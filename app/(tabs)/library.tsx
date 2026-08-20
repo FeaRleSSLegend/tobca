@@ -236,7 +236,7 @@ export default function LibraryScreen() {
                             <ScrollView
                                 showsVerticalScrollIndicator={false}
                                 onScroll={videoScroll.onScroll}
-                                scrollEventThrottle={100}
+                                scrollEventThrottle={16}
                                 contentContainerStyle={{ paddingBottom: bottomClearance }}
                             >
                     {/* A branch with no content is a fact worth stating. Without

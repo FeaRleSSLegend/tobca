@@ -12,7 +12,7 @@
 // filter appears on its own with no screen edited.
 
 import { useEffect, useRef, useState } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import { View, ScrollView, Animated, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
 import { branches } from '../../data/branches';
 import { FilterPill } from './FilterPill';
@@ -86,15 +86,28 @@ export const BranchFilter = ({ value, onChange, visible = true }: BranchFilterPr
           if (h > rowHeight) setRowHeight(h);
         }}
       >
-        <FilterPill label="All" isActive={value === 'all'} onPress={() => onChange('all')} />
-        {branches.map((b) => (
-          <FilterPill
-            key={b.id}
-            label={b.shortName}
-            isActive={value === b.id}
-            onPress={() => onChange(b.id)}
-          />
-        ))}
+        {/* Horizontally scrollable, even though two branches and "All" fit on
+            every phone today. Branch count is data, not layout: the day a
+            third or fourth branch is added, a fixed row would either wrap onto
+            a second line (doubling the header's height) or squeeze the pills
+            narrower than their labels. Scrolling absorbs that with no edit.
+            The height measurement above still works — a horizontal ScrollView
+            sizes its height to its content. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <FilterPill label="All" isActive={value === 'all'} onPress={() => onChange('all')} />
+          {branches.map((b) => (
+            <FilterPill
+              key={b.id}
+              label={b.shortName}
+              isActive={value === b.id}
+              onPress={() => onChange(b.id)}
+            />
+          ))}
+        </ScrollView>
       </View>
     </Animated.View>
   );
@@ -115,10 +128,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  row: {
+  // The gap between pills now lives on the ScrollView's content container
+  // (scrollContent) — a gap on this outer view would only space the single
+  // ScrollView child, which is nothing.
+  scrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
+  },
+  row: {
     // PADDING, not margin. The gap to the search bar above is the same 16 it
     // always was, but it has to live INSIDE the collapsing wrapper: onLayout
     // reports a view's height excluding its own margins, so as a marginTop it

@@ -272,7 +272,7 @@ export default function ReadingScreen() {
       <ScrollView
         ref={scrollRef}
         onScroll={handleScroll}
-        scrollEventThrottle={100}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
       >
         {/* The page itself toggles the quick nav on tap — the standard

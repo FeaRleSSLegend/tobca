@@ -197,7 +197,7 @@ export const AudioLibrary = ({
     <ScrollView
       showsVerticalScrollIndicator={false}
       onScroll={onScroll}
-      scrollEventThrottle={100}
+      scrollEventThrottle={16}
       contentContainerStyle={[styles.content, { paddingBottom: bottomClearance }]}
     >
       {/* The video page's hero (CurrentMessage) carries no section label,

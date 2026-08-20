@@ -1,5 +1,32 @@
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, theme } from "../../constants/theme";
+// components/ui/FilterPill.tsx
+// The app's one filter chip: branch pills (All / Kubwa / Wuse 2) and the
+// per-collection pills on see-all both render through this.
+//
+// THE RESTYLE, AND WHAT IT CHANGED
+// The old recipe was a bordered white pill that turned NAVY when active. Two
+// problems with that, both about contrast in the wrong place:
+//
+//   - the inactive pill carried a 1pt border and a white fill, i.e. exactly
+//     the recipe every CARD on these screens uses. A row of small cards above
+//     a column of large cards is a lot of edges for a control that should read
+//     as one lightweight row.
+//   - active was navy — the app's TEXT colour. Selection is an accent job,
+//     and pink is the accent everywhere else it matters (the media-mode
+//     marker, the tab bar's active indicator, play affordances).
+//
+// So: inactive is the recessed grey field (grayBorder, the same tone the
+// search bar is filled with, so "quiet interactive surface" means one thing
+// app-wide) with NO border, and active is a solid pink fill. The shape is
+// unchanged — fully rounded, hugging its label.
+//
+// CONTRAST NOTE, stated rather than buried: white on pink measures 4.04:1,
+// which clears WCAG AA for large text but sits just under the 4.5:1 bar for
+// text this size. It is the accent the brief asked for and the label is also
+// marked selected for assistive tech, so colour is not the only signal — but
+// if a strict AA pass is wanted later, navy-on-pinkTint is the swap that
+// keeps the same shape and reads as the same control.
+import { Text, StyleSheet } from 'react-native';
+import { theme } from '../../constants/theme';
 import { PressableScale } from './motion';
 
 interface FilterPillProps {
@@ -12,13 +39,7 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
     return (
         <PressableScale
             activeScale={0.94}
-            style={[
-                style.pillStyle,
-                {
-                    backgroundColor: isActive ? theme.colors.navy : theme.colors.white,
-                    borderColor: isActive ? theme.colors.navy : theme.colors.grayBorder,
-                }
-            ]}
+            style={[style.pillStyle, isActive ? style.pillActive : style.pillInactive]}
             onPress={onPress}
             // The pill's visible padding only gets it to ~33pt tall — same fix
             // as VerseOfDayCard's shareBtn: extend the tappable area with
@@ -33,13 +54,7 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={label}
         >
-            <Text
-                numberOfLines={1}
-                style={{
-                    color: isActive ? theme.colors.white : theme.colors.graySecondary,
-                    fontWeight: theme.fontWeight.medium
-                }}
-            >
+            <Text numberOfLines={1} style={[style.label, isActive ? style.labelActive : style.labelInactive]}>
                 {label}
             </Text>
         </PressableScale>
@@ -48,7 +63,6 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
 
 const style = StyleSheet.create({
     pillStyle: {
-        borderWidth: 1,
         borderRadius: theme.radius.full,
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.sm,
@@ -62,7 +76,30 @@ const style = StyleSheet.create({
         // than its label — which is what let "Sunday Service" wrap onto a
         // second line and, with it, drag the whole row's height up.
         flexShrink: 0,
-    }
+    },
+    // No borderWidth on either state, deliberately. A border that appears on
+    // one state and not the other changes the pill's outer size by 2pt when
+    // it is selected, which makes a row of pills twitch as the selection
+    // moves along it.
+    pillActive: {
+        backgroundColor: theme.colors.pink,
+    },
+    pillInactive: {
+        backgroundColor: theme.colors.grayBorder,
+    },
+    label: {
+        fontSize: theme.fontSize.bodyLg,
+    },
+    labelActive: {
+        // Bolder as well as lighter: weight is a second, non-colour signal
+        // that this is the chosen one.
+        fontFamily: theme.fontFamily.bodySemibold,
+        color: theme.colors.white,
+    },
+    labelInactive: {
+        fontFamily: theme.fontFamily.bodyMedium,
+        color: theme.colors.graySecondary,
+    },
 });
 
 export const filterLabels = {

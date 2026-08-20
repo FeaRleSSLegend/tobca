@@ -1,5 +1,6 @@
 import { View, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
+import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { Shimmer } from './motion';
 
 /**
@@ -51,16 +52,38 @@ export const SkeletonGrid = ({ tiles = 4 }: { tiles?: number }) => (
   </View>
 );
 
-// Stand-in for a horizontal preview row on the Library hub (poster cards).
+// Stand-in for a horizontal preview row on the Library hub.
+//
+// A REAL SHELF IS TWO THINGS, AND SO IS THIS.
+// Every shelf on the hub is `<SectionLabel/> + <HScroll/>`, and ALL of the
+// vertical rhythm around it lives on the label: sharedStyles.sectionHeaderRow
+// carries marginTop 24 (section to section) and marginBottom 12 (header to its
+// own content). HScroll contributes nothing vertically, and neither did this
+// skeleton — it was only ever the poster row.
+//
+// That is why the loading state read as one joined block: the hero skeleton
+// has no bottom margin (the real hero has none either), and with no label
+// standing in between, the first poster row started at the hero's bottom edge
+// with 0pt of separation. The gap was never missing from the cards; it was
+// missing along with the label that owns it.
+//
+// So the label placeholder is part of the shelf skeleton, and it reuses
+// sectionHeaderRow itself rather than restating 24/12 here — one source for
+// the rhythm means the skeleton cannot drift from the real layout later.
 export const SkeletonRow = ({ cards = 3 }: { cards?: number }) => (
-  <View style={styles.hRow} accessibilityLabel="Loading content">
-    {Array.from({ length: cards }).map((_, i) => (
-      <View key={i} style={styles.poster}>
-        <Box style={styles.posterThumb} width={148} />
-        <Box style={styles.rowLineWide} width={120} />
-        <Box style={styles.rowLineNarrow} width={70} />
-      </View>
-    ))}
+  <View accessibilityLabel="Loading content">
+    <View style={sharedStyles.sectionHeaderRow}>
+      <Box style={styles.labelLine} width={110} />
+    </View>
+    <View style={styles.hRow}>
+      {Array.from({ length: cards }).map((_, i) => (
+        <View key={i} style={styles.poster}>
+          <Box style={styles.posterThumb} width={148} />
+          <Box style={styles.rowLineWide} width={120} />
+          <Box style={styles.rowLineNarrow} width={70} />
+        </View>
+      ))}
+    </View>
   </View>
 );
 
@@ -114,6 +137,14 @@ const styles = StyleSheet.create({
   tileThumb: {
     height: 96,
     width: '100%',
+  },
+  // The section label's line box, not its glyph height: sectionTitle is 12pt
+  // Inter Bold with no explicit lineHeight, which RN lays out at ~15pt. The
+  // placeholder has to occupy the LINE, or the shelf below it would sit a few
+  // points higher while loading and step down when the real label arrives —
+  // the same class of jump the poster thumb size fixed.
+  labelLine: {
+    height: 15,
   },
   hRow: {
     flexDirection: 'row',
