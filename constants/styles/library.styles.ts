@@ -40,6 +40,17 @@ export const LibraryStyles = StyleSheet.create({
   // — GridCard sizes itself flex-first for 2/3-col grids, so inside an
   // HScroll it needs an explicit width. 148 ≈ one-and-a-bit visible past
   // two full cards on a 390pt screen, the "there's more to scroll" cue.
+  // Sits between the search bar and the branch pills.
+  //
+  // Zero bottom margin, deliberately. This was 8 when the switcher was a
+  // filled capsule that needed air around it. As an underline tab set it is
+  // mostly whitespace already: it carries its own paddingBottom for the
+  // indicator, and BranchFilter below carries its own paddingTop. Adding a
+  // third gap between two elements that each already reserve their own space
+  // is what made the header feel like a stack of separate bars.
+  segmentRow: {
+    marginBottom: 0,
+  },
   hScrollCard: {
     width: theme.layout.rowCard.width,
   },

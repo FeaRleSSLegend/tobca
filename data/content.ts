@@ -105,6 +105,33 @@ export const recentlyAdded = [...messages]
 
 // --- Pure helpers below operate on whatever array is passed in. ---
 
+/**
+ * Audio-only messages, for the Library's Audio page.
+ *
+ * "Audio-only" means the message has an audio variant and NO video variant.
+ * That distinction matters: a normal sermon carries both (the YouTube video
+ * plus the audio the player extracts from it), and listing those here would
+ * make the Audio page a near-duplicate of the Video page rather than its own
+ * shelf. What belongs here is the material that exists ONLY as audio —
+ * mid-week teachings, phone recordings, anything the Telegram ingestion
+ * pipeline will drop in without a video counterpart.
+ *
+ * Returns [] today, and that is expected rather than a gap: no source
+ * currently produces audio-only messages. The Audio page renders its empty
+ * state off this. When the ingestion bot lands and starts emitting
+ * `source: 'telegram'` messages with a single `kind: 'audio'` variant, they
+ * appear here with no change to this function or to the screen.
+ */
+export function getAudioMessages(list: Message[]): Message[] {
+  return [...list]
+    .filter((m) => hasAudioOnly(m))
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+}
+
+function hasAudioOnly(m: Message): boolean {
+  return m.media.some((v) => v.kind === 'audio') && !m.media.some((v) => v.kind === 'video');
+}
+
 export function getLatestMessages(list: Message[], count = 2): Message[] {
   return [...list]
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())

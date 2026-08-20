@@ -29,6 +29,11 @@ interface AutoHideOptions {
   topZone?: number;
   /** Movement smaller than this is treated as jitter and ignored. */
   deadband?: number;
+  /**
+   * The list must have at least this much scrollable distance before hiding
+   * is allowed at all. See the note on the unreachable-tail bug below.
+   */
+  minScrollable?: number;
 }
 
 interface AutoHideResult {
@@ -43,14 +48,39 @@ interface AutoHideResult {
 export function useAutoHideOnScroll({
   topZone = 40,
   deadband = 12,
+  // Two bar-heights' worth of slack. Below this there is nothing to gain by
+  // hiding (you can see the whole list already) and, per the note above,
+  // real harm in trying.
+  minScrollable = 120,
 }: AutoHideOptions = {}): AutoHideResult {
   const [visible, setVisible] = useState(true);
   const lastOffsetY = useRef(0);
 
   const onScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y;
+      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+      const y = contentOffset.y;
       const dy = y - lastOffsetY.current;
+
+      // BARELY-SCROLLABLE LISTS NEVER HIDE THE BAR.
+      //
+      // Straightforward UX reasoning: if the whole list is already almost
+      // visible, hiding the bar buys the reader nothing and costs them the
+      // control they were about to use. So below this much travel the bar
+      // stays pinned.
+      //
+      // HONEST NOTE ON SCOPE. This was originally written believing it also
+      // fixed the unreachable-tail bug on the Wuse 2 branch, where the last
+      // card sits clipped behind the tab bar. It does not. Measured on device
+      // after this guard was added: the bar correctly stays pinned for that
+      // list, and the tail is still unreachable — so the auto-hide behaviour
+      // was never the cause. That bug is separate, pre-existing, and still
+      // open; see the report. Do not treat this guard as its fix.
+      if (contentSize.height - layoutMeasurement.height < minScrollable) {
+        setVisible(true);
+        lastOffsetY.current = y;
+        return;
+      }
 
       if (y < topZone) {
         setVisible(true);
@@ -62,7 +92,7 @@ export function useAutoHideOnScroll({
 
       lastOffsetY.current = y;
     },
-    [topZone, deadband]
+    [topZone, deadband, minScrollable]
   );
 
   const show = useCallback(() => setVisible(true), []);
