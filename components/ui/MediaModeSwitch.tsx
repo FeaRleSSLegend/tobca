@@ -172,7 +172,21 @@ const styles = StyleSheet.create({
     // content below it, and headings start at the text margin like everything
     // else on the screen.
     alignSelf: 'flex-start',
-    gap: theme.space.section,
+    // THE GAP BETWEEN THE TWO MODES.
+    //
+    // Was `space.section` (24), and on device the two read as one run —
+    // "VIDEO 🎧AUDIO" — because 24pt is measured between the tabs, but what
+    // the eye measures is the distance from the END OF "VIDEO" to the START OF
+    // THE NEXT TAB'S GLYPH, and that glyph then sits only 6pt from its own
+    // label. So the second tab's icon lands closer to the first tab's word
+    // than to the word it belongs to, and the pairing reads backwards.
+    //
+    // `space.major` (40) restores the hierarchy the spacing scale exists to
+    // encode: space BETWEEN groups must clearly exceed space WITHIN them, and
+    // here the within-group gap is the 6pt icon-to-label. It is also the value
+    // the scale already reserves for "a change of subject", which is exactly
+    // what crossing from one media library to the other is.
+    gap: theme.space.major,
     // Just enough room for the marker to sit clear of the caps without the
     // row growing into the pills underneath.
     paddingBottom: theme.space.tight,

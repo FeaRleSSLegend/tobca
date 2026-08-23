@@ -10,6 +10,25 @@ export const HScroll = ({ children }: HScrollProps) => {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      // NESTED-HORIZONTAL HARDENING. Every shelf in this app is a horizontal
+      // scroller living inside the Library's horizontal mode PAGER, which is
+      // the classic arbitration conflict: two scrollers competing for the same
+      // axis, where the parent can swallow the child's pan and the shelf reads
+      // as frozen.
+      //
+      //   directionalLockEnabled  iOS. Locks a gesture to whichever axis it
+      //     started on, so a shelf drag that wanders a few points vertically
+      //     is not handed up to the vertical list instead.
+      //   nestedScrollEnabled     Android. Lets this view keep a gesture it
+      //     has claimed rather than yielding it to an ancestor scroller.
+      //
+      // Neither changes behaviour where things already work; both remove a
+      // failure mode that only shows up on device. The audio shelves' actual
+      // freeze had a different cause (see the removeClippedSubviews note in
+      // components/library/AudioLibrary.tsx) — this is the other half of the
+      // diagnosis, fixed here because it would apply to every shelf equally.
+      directionalLockEnabled
+      nestedScrollEnabled
       contentContainerStyle={styles.content}
     >
       {children}

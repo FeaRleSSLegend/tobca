@@ -32,10 +32,21 @@
 // with "trending" written above it would be a lie about data we do not have,
 // so the section is skipped rather than faked.
 //
-// Typing anything hands the screen back to the existing results behaviour,
-// unchanged.
+// SEARCH NOW COVERS AUDIO TOO.
+// It was video-only, which the placeholder said out loud ("Search sermons,
+// videos, and more") while the church's 546 audio recordings — the larger half
+// of its library — were reachable only from inside the Audio tab. Results are
+// split into two labelled groups and drawn with each medium's own component:
+// video keeps MessageCard (16:9 thumbnail), audio uses AudioListRow (derived
+// artwork, speaker, date). That is the distinction the rest of the app already
+// makes between the two, so nothing new had to be invented to tell them apart.
+//
+// PERFORMANCE. Both corpora are matched on every search, so the filtering is
+// debounced (hooks/useDebouncedValue) and memoised on the settled term. The
+// audio side is matched against a PRE-BUILT index — see audioCorpus below —
+// rather than lower-casing 546 titles and speakers on each pass.
 import { useMemo, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
@@ -53,11 +64,23 @@ import { SkeletonList } from '../components/ui/Skeletons';
 import { PressableScale } from '../components/ui/motion';
 import { usePlayback } from '../providers/PlaybackProvider';
 import { useStackBottomClearance } from '../hooks/useBottomClearance';
+import { AudioListRow } from '../components/ui/AudioListRow';
+import { useR2Manifest } from '../hooks/useR2Manifest';
+import { useAudioFiles } from '../providers/AudioFileProvider';
+import { groupAudio, formatAudioDate } from '../utils/audioGrouping';
+import { buildTrackIndex } from '../utils/audioTracks';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { AUDIO_ROW_ART } from '../components/ui/AudioListRow';
 
 // Two rows of tiles. Enough to show the shape of the library without turning
 // the pre-search screen into the browse screen — see-all is where the full
 // list of collections lives, and every tile here already goes there.
 const BROWSE_LIMIT = 4;
+
+// Results are capped per medium. Someone searching "grace" against 546
+// recordings does not want 300 rows; they want to see that there are many and
+// then narrow. The count line above each group states the real total.
+const RESULT_LIMIT = 25;
 
 /**
  * One recent term. Two separate tap targets in one pill rather than a
@@ -102,12 +125,16 @@ export default function SearchScreen() {
   const router = useRouter();
   const push = useGuardedPush();
   const { play } = usePlayback();
+  const audio = useAudioFiles();
   const [query, setQuery] = useState('');
   const bottomClearance = useStackBottomClearance();
   const { messages, isBranchReady } = useMessages();
   const { recents, record, remove, clear } = useRecentSearches();
   const ready = isBranchReady('all');
-  const recentlyAdded = getRecentlyAdded(messages);
+  // Memoised: this used to be recomputed on every render, which — on a screen
+  // whose state changes with every keystroke — meant re-deriving the pre-search
+  // list while the user was typing and could not even see it.
+  const recentlyAdded = useMemo(() => getRecentlyAdded(messages), [messages]);
 
   // The browsable collections, straight out of the same classifier the
   // Library shelves use — services first (they are the church's backbone and
@@ -124,9 +151,46 @@ export default function SearchScreen() {
     return rows;
   }, [browse]);
 
-  const results = query.trim().length > 0
-    ? messages.filter((m) => m.title.toLowerCase().includes(query.trim().toLowerCase()))
-    : [];
+  // ---- AUDIO CORPUS -------------------------------------------------------
+  // Built once per manifest load, not once per keystroke: the lower-cased
+  // haystack for each recording is precomputed here so a search pass is 546
+  // substring tests rather than 1,092 toLowerCase() allocations plus the
+  // tests. Grouping runs here too, so a result row can show the series it
+  // belongs to — the same derived name the Audio tab shows.
+  const { items: audioItems } = useR2Manifest('audio');
+  const audioCorpus = useMemo(() => {
+    const { seriesByUrl } = groupAudio(audioItems);
+    const { all } = buildTrackIndex(audioItems, seriesByUrl);
+    return all.map((track) => ({
+      track,
+      haystack: `${track.title} ${track.speaker ?? ''}`.toLowerCase(),
+    }));
+  }, [audioItems]);
+
+  // ---- FILTERING ----------------------------------------------------------
+  // On the DEBOUNCED term, and memoised on it. `query` still drives the input
+  // (typing must never feel laggy), while the two corpus passes wait for the
+  // typing to settle — see hooks/useDebouncedValue for why both halves are
+  // needed.
+  const settled = useDebouncedValue(query.trim(), 250);
+  const needle = settled.toLowerCase();
+
+  const videoResults = useMemo(
+    () => (needle ? messages.filter((m) => m.title.toLowerCase().includes(needle)) : []),
+    [messages, needle]
+  );
+
+  const audioResults = useMemo(
+    () => (needle ? audioCorpus.filter((entry) => entry.haystack.includes(needle)) : []),
+    [audioCorpus, needle]
+  );
+
+  const hasResults = videoResults.length > 0 || audioResults.length > 0;
+  // The results view is shown as soon as anything is typed, but it renders the
+  // SETTLED term's results — so the screen never flashes "No results for
+  // 'grac'" on the way to "grace".
+  const searching = query.trim().length > 0;
+  const pending = searching && settled !== query.trim();
 
   // Recording happens on SUBMIT, not on change. Saving as you type would fill
   // the history with every prefix of every word ("g", "gr", "gra"…), which is
@@ -149,7 +213,7 @@ export default function SearchScreen() {
           <Ionicons name="search" size={18} color={theme.colors.grayIcon} />
           <TextInput
             autoFocus
-            placeholder="Search sermons, videos, and more"
+            placeholder="Search sermons, audio, and more"
             placeholderTextColor={theme.colors.grayIcon}
             value={query}
             onChangeText={setQuery}
@@ -257,27 +321,88 @@ export default function SearchScreen() {
               )}
             </View>
           </View>
-        ) : results.length > 0 ? (
-          <View style={searchStyles.resultsList}>
-            {results.map((msg) => (
-              <MessageCard
-                key={msg.id}
-                id={msg.id}
-                title={msg.title}
-                speaker={msg.speaker}
-                duration={msg.duration}
-                series={msg.series}
-                type={msg.type}
-                publishedAt={shortDate(msg.publishedAt)}
-                thumbnail={msg.thumbnail}
-                onPress={() => play(msg)}
-              />
-            ))}
+        ) : hasResults ? (
+          // TWO GROUPS, each drawn in its own medium's language. Interleaving
+          // them into one list would need a single card that serves both, and
+          // the two have nothing in common to show: a video has a thumbnail
+          // and a runtime, a recording has neither and has a speaker instead.
+          <View style={searchStyles.preSearch}>
+            {videoResults.length > 0 && (
+              <View>
+                <Text style={searchStyles.sectionLabel}>
+                  Videos · {videoResults.length}
+                </Text>
+                <View style={searchStyles.resultsList}>
+                  {videoResults.slice(0, RESULT_LIMIT).map((msg) => (
+                    <MessageCard
+                      key={msg.id}
+                      id={msg.id}
+                      title={msg.title}
+                      speaker={msg.speaker}
+                      duration={msg.duration}
+                      series={msg.series}
+                      type={msg.type}
+                      publishedAt={shortDate(msg.publishedAt)}
+                      thumbnail={msg.thumbnail}
+                      onPress={() => play(msg)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {audioResults.length > 0 && (
+              <View>
+                <Text style={searchStyles.sectionLabel}>
+                  Audio · {audioResults.length}
+                </Text>
+                <View>
+                  {audioResults.slice(0, RESULT_LIMIT).map(({ track }, i) => (
+                    <View key={track.id}>
+                      {i > 0 && <View style={styles.divider} />}
+                      <AudioListRow
+                        title={track.title}
+                        series={track.series}
+                        speaker={track.speaker}
+                        date={formatAudioDate(track.date)}
+                        isActive={audio.isActive(track.id)}
+                        isPlaying={audio.isPlaying(track.id)}
+                        isLoading={audio.isLoading(track.id)}
+                        isSaved={!!track.sourceUrl && audio.isSaved(track.sourceUrl)}
+                        // The queue is THE RESULTS you are looking at, so
+                        // "next" moves down the list on screen rather than
+                        // jumping into unrelated content.
+                        onPress={() =>
+                          audio.toggle(track, {
+                            items: audioResults.slice(0, RESULT_LIMIT).map((r) => r.track),
+                            label: `Search: ${settled}`,
+                          })
+                        }
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
+        ) : pending ? (
+          // The term is still settling. Saying "no results" here would be a
+          // claim about a search that has not run yet.
+          <SkeletonList rows={3} />
         ) : (
-          <Text style={searchStyles.noResults}>No results for "{query}"</Text>
+          <Text style={searchStyles.noResults}>No results for "{settled}"</Text>
         )}
       </ScrollView>
     </ScreenWithWatermark>
   );
 }
+
+const styles = StyleSheet.create({
+  // Matches the divider the Audio tab's own lists use, so an audio row looks
+  // the same here as it does where it lives.
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.grayBorder,
+    marginLeft: AUDIO_ROW_ART + theme.space.tight + 4,
+  },
+});

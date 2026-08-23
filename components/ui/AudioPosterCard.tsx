@@ -8,115 +8,124 @@
 // baselines and scroll peek line up exactly, which is the whole point — Audio
 // should read as a sibling of Video, not as a different app's screen.
 //
-// The ONE deliberate difference is what fills the art box. There is no frame
-// to grab from an mp3, so instead of a fake thumbnail it carries the waveform
-// mark already established by AudioRow: the same bar figure, the same pink
-// accent, on the brand gradient wash PosterCard falls back to when a video has
-// no thumbnail. That keeps "this is sound, not video" legible at shelf size
-// without inventing a second audio visual language.
+// TWO KINDS OF CARD, TWO KINDS OF ARTWORK
+//
+//   variant="track"   AudioArt: a per-item duotone and wave curve, derived
+//                     from the item so a Recent shelf is six visibly
+//                     different things rather than one tile printed six times.
+//                     The title sits BELOW the art, as on every video card.
+//
+//   variant="series"  AudioCover: a designed poster carrying the OliveBrook
+//                     mark and the series title as type. The title is ON the
+//                     cover, so it is not repeated underneath — the caption is
+//                     just the count, which is how an album shelf reads and
+//                     what keeps the same words from appearing twice in 83pt
+//                     of vertical space.
 
+import { memo } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import { PressableScale } from './motion';
+import { AudioArt } from './AudioArt';
+import { AudioCover } from './AudioCover';
+import { PlayingBars } from './PlayingBars';
+import { artSeed } from '../../utils/audioArtwork';
 
 interface AudioPosterCardProps {
   title: string;
   /** "6 messages" for a series, a date for a single recording. */
   subtitle: string;
-  /** Series cards get a stack glyph, single recordings a play/pause one. */
   variant?: 'track' | 'series';
+  /**
+   * The series a TRACK belongs to, when it belongs to one. Only used to seed
+   * the artwork, so every part of a series shares a palette on the shelf.
+   */
+  series?: string | null;
+  isActive?: boolean;
   isPlaying?: boolean;
   onPress?: () => void;
 }
 
-// Same figure as AudioRow's tile, widened for a 16:9 box. A fixed pattern, not
-// random heights: random would imply these bars are real amplitude data for
-// this particular file, which they are not.
-const BARS = [0.3, 0.55, 0.85, 0.45, 1, 0.7, 0.4, 0.9, 0.6, 0.35, 0.75, 0.5];
-
-export const AudioPosterCard = ({
+const AudioPosterCardBase = ({
   title,
   subtitle,
   variant = 'track',
+  series,
+  isActive = false,
   isPlaying = false,
   onPress,
-}: AudioPosterCardProps) => (
-  <PressableScale
-    style={styles.wrapper}
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityState={{ selected: isPlaying }}
-    accessibilityLabel={`${title}, ${subtitle}${variant === 'series' ? '' : ', audio'}`}
-  >
-    <View style={styles.art}>
-      <LinearGradient
-        colors={['rgba(248,0,104,0.35)', 'rgba(200,32,248,0.25)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.bars}>
-        {BARS.map((h, i) => (
-          <View
-            key={i}
-            style={[
-              styles.bar,
-              {
-                height: `${Math.round(h * 100)}%`,
-                backgroundColor: h >= 0.8 ? theme.colors.white : 'rgba(255,255,255,0.55)',
-              },
-            ]}
-          />
-        ))}
-      </View>
-      {/* A badge rather than PosterCard's centred glyph: the waveform already
-          owns the middle of this box, and a glyph on top of it would read as
-          two marks fighting for the same space. */}
-      <View style={styles.badge}>
-        <Ionicons
-          name={variant === 'series' ? 'albums' : isPlaying ? 'pause' : 'play'}
-          size={12}
-          color={theme.colors.white}
-        />
-      </View>
+}: AudioPosterCardProps) => {
+  const badge = (
+    // A badge rather than PosterCard's centred glyph: the artwork already owns
+    // the middle of this box, and a glyph on top of it would read as two marks
+    // fighting for the same space.
+    <View style={styles.badge}>
+      {isActive ? (
+        <PlayingBars animating={isPlaying} color={theme.colors.white} size={11} />
+      ) : (
+        // Always 'play' — only track cards carry this badge now.
+        <Ionicons name="play" size={12} color={theme.colors.white} />
+      )}
     </View>
-    <Text style={styles.title} numberOfLines={2}>
-      {title}
-    </Text>
-    <Text style={styles.subtitle} numberOfLines={1}>
-      {subtitle}
-    </Text>
-  </PressableScale>
-);
+  );
+
+  return (
+    <PressableScale
+      style={styles.wrapper}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
+      accessibilityLabel={`${title}, ${subtitle}${variant === 'series' ? '' : ', audio'}`}
+    >
+      {variant === 'series' ? (
+        // NO BADGE on a cover. The badge sits bottom-right and the cover's
+        // title sits bottom-left across up to three lines, so on any series
+        // whose name reaches the corner the glyph lands on the words. It is
+        // also redundant here in a way it is not on a track card: a cover
+        // carrying the mark and the title over "17 messages" is already
+        // unmistakably a collection, and a designed poster should not have
+        // furniture bolted to it.
+        <AudioCover
+          title={title}
+          width={theme.layout.rowCard.width}
+          height={theme.layout.rowCard.height}
+          style={styles.art}
+        />
+      ) : (
+        <AudioArt
+          seed={artSeed(title, series)}
+          width={theme.layout.rowCard.width}
+          height={theme.layout.rowCard.height}
+          style={styles.art}
+        >
+          {badge}
+        </AudioArt>
+      )}
+
+      {/* The series title is already set on its cover — repeating it here
+          would print the same words twice inside 100pt. */}
+      {variant === 'track' && (
+        <Text style={[styles.title, isActive && styles.titleActive]} numberOfLines={2}>
+          {title}
+        </Text>
+      )}
+      <Text style={styles.subtitle} numberOfLines={1}>
+        {subtitle}
+      </Text>
+    </PressableScale>
+  );
+};
+
+/** Memoised: a shelf card's props are primitives, and its artwork is generated. */
+export const AudioPosterCard = memo(AudioPosterCardBase);
 
 const styles = StyleSheet.create({
   wrapper: {
     width: theme.layout.rowCard.width,
   },
   art: {
-    width: theme.layout.rowCard.width,
-    height: theme.layout.rowCard.height,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.slate,
     marginBottom: theme.spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  bars: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    height: '52%',
-    width: '68%',
-  },
-  bar: {
-    flex: 1,
-    borderRadius: theme.radius.full,
-    minHeight: 3,
   },
   badge: {
     position: 'absolute',
@@ -126,6 +135,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.55)',
     borderRadius: theme.radius.full,
     padding: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Identical to PosterCard's — same family, same tokens.
   title: {
@@ -133,6 +144,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.caption,
     color: theme.colors.navy,
     lineHeight: 16,
+  },
+  titleActive: {
+    color: theme.colors.pink,
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,

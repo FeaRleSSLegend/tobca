@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlaybackProvider } from '../providers/PlaybackProvider';
 import { AudioFileProvider } from '../providers/AudioFileProvider';
 import { PlayerHost } from '../components/player/PlayerHost';
+import { AudioPlayerHost } from '../components/player/AudioPlayerHost';
 import { AnimatedSplash } from '../components/ui/AnimatedSplash';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -96,6 +97,17 @@ export default function RootLayout() {
             One mounted YouTube instance, so audio/video never restarts when
             you collapse it to keep browsing. */}
         <PlayerHost />
+
+        {/* The audio surfaces — full player and docked mini bar — for the
+            church's own mp3s. A sibling of PlayerHost rather than part of it:
+            they render different media through different engines, and the one
+            thing they must agree on (only one of them audible) is handled
+            explicitly inside AudioPlayerHost and AudioFileProvider.
+
+            Mounted INSIDE AudioFileProvider, and after the Stack, so the mini
+            bar floats above every screen while the tab bar stays reachable —
+            the bar docks on the tab bar's top edge, never over it. */}
+        <AudioPlayerHost />
 
         {/* Last child so it covers the app, including the player overlay.
             Unmounted once finished — it has no reason to stay in the tree. */}

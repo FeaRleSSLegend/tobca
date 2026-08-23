@@ -16,9 +16,9 @@ export const SearchBar = () => {
     const push = useGuardedPush();
 
     return (
-        <PressableScale style={LibraryStyles.searchBar} onPress={() => push('/search')} accessibilityRole="search" accessibilityLabel="Search sermons, videos, and more">
+        <PressableScale style={LibraryStyles.searchBar} onPress={() => push('/search')} accessibilityRole="search" accessibilityLabel="Search sermons, audio, and more">
             <Ionicons name="search" size={18} color={theme.colors.grayIcon} />
-            <Text style={LibraryStyles.searchPlaceholder}>Search sermons, videos, and more</Text>
+            <Text style={LibraryStyles.searchPlaceholder}>Search sermons, audio, and more</Text>
         </PressableScale>
     );
 };

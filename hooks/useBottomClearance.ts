@@ -24,7 +24,9 @@ import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../constants/theme';
 import { miniPlayerFootprint } from '../components/player/PlayerHost';
+import { audioMiniBarFootprint } from '../components/player/AudioPlayerHost';
 import { usePlayback } from '../providers/PlaybackProvider';
+import { useAudioFiles } from '../providers/AudioFileProvider';
 
 /**
  * Bottom clearance for a scrolling screen inside (tabs).
@@ -35,8 +37,18 @@ import { usePlayback } from '../providers/PlaybackProvider';
  */
 export function useTabBottomClearance(): number {
   const { hasActive } = usePlayback();
+  const audio = useAudioFiles();
   const { width } = useWindowDimensions();
-  return theme.layout.scrollClearance.tabBase + (hasActive ? miniPlayerFootprint(width) : 0);
+  return (
+    theme.layout.scrollClearance.tabBase +
+    (hasActive ? miniPlayerFootprint(width) : 0) +
+    // The audio mini bar is the second thing that can float over a tab screen.
+    // Added, not maxed, with the video window: the two can be docked at once
+    // only in the moment between starting one and the other stopping, and a
+    // max() would clip the last row for that moment. The cost of adding is a
+    // few points of extra breathing room, which is invisible.
+    (audio.hasActive ? audioMiniBarFootprint() : 0)
+  );
 }
 
 /**
@@ -45,5 +57,13 @@ export function useTabBottomClearance(): number {
  */
 export function useStackBottomClearance(): number {
   const insets = useSafeAreaInsets();
-  return insets.bottom + theme.layout.scrollClearance.stack;
+  const audio = useAudioFiles();
+  // A pushed screen has no tab bar, so the audio mini bar docks lower — but it
+  // still floats over the content, and /audio-collection is exactly the screen
+  // you are most likely to be scrolling WHILE something plays.
+  return (
+    insets.bottom +
+    theme.layout.scrollClearance.stack +
+    (audio.hasActive ? audioMiniBarFootprint() : 0)
+  );
 }

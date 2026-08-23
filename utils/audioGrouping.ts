@@ -149,6 +149,103 @@ export function formatAudioDate(iso?: string): string | null {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// ---------------------------------------------------------------------------
+// SPEAKER
+//
+// The manifest's `speaker` comes from Telegram's `performer` tag, typed by
+// hand over six years by several people, and it shows: 55 distinct strings
+// covering maybe a dozen actual humans. 'Pst. Abu Jibril' (237), 'Pst Abu
+// Jibril' (46), 'PST ABU JIBRIL' (9), 'Pastor Abu Jibril' (19), 'PST, ABU
+// JIBRIL' (1) and 'Pst.  Abu Jibril' (2, double space) are one person.
+//
+// This normalises for DISPLAY only — casing, spacing, honorific punctuation.
+// It deliberately does NOT merge names: 'Pastor Abu Jibril' and 'Pst. Abu
+// Jibril' still render differently, because collapsing them means deciding
+// which spelling of a real person's title is correct, and getting that wrong
+// in a church app is worse than an inconsistent byline. If speaker ever
+// becomes a filter or a grouping key, that decision has to be made then, with
+// the church, not guessed at here.
+// ---------------------------------------------------------------------------
+
+/**
+ * Values that occupy the field without naming anyone. '<unknown>' is the
+ * pipeline's own placeholder; 'AudioLab' is the recording app that wrote the
+ * tag on itself. Both are worse than an empty line, because a byline reading
+ * "AudioLab" states something false about who preached.
+ */
+const SPEAKER_SENTINELS = new Set(['<unknown>', 'unknown', 'n/a', 'na', 'none', 'audiolab']);
+
+/** 'PST' → 'Pst.', 'PASTOR' → 'Pastor' — applied only to all-caps input. */
+const HONORIFICS: Record<string, string> = {
+  pst: 'Pst.',
+  'pst.': 'Pst.',
+  'pst,': 'Pst.',
+  pastor: 'Pastor',
+  apst: 'Apst.',
+  'apst.': 'Apst.',
+  rev: 'Rev.',
+  'rev.': 'Rev.',
+  min: 'Min.',
+  'min.': 'Min.',
+  mr: 'Mr',
+  mrs: 'Mrs',
+  bishop: 'Bishop',
+  tobc: 'TOBC', // the church's own initials — must NOT be title-cased to 'Tobc'
+};
+
+function titleCaseWord(word: string): string {
+  const mapped = HONORIFICS[word.toLowerCase()];
+  if (mapped) return mapped;
+  // Single letters keep their initial form ('Philip A.'), and anything with a
+  // '&' passes straight through.
+  if (word.length <= 2 && word.endsWith('.')) return word.toUpperCase();
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+/**
+ * A displayable speaker name, or undefined when the field names nobody.
+ * Callers must treat undefined as "omit the line", never as "show a blank".
+ */
+export function normalizeSpeaker(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  // Collapse the runs of whitespace that produce 'Pst.  Abu Jibril'.
+  const clean = raw.replace(/\s+/g, ' ').trim();
+  if (!clean || SPEAKER_SENTINELS.has(clean.toLowerCase())) return undefined;
+
+  // ONLY all-caps entries are re-cased. A mixed-case string is something a
+  // person typed deliberately, and lower-casing it would damage names this
+  // code has no business having an opinion about.
+  const isShouted = clean === clean.toUpperCase() && /[A-Z]/.test(clean);
+  if (!isShouted) return clean;
+
+  return clean
+    .split(' ')
+    .map((w) => (w === '&' ? w : titleCaseWord(w)))
+    .join(' ');
+}
+
+/** 'Speaker · 12 Mar 2024' — the row/player meta line, minus anything unknown. */
+export function metaLine(parts: (string | null | undefined)[]): string | null {
+  const kept = parts.filter((p): p is string => !!p && p.length > 0);
+  return kept.length ? kept.join(' · ') : null;
+}
+
+/**
+ * 'mm:ss', or 'h:mm:ss' past an hour. Used for playback position and runtime.
+ * Note the manifest carries NO duration — an mp3's length is only known once
+ * the player has loaded it, so every duration in this app is a live reading
+ * from the player, never metadata.
+ */
+export function formatClock(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = h > 0 ? String(m).padStart(2, '0') : String(m);
+  return `${h > 0 ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
+}
+
 export interface GroupedAudio {
   /** Series with 2+ recordings, largest first. */
   series: AudioSeries[];
@@ -156,6 +253,14 @@ export interface GroupedAudio {
   standalone: R2Item[];
   /** Everything, newest first — the "Recently Added" shelf reads from this. */
   recent: R2Item[];
+  /**
+   * url → the series label that url belongs to, for the items that belong to
+   * one at all. This is the ONLY honest "series/service name" available for an
+   * audio item: the manifest has no series id, so the name is the stripped
+   * group title and nothing more. A url absent from this map is a standalone
+   * recording and must show NO series line rather than a blank one.
+   */
+  seriesByUrl: Map<string, string>;
 }
 
 export function groupAudio(items: R2Item[]): GroupedAudio {
@@ -169,6 +274,7 @@ export function groupAudio(items: R2Item[]): GroupedAudio {
 
   const series: AudioSeries[] = [];
   const standalone: R2Item[] = [];
+  const seriesByUrl = new Map<string, string>();
 
   for (const [label, bucket] of buckets) {
     // THE SIBLING RULE: a stripped title with no siblings is not a series of
@@ -180,6 +286,7 @@ export function groupAudio(items: R2Item[]): GroupedAudio {
         label,
         items: [...bucket].sort(byPartThenRecency),
       });
+      for (const item of bucket) seriesByUrl.set(item.url, label);
     } else {
       standalone.push(...bucket);
     }
@@ -190,5 +297,5 @@ export function groupAudio(items: R2Item[]): GroupedAudio {
   series.sort((a, b) => b.items.length - a.items.length || a.label.localeCompare(b.label));
   standalone.sort(byRecency);
 
-  return { series, standalone, recent: [...items].sort(byRecency) };
+  return { series, standalone, recent: [...items].sort(byRecency), seriesByUrl };
 }

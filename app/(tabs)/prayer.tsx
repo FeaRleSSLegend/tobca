@@ -1,5 +1,4 @@
 import { View, Text, ScrollView, ActivityIndicator, Linking, Pressable } from 'react-native';
-import { useState } from 'react';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { prayerStyles } from '../../constants/styles/prayer.styles';
@@ -8,7 +7,6 @@ import { FocusCard } from '../../components/ui/FocusCard';
 import { HScroll } from '../../components/ui/HScroll';
 import { DocCard } from '../../components/ui/DocCard';
 import { DocumentRow } from '../../components/ui/DocumentRow';
-import { AudioPlayer } from '../../components/ui/AudioPlayer';
 import { currentFocus, prayerResources, archivedFocuses } from '../../data/prayer';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition, FadeInUp, staggerDelay } from '../../components/ui/motion';
@@ -16,13 +14,46 @@ import { useTabBottomClearance } from '../../hooks/useBottomClearance';
 import { useR2Manifest } from '../../hooks/useR2Manifest';
 import { formatBytes } from '../../services/r2';
 
+// THE AMBIENT-AUDIO CAPSULE THAT USED TO LIVE HERE IS GONE — read this before
+// wiring Mixlr.
+//
+// This screen used to dock its own <AudioPlayer> bar at the bottom: title
+// "Prayer & Fasting: Live", subtitle "Streaming audio · Tap to expand", a
+// gradient play button. It was a SHELL. Its isPlaying was a local useState
+// that flipped an icon and nothing else, its onPress was never passed, and no
+// audio source existed anywhere behind it — confirmed by reading it: the
+// component (components/ui/AudioPlayer.tsx, now deleted) took only strings and
+// two callbacks and never touched an audio API.
+//
+// Once the Library's audio player shipped, that shell became a real problem
+// rather than a harmless placeholder: two floating bars stacked at the bottom
+// of this tab, one of them functional and one of them theatre. Moving them
+// apart would have been a patch on the wrong layer, because a phone can play
+// ONE audio source, and a live prayer stream and a sermon recording are both
+// going to be real.
+//
+// So there is now exactly one now-playing surface for the whole app —
+// components/player/AudioPlayerHost, driven by providers/AudioFileProvider —
+// and it already renders over this tab like every other. If a sermon is
+// playing, you see it here; if nothing is, you see nothing.
+//
+// WIRING MIXLR, when there is a stream to wire, is a single call into that
+// same state — no new component, no second bar:
+//
+//   const audio = useAudioFiles();
+//   audio.play({
+//     id: 'live:prayer',
+//     title: 'Prayer & Fasting: Live',
+//     uri: <the Mixlr stream url>,
+//     kind: 'live',
+//     subtitle: 'Live now',
+//   });
+//
+// Put that behind a card in this screen's content flow (NOT a floating bar —
+// that surface is taken). kind: 'live' already tells the player to skip
+// position restore, position saving and save-for-offline, and starting it
+// replaces whatever was playing, which is the correct behaviour and is free.
 export default function PrayerScreen() {
-    const [isPlaying, setIsPlaying] = useState(false);
-    // Prayer is the one tab with chrome of its OWN floating over the content:
-    // the sticky AudioPlayer. Its height is measured rather than assumed —
-    // see AudioPlayer's onHeightChange. The shared hook then adds the
-    // mini-player on top when that is docked too.
-    const [audioBarHeight, setAudioBarHeight] = useState(0);
     const bottomClearance = useTabBottomClearance();
     // The church's real PDFs, from the documents manifest in R2. Additive to
     // the sections above it: `prayerResources` and `archivedFocuses` are still
@@ -42,7 +73,10 @@ export default function PrayerScreen() {
             <ScrollView
                 contentContainerStyle={[
                     prayerStyles.scrollContent,
-                    { paddingBottom: bottomClearance + audioBarHeight },
+                    // No local audio-bar height any more: useTabBottomClearance
+                    // already accounts for the shared mini player whenever it
+                    // is docked, on this tab exactly as on every other.
+                    { paddingBottom: bottomClearance },
                 ]}
                 showsVerticalScrollIndicator={false}
             >
@@ -137,14 +171,6 @@ export default function PrayerScreen() {
                 </HScroll>
             </ScrollView>
 
-            {/* Sticky Audio Player */}
-            <AudioPlayer
-                title="Prayer & Fasting: Live"
-                subtitle="Streaming audio · Tap to expand"
-                isPlaying={isPlaying}
-                onPlayPause={() => setIsPlaying(!isPlaying)}
-                onHeightChange={setAudioBarHeight}
-            />
         </ScreenWithWatermark>
         </TabTransition>
     );

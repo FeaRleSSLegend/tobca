@@ -52,7 +52,8 @@ export const DocumentRow = ({ title, sizeLabel, onPress }: DocumentRowProps) => 
 );
 
 const styles = StyleSheet.create({
-  // The same list-row recipe as AudioRow (white surface, hairline border,
+  // The same list-row recipe the document/series rows share (white surface,
+  // hairline border,
   // 16pt gap) so a document row and an audio row read as members of one
   // family rather than as two people's components.
   row: {

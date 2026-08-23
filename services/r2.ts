@@ -56,6 +56,17 @@ export interface R2Item {
    * byRecency in utils/audioGrouping.ts, which sends them to the end.
    */
   date?: string;
+  /**
+   * Who is speaking, from Telegram's `performer` tag. OPTIONAL, and the
+   * coverage is the reason: 436 of 546 audio items carry the field at all,
+   * one of those is the literal string '<unknown>', so 435 (79.7%) name a
+   * real speaker. It also arrives UNNORMALISED — 'Pst. Abu Jibril',
+   * 'Pst Abu Jibril', 'PST ABU JIBRIL' and 'Pastor Abu Jibril' are all the
+   * same person — so nothing should display this raw. Run it through
+   * normalizeSpeaker() in utils/audioGrouping.ts, which also drops the
+   * sentinel values ('<unknown>', 'AudioLab' — a recorder-app artifact).
+   */
+  speaker?: string;
 }
 
 export type R2ManifestKind = 'audio' | 'documents';
@@ -65,12 +76,13 @@ const MANIFEST_PATH: Record<R2ManifestKind, string> = {
   documents: '/manifests/documents-manifest.json',
 };
 
-// VERSIONED. The v1 blobs on devices predate the manifest's `date` field, and
-// a 6-hour TTL means an app updated mid-window would sort a dateless cached
-// list until it expired — i.e. the recency ordering would silently not work on
+// VERSIONED, and bumped whenever the ITEM SHAPE grows a field the UI reads.
+// The v1 blobs predated `date`, the v2 blobs predate `speaker`, and a 6-hour
+// TTL means an app updated mid-window would render from a cached list missing
+// the new field until it expired — i.e. the feature would silently not work on
 // exactly the devices that had used the app most recently. Bumping the key
 // retires those blobs immediately instead.
-const cacheKey = (kind: R2ManifestKind) => `r2:manifest:v2:${kind}`;
+const cacheKey = (kind: R2ManifestKind) => `r2:manifest:v3:${kind}`;
 
 /**
  * THE ENCODING CATCH, and why this is not just `encodeURI`.
@@ -137,6 +149,7 @@ function parseItems(json: unknown): R2Item[] {
       // downstream code has exactly two cases to handle instead of also
       // guarding against '' and null.
       date: typeof i.date === 'string' && i.date.length > 0 ? i.date : undefined,
+      speaker: typeof i.speaker === 'string' && i.speaker.length > 0 ? i.speaker : undefined,
     }));
 }
 
