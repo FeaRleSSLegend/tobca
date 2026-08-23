@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Linking, Pressable } from 'react-native';
 import { useState } from 'react';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
@@ -7,11 +7,14 @@ import { SectionLabel } from '../../components/ui/SectionLabel';
 import { FocusCard } from '../../components/ui/FocusCard';
 import { HScroll } from '../../components/ui/HScroll';
 import { DocCard } from '../../components/ui/DocCard';
+import { DocumentRow } from '../../components/ui/DocumentRow';
 import { AudioPlayer } from '../../components/ui/AudioPlayer';
 import { currentFocus, prayerResources, archivedFocuses } from '../../data/prayer';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition, FadeInUp, staggerDelay } from '../../components/ui/motion';
 import { useTabBottomClearance } from '../../hooks/useBottomClearance';
+import { useR2Manifest } from '../../hooks/useR2Manifest';
+import { formatBytes } from '../../services/r2';
 
 export default function PrayerScreen() {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -21,6 +24,17 @@ export default function PrayerScreen() {
     // mini-player on top when that is docked too.
     const [audioBarHeight, setAudioBarHeight] = useState(0);
     const bottomClearance = useTabBottomClearance();
+    // The church's real PDFs, from the documents manifest in R2. Additive to
+    // the sections above it: `prayerResources` and `archivedFocuses` are still
+    // the hand-written data they always were, and are left untouched here.
+    const documents = useR2Manifest('documents');
+
+    // Straight out to the system PDF viewer. No in-app reader: a PDF is a
+    // thing people save, print and share, and the OS viewer already does all
+    // three better than anything this app would ship.
+    const openDocument = (url: string) => {
+        Linking.openURL(url).catch((e) => console.warn('Failed to open document:', e));
+    };
 
     return (
         <TabTransition>
@@ -67,6 +81,48 @@ export default function PrayerScreen() {
                         </FadeInUp>
                     ))}
                 </HScroll>
+
+                {/* DOCUMENTS — the real, downloadable guides. Placed next to
+                    the resource shelf above because they are the same kind of
+                    thing, and before Archive so live material outranks past
+                    material. */}
+                <SectionLabel label="Documents" />
+                {documents.status === 'loading' ? (
+                    <View style={prayerStyles.docsStatus}>
+                        <ActivityIndicator color={theme.colors.pink} />
+                    </View>
+                ) : documents.status === 'error' ? (
+                    // An inline retry, not a full-screen empty state: this is
+                    // one section inside a screen whose other sections loaded
+                    // fine, and blanking the page for it would be a lie about
+                    // what failed.
+                    <View style={prayerStyles.docsStatus}>
+                        <Text style={prayerStyles.docsStatusText}>
+                            Couldn't load documents. Check your connection.
+                        </Text>
+                        <Pressable onPress={documents.reload} hitSlop={8} accessibilityRole="button">
+                            <Text style={prayerStyles.docsRetry}>Try again</Text>
+                        </Pressable>
+                    </View>
+                ) : documents.items.length === 0 ? (
+                    <View style={prayerStyles.docsStatus}>
+                        <Text style={prayerStyles.docsStatusText}>
+                            Prayer guides and timetables will appear here once they are published.
+                        </Text>
+                    </View>
+                ) : (
+                    <View style={prayerStyles.docsList}>
+                        {documents.items.map((doc, i) => (
+                            <FadeInUp key={doc.url} delay={staggerDelay(i)}>
+                                <DocumentRow
+                                    title={doc.title}
+                                    sizeLabel={formatBytes(doc.sizeBytes)}
+                                    onPress={() => openDocument(doc.url)}
+                                />
+                            </FadeInUp>
+                        ))}
+                    </View>
+                )}
 
                 <SectionLabel label="Archive" />
                 <HScroll>

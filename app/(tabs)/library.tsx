@@ -16,7 +16,7 @@ import { HScroll } from '../../components/ui/HScroll';
 import { PosterCard } from '../../components/ui/PosterCard';
 import { GridCard } from '../../components/ui/GridCard';
 import { PlaylistCircle } from '../../components/ui/PlaylistCircle';
-import { getCurrentlyStreaming, getRecentlyAdded, getAudioMessages } from '../../data/content';
+import { getCurrentlyStreaming, getRecentlyAdded } from '../../data/content';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition, FadeInUp, staggerDelay, Shimmer, PressableScale } from '../../components/ui/motion';
 import { useMessages, filterByBranch, BranchFilter as BranchFilterValue } from '../../hooks/useMessages';
@@ -125,10 +125,11 @@ export default function LibraryScreen() {
 
     const currentlyStreaming = getCurrentlyStreaming(messages);
 
-    // Derived from the SAME branch-filtered `messages` the video shelves use,
-    // which is the whole reason the branch pills work identically on both
-    // pages without any extra plumbing. Empty today — see getAudioMessages.
-    const audioMessages = useMemo(() => getAudioMessages(messages), [messages]);
+    // NOTE: the Audio mode no longer derives from `messages` at all. It reads
+    // the church's R2 audio manifest directly (see components/library/
+    // AudioLibrary.tsx), because that is where audio actually lives —
+    // getAudioMessages() covers audio-only YouTube/Telegram messages, of which
+    // there are still none.
 
     // Classification is just grouping over an array already in memory —
     // cheap enough to recompute via useMemo, no need to cache separately.
@@ -184,10 +185,20 @@ export default function LibraryScreen() {
                 />
             </View>
 
-            {/* Auto-hides while scrolling down, returns on scroll up — the
+            {/* VIDEO ONLY, and that is a data fact rather than a design
+                preference: the R2 audio manifest carries no branch field, so
+                on the Audio mode these pills would have nothing to filter by.
+                Leaving them visible would mean tapping "Wuse 2" emptied a list
+                that has no branch information at all — a control that lies
+                about what it did. They come back the moment audio items carry
+                a branch.
+
+                Auto-hides while scrolling down, returns on scroll up — the
                 same rule as the Bible reader's quick-nav, shared via
                 useAutoHideOnScroll rather than reimplemented. */}
-            <BranchFilter value={branch} onChange={setBranch} visible={filterVisible} />
+            {mode === 'video' && (
+                <BranchFilter value={branch} onChange={setBranch} visible={filterVisible} />
+            )}
 
             {/* THE PAGER.
                 A plain horizontal FlatList with pagingEnabled — deliberately
@@ -427,11 +438,8 @@ export default function LibraryScreen() {
                             </ScrollView>
                         ) : (
                             <AudioLibrary
-                                items={audioMessages}
-                                branch={branch}
                                 onScroll={audioScroll.onScroll}
                                 bottomClearance={bottomClearance}
-                                onPlay={play}
                             />
                         )}
                     </View>

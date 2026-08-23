@@ -1,256 +1,152 @@
 // components/library/AudioLibrary.tsx
-// The Audio MODE of the Library — not a filtered view of the video library.
+// The Audio MODE of the Library — the church's own recordings, served from the
+// public Cloudflare R2 bucket rather than from YouTube.
 //
-// WHAT "MODE" MEANS HERE
-// Switching the header control to AUDIO has to change what the Library IS,
-// not just what it lists. So this page carries its own shelves, its own hero
-// and its own vocabulary:
+// WHERE THE CONTENT COMES FROM
+// services/r2.ts fetches `manifests/audio-manifest.json` (546 entries today)
+// and caches it; this component owns nothing but the rendering and the
+// playing. The manifest carries four fields per item — title, sourceFilename,
+// url, sizeBytes — and that shortness is what shapes this screen:
 //
-//   Latest      the newest recording, given the hero slot that CurrentMessage
-//               occupies on the video side — the one thing to press play on
-//   Teachings   audio that belongs to a teaching/series, grouped under it, so
-//               a multi-part midweek study reads as one body of work
-//   Recent      the standalone recordings, newest first
+//   no publishedAt  → there is NO "Latest" and no "Recently Added" here. The
+//                     manifest is ordered alphabetically and carries no date,
+//                     so any recency framing would be invented. The earlier
+//                     hero-plus-shelves layout was written against a Message[]
+//                     that had dates and series; with this data it would have
+//                     been three headings over one arbitrary ordering.
+//   no series       → no "Teachings" grouping.
+//   no speaker      → the rows state no speaker rather than guessing one.
+//   no duration     → the row shows file size instead, which is the one
+//                     concrete fact the manifest does have. Real duration only
+//                     becomes knowable once a track is loaded.
 //
-// Every section is derived from the audio that actually exists. None of them
-// render when their bucket is empty, which is why there is no "Playlists" row
-// here: playlists come from the YouTube channel (usePlaylists) and are video
-// collections. Putting them on this page would be exactly the "changed one
-// filter" reading the redesign is trying to kill.
+// So this is one honest, complete, virtualized list. It is not a discovery hub
+// like the video mode, because the data cannot support one yet — when the
+// pipeline starts emitting dates and speakers, the shelves can come back.
 //
-// SECTIONS DO NOT NAVIGATE, ON PURPOSE
-// The video shelves are teasers with a "›" into a collection screen. Audio has
-// no collection screen (see-all's collections render 16:9 grids and count
-// themselves in "videos"), so these headers carry no chevron. A chevron into a
-// screen that would show audio as broken video thumbnails is worse than no
-// chevron — and the whole audio set is short enough to live on one page.
-//
-// WHY THIS RENDERS EMPTY TODAY, AND WHY THAT IS THE POINT
-// No source currently produces audio-only messages. The Telegram ingestion
-// pipeline that will produce them is a separate, unbuilt piece. So this page
-// is built against the real typed shape — Message[] from getAudioMessages() —
-// and renders the empty state when that array is empty, which today is always.
-// No mock rows: they would have to be deleted later and, worse, would hide the
-// empty state from review right up until the day it becomes what everyone
-// sees. When the pipeline lands, messages with `source: 'telegram'` and a
-// single `kind: 'audio'` variant arrive through the same useMessages() path
-// the video shelves use, getAudioMessages() picks them up, and these shelves
-// fill in. Nothing here needs editing.
+// PLAYBACK is expo-audio, one player instance for the whole mode: tapping a
+// row plays it, tapping the playing row pauses it, tapping a different row
+// replaces the source. Deliberately not routed through PlaybackProvider —
+// that provider drives a YouTube IFrame inside a WebView and every one of its
+// paths expects a Message with a videoId, which an mp3 url is not.
 
-import { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import { theme } from '../../constants/theme';
 import { EmptyState } from '../ui/EmptyState';
-import { AudioRow, AudioWaveformTile } from '../ui/AudioRow';
-import { SectionLabel } from '../ui/SectionLabel';
-import { FadeInUp, staggerDelay, PressableScale } from '../ui/motion';
-import { formatDuration, primaryVariant, type Message } from '../../data/contentModel';
-import { getBranch } from '../../data/branches';
-import type { BranchFilter as BranchFilterValue } from '../../hooks/useMessages';
+import { AudioRow } from '../ui/AudioRow';
+import { formatBytes, type R2Item } from '../../services/r2';
+import { useR2Manifest } from '../../hooks/useR2Manifest';
 
 interface AudioLibraryProps {
-  items: Message[];
-  /** Only used to name the branch in the empty state copy. */
-  branch: BranchFilterValue;
   onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
   bottomClearance: number;
-  onPlay: (m: Message) => void;
 }
 
-/** One teaching/series and the audio recorded under it, newest first. */
-interface AudioGroup {
-  key: string;
-  label: string;
-  items: Message[];
-}
+export const AudioLibrary = ({ onScroll, bottomClearance }: AudioLibraryProps) => {
+  const { items, status, stale, reload } = useR2Manifest('audio');
 
-const durationLabel = (m: Message) => {
-  const variant = primaryVariant(m);
-  return variant ? formatDuration(variant.durationSeconds) : '';
-};
+  // ONE player for the whole mode, created with no source and re-pointed with
+  // replace(). Creating a player per row would mean 546 native player objects
+  // for a list where at most one can ever be audible.
+  const player = useAudioPlayer(undefined, { updateInterval: 500 });
+  const playerStatus = useAudioPlayerStatus(player);
+  const [activeUrl, setActiveUrl] = useState<string | null>(null);
 
-// ---------------------------------------------------------------------------
-// The hero. Same role as CurrentMessage on the video page — the page's one
-// large press-to-play surface — but built from the audio vocabulary rather
-// than a 16:9 still: a large waveform tile, the title, and a play affordance.
-// Deliberately not a gradient card: the video page already spends the
-// gradient budget on its hero, and two gradient heroes one swipe apart would
-// make the modes look like the same screen twice.
-// ---------------------------------------------------------------------------
-const AudioFeature = ({ message, onPress }: { message: Message; onPress: () => void }) => (
-  <PressableScale
-    style={styles.feature}
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityLabel={`Play ${message.title}, audio, ${message.speaker}, ${durationLabel(message)}`}
-  >
-    <AudioWaveformTile size={84} />
-    <View style={styles.featureBody}>
-      <Text style={styles.featureTitle} numberOfLines={2}>
-        {message.title}
-      </Text>
-      <Text style={styles.featureMeta} numberOfLines={1}>
-        {message.series ? `${message.series} · ${message.speaker}` : message.speaker}
-      </Text>
-      <View style={styles.featureAction}>
-        <View style={styles.featurePlay}>
-          <Ionicons name="play" size={13} color={theme.colors.white} />
-        </View>
-        <Text style={styles.featureDuration}>{durationLabel(message)}</Text>
-      </View>
-    </View>
-  </PressableScale>
-);
-
-/** Small caps header for one teaching group — the same register see-all uses
- *  for its date/series buckets, so a group inside a shelf never gets mistaken
- *  for a shelf of its own. */
-const GroupHeader = ({ label, count }: { label: string; count: number }) => (
-  <View style={styles.groupHeaderRow}>
-    <Text style={styles.groupHeader} accessibilityRole="header" numberOfLines={1}>
-      {label}
-    </Text>
-    <Text style={styles.groupCount}>{count}</Text>
-  </View>
-);
-
-export const AudioLibrary = ({
-  items,
-  branch,
-  onScroll,
-  bottomClearance,
-  onPlay,
-}: AudioLibraryProps) => {
-  const branchName = branch === 'all' ? null : getBranch(branch)?.shortName ?? null;
-
-  // One pass over the audio, splitting it into the three shelves. The hero is
-  // removed from the shelves below it — a page where the top item also appears
-  // three rows down reads as a bug, not as emphasis.
-  const { featured, groups, loose } = useMemo(() => {
-    const [first, ...rest] = items;
-    const byLabel = new Map<string, Message[]>();
-    const standalone: Message[] = [];
-
-    for (const m of rest) {
-      if (m.series) {
-        const bucket = byLabel.get(m.series);
-        if (bucket) bucket.push(m);
-        else byLabel.set(m.series, [m]);
-      } else {
-        standalone.push(m);
-      }
-    }
-
-    // A "group" of one is not a teaching, it is a single recording — it reads
-    // better in the flat Recent shelf than under a header of its own.
-    const teachings: AudioGroup[] = [];
-    for (const [label, bucket] of byLabel) {
-      if (bucket.length > 1) {
-        teachings.push({ key: label.toLowerCase().replace(/\s+/g, '-'), label, items: bucket });
-      } else {
-        standalone.push(...bucket);
-      }
-    }
-    teachings.sort((a, b) => b.items.length - a.items.length);
-    standalone.sort(
-      (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  useEffect(() => {
+    // Without this, iOS silences playback when the ring switch is set to
+    // silent — which is where a lot of phones live, and it reads as "the app's
+    // audio is broken" rather than as a device setting.
+    setAudioModeAsync({ playsInSilentMode: true }).catch((e) =>
+      console.warn('Failed to set audio mode:', e)
     );
+  }, []);
 
-    return { featured: first, groups: teachings, loose: standalone };
-  }, [items]);
+  const toggle = useCallback(
+    (item: R2Item) => {
+      if (activeUrl === item.url) {
+        if (playerStatus.playing) player.pause();
+        else player.play();
+        return;
+      }
+      setActiveUrl(item.url);
+      player.replace({ uri: item.url });
+      player.play();
+    },
+    [activeUrl, player, playerStatus.playing]
+  );
 
-  // EMPTY AND FILLED ARE TWO DIFFERENT LAYOUTS, not one layout with a flag.
-  //
-  // This is the pattern the rest of the app already uses (see-all.tsx,
-  // playlist/[id].tsx): EmptyState is rendered as a direct flex child of the
-  // screen body, NOT inside a scroll container. That is what lets its own
-  // `flex: 1` resolve against the real available height, and its
-  // justifyContent:'center' then does the vertical centring for free.
-  //
-  // The first version here put it inside the ScrollView's contentContainer
-  // instead. It still centred — but against a box that also carried
-  // paddingTop (8) and the bottom scroll clearance (32), so the content sat
-  // ~10dp above true centre, measured on device. Those paddings exist to
-  // separate a LIST from the chrome above and the tab bar below; an empty
-  // state has no list to separate and nothing to clear, so it should not
-  // inherit either.
-  if (!featured) {
+  if (status === 'loading') {
     return (
-      <View style={styles.emptyPage}>
+      <View style={styles.centered}>
+        <ActivityIndicator color={theme.colors.pink} />
+        <Text style={styles.loadingLabel}>Loading audio…</Text>
+      </View>
+    );
+  }
+
+  // A failed fetch with nothing cached falls back to the SAME empty-state copy
+  // this mode has always shown, plus a retry — a network blip should not look
+  // like a different, scarier screen than "nothing here yet".
+  if (status === 'error' || items.length === 0) {
+    return (
+      <View style={styles.centered}>
         <EmptyState
           icon="headset-outline"
-          title={branchName ? `No audio from ${branchName} yet` : 'No audio yet'}
-          subtitle="Audio-only recordings — midweek teachings and messages shared straight to the church — will appear here once they start being published."
+          title="No audio yet"
+          subtitle={
+            status === 'error'
+              ? "We couldn't reach the audio library. Check your connection and try again."
+              : 'Audio-only recordings — midweek teachings and messages shared straight to the church — will appear here once they start being published.'
+          }
+          actionLabel={status === 'error' ? 'Try again' : undefined}
+          onAction={status === 'error' ? reload : undefined}
         />
       </View>
     );
   }
 
-  // The stagger runs across the WHOLE page rather than restarting per shelf,
-  // so a mode switch reads as one page arriving instead of three lists racing
-  // each other. Incremented as rows are emitted.
-  let row = 0;
-
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
+    <FlatList
+      data={items}
+      keyExtractor={(item) => item.url}
       onScroll={onScroll}
       scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
       contentContainerStyle={[styles.content, { paddingBottom: bottomClearance }]}
-    >
-      {/* The video page's hero (CurrentMessage) carries no section label,
-          because it is a full-bleed banner and announces itself. This hero is
-          a card at row scale, so without a label it would read as a stray
-          first row rather than as the top of the library. */}
-      <SectionLabel label="Latest" />
-      <FadeInUp delay={staggerDelay(row++)}>
-        <AudioFeature message={featured} onPress={() => onPlay(featured)} />
-      </FadeInUp>
-
-      {groups.length > 0 && (
-        <>
-          <SectionLabel label="Teachings" />
-          {groups.map((g) => (
-            <View key={g.key}>
-              <GroupHeader label={g.label} count={g.items.length} />
-              {g.items.map((m) => (
-                <FadeInUp key={m.id} delay={staggerDelay(row++)}>
-                  <View style={styles.rowSlot}>
-                    <AudioRow
-                      title={m.title}
-                      speaker={m.speaker}
-                      duration={durationLabel(m)}
-                      onPress={() => onPlay(m)}
-                    />
-                  </View>
-                </FadeInUp>
-              ))}
-            </View>
-          ))}
-        </>
-      )}
-
-      {loose.length > 0 && (
-        <>
-          <SectionLabel label="Recent Audio" />
-          {loose.map((m) => (
-            <FadeInUp key={m.id} delay={staggerDelay(row++)}>
-              <View style={styles.rowSlot}>
-                <AudioRow
-                  title={m.title}
-                  speaker={m.speaker}
-                  duration={durationLabel(m)}
-                  context={m.series}
-                  onPress={() => onPlay(m)}
-                />
-              </View>
-            </FadeInUp>
-          ))}
-        </>
-      )}
-    </ScrollView>
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
+      // A list this long has to be virtualized; these are the same window
+      // settings the other long collections use.
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
+      windowSize={7}
+      removeClippedSubviews
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text style={styles.headerLabel}>Recordings</Text>
+          <Text style={styles.headerCount}>
+            {items.length}
+            {stale ? ' · offline copy' : ''}
+          </Text>
+        </View>
+      }
+      renderItem={({ item }) => {
+        const isActive = item.url === activeUrl;
+        return (
+          <AudioRow
+            title={item.title}
+            sizeLabel={formatBytes(item.sizeBytes)}
+            isPlaying={isActive && playerStatus.playing}
+            // Buffering a 100MB mp3 over mobile data is not instant, and a
+            // button that looks idle for four seconds gets tapped again.
+            isLoading={isActive && !playerStatus.isLoaded}
+            onPress={() => toggle(item)}
+          />
+        );
+      }}
+    />
   );
 };
 
@@ -262,81 +158,39 @@ const styles = StyleSheet.create({
     paddingTop: theme.space.tight,
   },
   // Fills the page so EmptyState's own flex:1 has a real height to resolve
-  // against. No padding: the centring must be governed by flex alone, so it
-  // stays correct whatever height the search bar, mode switch and filter
-  // pills happen to take on a given device.
-  emptyPage: {
+  // against, and centres the loading spinner the same way. No padding: the
+  // centring must be governed by flex alone, so it stays correct whatever
+  // height the search bar and mode switch take on a given device.
+  centered: {
     flex: 1,
-  },
-  rowSlot: {
-    marginBottom: theme.space.tight,
-  },
-  feature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.related,
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.grayBorder,
-    borderWidth: theme.layout.cardBorderWidth,
-    borderRadius: theme.radius.md,
-    padding: theme.space.related,
-  },
-  featureBody: {
-    flex: 1,
-    gap: theme.space.micro,
-  },
-  featureTitle: {
-    fontFamily: theme.fontFamily.displaySemibold,
-    fontSize: theme.fontSize.heroTitle,
-    lineHeight: 25,
-    letterSpacing: -0.3,
-    color: theme.colors.navy,
-  },
-  featureMeta: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
-  },
-  featureAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.tight,
-    marginTop: theme.space.micro,
-  },
-  featurePlay: {
-    width: 26,
-    height: 26,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.pink,
     alignItems: 'center',
     justifyContent: 'center',
-    // Optical centring: a play triangle sits visually left of a circle's
-    // true centre unless it is nudged across.
-    paddingLeft: 2,
+    gap: theme.space.related,
   },
-  featureDuration: {
-    fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: theme.fontSize.caption,
+  loadingLabel: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: theme.fontSize.body,
     color: theme.colors.graySecondary,
   },
-  groupHeaderRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    gap: theme.space.tight,
-    marginBottom: theme.space.tight,
+    marginBottom: theme.space.header,
   },
-  groupHeader: {
-    flex: 1,
-    fontFamily: theme.fontFamily.bodySemibold,
-    fontSize: theme.fontSize.body,
-    letterSpacing: 0.6,
+  headerLabel: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: theme.fontSize.caption,
+    letterSpacing: theme.editorial.trackLabel,
     textTransform: 'uppercase',
-    color: theme.colors.slate,
+    color: theme.colors.graySecondary,
   },
-  groupCount: {
+  headerCount: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     color: theme.colors.grayIcon,
+  },
+  separator: {
+    height: theme.space.tight,
   },
 });

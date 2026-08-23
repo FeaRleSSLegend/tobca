@@ -44,3 +44,6 @@ yarn-error.*
 
 .claude/
 .claude/skills/
+
+backfill.py
+enrich_manifest_dates.py

@@ -19,17 +19,33 @@
 // sits in the same family as ServiceRow and the Latest Messages rows rather
 // than being a bespoke card.
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import { PressableScale } from './motion';
 
 interface AudioRowProps {
   title: string;
-  speaker: string;
-  duration: string;
+  /**
+   * OPTIONAL, because the R2 manifest has no speaker field. Where a source
+   * genuinely knows who preached (the future Telegram pipeline, tagged
+   * uploads), pass it; where it does not, the meta line is simply omitted
+   * rather than filled with "Unknown" — a row that states nothing is honest,
+   * a row that states a guess is not.
+   */
+  speaker?: string;
+  /** Formatted runtime. Also optional: an mp3's duration is not known until
+   *  it has been loaded, and the manifest does not carry it. */
+  duration?: string;
+  /** e.g. "12.4 MB". Shown in the duration slot when no duration is known, so
+   *  the row still says something concrete about the file. */
+  sizeLabel?: string;
   /** e.g. "Wed Bible Study · 12 Aug" — the same subtitle register as video rows. */
   context?: string;
+  /** Swaps the play glyph for pause. The row is the play/pause control. */
+  isPlaying?: boolean;
+  /** Track is loading/buffering — the button shows a spinner instead. */
+  isLoading?: boolean;
   onPress?: () => void;
 }
 
@@ -60,36 +76,74 @@ export const AudioWaveformTile = ({ size = 60 }: { size?: number }) => (
   </View>
 );
 
-export const AudioRow = ({ title, speaker, duration, context, onPress }: AudioRowProps) => (
-  <PressableScale
-    style={styles.row}
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityLabel={`Play ${title}, audio, ${speaker}, ${duration}`}
-  >
-    <AudioWaveformTile />
+export const AudioRow = ({
+  title,
+  speaker,
+  duration,
+  sizeLabel,
+  context,
+  isPlaying = false,
+  isLoading = false,
+  onPress,
+}: AudioRowProps) => {
+  // The meta line only renders when there is something true to put on it.
+  const meta = context && speaker ? `${context} · ${speaker}` : context ?? speaker ?? null;
+  return (
+    <PressableScale
+      style={styles.row}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isPlaying }}
+      accessibilityLabel={
+        [isPlaying ? `Pause ${title}` : `Play ${title}`, 'audio', speaker, duration ?? sizeLabel]
+          .filter(Boolean)
+          .join(', ')
+      }
+    >
+      <AudioWaveformTile />
 
-    <View style={styles.body}>
-      <Text style={styles.title} numberOfLines={2}>
-        {title}
-      </Text>
-      <Text style={styles.meta} numberOfLines={1}>
-        {context ? `${context} · ${speaker}` : speaker}
-      </Text>
-      <View style={styles.durationRow}>
-        {/* Headphones, not a clock: the glyph is doing double duty as the
-            "this is listening, not watching" cue in the one place the eye
-            lands after the title. */}
-        <Ionicons name="headset-outline" size={12} color={theme.colors.grayIcon} />
-        <Text style={styles.duration}>{duration}</Text>
+      <View style={styles.body}>
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
+        </Text>
+        {meta && (
+          <Text style={styles.meta} numberOfLines={1}>
+            {meta}
+          </Text>
+        )}
+        {duration ? (
+          <View style={styles.durationRow}>
+            {/* Headphones, not a clock: the glyph is doing double duty as the
+                "this is listening, not watching" cue in the one place the eye
+                lands after the title. */}
+            <Ionicons name="headset-outline" size={12} color={theme.colors.grayIcon} />
+            <Text style={styles.duration}>{duration}</Text>
+          </View>
+        ) : sizeLabel ? (
+          // No glyph on the size line, deliberately: the headphones above mean
+          // "runtime", and reusing it for megabytes would say the file is 12
+          // minutes long when it is 12 megabytes.
+          <Text style={[styles.duration, styles.sizeLine]}>{sizeLabel}</Text>
+        ) : null}
       </View>
-    </View>
 
-    <View style={styles.playBtn}>
-      <Ionicons name="play" size={15} color={theme.colors.white} />
-    </View>
-  </PressableScale>
-);
+      <View style={styles.playBtn}>
+        {isLoading ? (
+          <ActivityIndicator size="small" color={theme.colors.white} />
+        ) : (
+          <Ionicons
+            name={isPlaying ? 'pause' : 'play'}
+            size={15}
+            color={theme.colors.white}
+            // Optical centring: a play triangle reads left-of-centre inside a
+            // circle, a pause bar pair does not.
+            style={isPlaying ? undefined : styles.playGlyph}
+          />
+        )}
+      </View>
+    </PressableScale>
+  );
+};
 
 const styles = StyleSheet.create({
   row: {
@@ -147,6 +201,12 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.caption,
     color: theme.colors.grayIcon,
+  },
+  sizeLine: {
+    marginTop: theme.space.hairline,
+  },
+  playGlyph: {
+    marginLeft: 2,
   },
   playBtn: {
     width: 36,

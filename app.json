@@ -36,7 +36,8 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-audio"
     ],
     "extra": {
       "router": {},
