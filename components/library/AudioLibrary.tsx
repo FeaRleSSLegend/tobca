@@ -2,81 +2,72 @@
 // The Audio MODE of the Library — the church's own recordings, served from the
 // public Cloudflare R2 bucket rather than from YouTube.
 //
-// WHERE THE CONTENT COMES FROM
-// services/r2.ts fetches `manifests/audio-manifest.json` (546 entries today)
-// and caches it; this component owns nothing but the rendering and the
-// playing. The manifest carries four fields per item — title, sourceFilename,
-// url, sizeBytes — and that shortness is what shapes this screen:
+// STRUCTURED LIKE THE VIDEO MODE, NOT LIKE A FILE LISTING.
+// This was a single flat list of 546 rows, which was honest but read as an
+// export rather than as a library. It now uses the video hub's own vocabulary,
+// component for component:
 //
-//   no publishedAt  → there is NO "Latest" and no "Recently Added" here. The
-//                     manifest is ordered alphabetically and carries no date,
-//                     so any recency framing would be invented. The earlier
-//                     hero-plus-shelves layout was written against a Message[]
-//                     that had dates and series; with this data it would have
-//                     been three headings over one arbitrary ordering.
-//   no series       → no "Teachings" grouping.
-//   no speaker      → the rows state no speaker rather than guessing one.
-//   no duration     → the row shows file size instead, which is the one
-//                     concrete fact the manifest does have. Real duration only
-//                     becomes knowable once a track is loaded.
+//   Recently Added   SectionLabel + HScroll of shelf cards   (video: same)
+//   Series           SectionLabel + HScroll of shelf cards   (video: same)
+//   Single Recordings   the vertical remainder                (video: grid)
 //
-// So this is one honest, complete, virtualized list. It is not a discovery hub
-// like the video mode, because the data cannot support one yet — when the
-// pipeline starts emitting dates and speakers, the shelves can come back.
+// The shelf cards are AudioPosterCard, which is PosterCard's twin down to the
+// shared rowCard metrics — so an audio shelf and a video shelf line up at the
+// card edge, the baseline and the scroll peek. The one difference is the art
+// box, which carries the waveform mark instead of a thumbnail, because an mp3
+// has no frame to grab and a grey rectangle reads as a broken image.
 //
-// PLAYBACK is expo-audio, one player instance for the whole mode: tapping a
-// row plays it, tapping the playing row pauses it, tapping a different row
-// replaces the source. Deliberately not routed through PlaybackProvider —
-// that provider drives a YouTube IFrame inside a WebView and every one of its
-// paths expects a Message with a videoId, which an mp3 url is not.
+// WHAT THE MANIFEST NOW SUPPORTS, AND WHAT IT STILL DOES NOT
+// The enrichment pass added a `date` to 521 of 546 items (95.4%), which is
+// what makes a real "Recently Added" possible — before this, the only ordering
+// available was alphabetical and any recency framing would have been invented.
+// Undated items sort to the END, never the top (see byRecency). Series come
+// from utils/audioGrouping, which strips installment suffixes measured against
+// the real titles. There is still no speaker and no duration in the manifest,
+// so rows state neither.
+//
+// PLAYBACK is providers/AudioFileProvider — one expo-audio player for the
+// whole app, deliberately separate from PlaybackProvider (that one drives a
+// YouTube IFrame in a WebView and every path through it expects a videoId).
+//
+// LOAD-ON-DEMAND: nothing here passes a url to anything that could fetch it.
+// A row receives strings and a callback; the url reaches the player only
+// inside the provider's toggle(), i.e. only from a tap. Rendering, scrolling
+// and virtualization recycling cannot start a request.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import { theme } from '../../constants/theme';
 import { EmptyState } from '../ui/EmptyState';
 import { AudioRow } from '../ui/AudioRow';
-import { formatBytes, type R2Item } from '../../services/r2';
+import { AudioPosterCard } from '../ui/AudioPosterCard';
+import { SectionLabel } from '../ui/SectionLabel';
+import { HScroll } from '../ui/HScroll';
+import { formatBytes } from '../../services/r2';
 import { useR2Manifest } from '../../hooks/useR2Manifest';
+import { useAudioFiles } from '../../providers/AudioFileProvider';
+import { groupAudio, formatAudioDate } from '../../utils/audioGrouping';
+import { useGuardedPush } from '../../hooks/useGuardedPush';
 
 interface AudioLibraryProps {
   onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
   bottomClearance: number;
 }
 
+// Same teaser count the video shelves use, for the same reason: a filled row
+// that runs past the screen edge says "there is more behind this header".
+const PREVIEW_COUNT = 6;
+
 export const AudioLibrary = ({ onScroll, bottomClearance }: AudioLibraryProps) => {
+  const push = useGuardedPush();
   const { items, status, stale, reload } = useR2Manifest('audio');
+  const audio = useAudioFiles();
 
-  // ONE player for the whole mode, created with no source and re-pointed with
-  // replace(). Creating a player per row would mean 546 native player objects
-  // for a list where at most one can ever be audible.
-  const player = useAudioPlayer(undefined, { updateInterval: 500 });
-  const playerStatus = useAudioPlayerStatus(player);
-  const [activeUrl, setActiveUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Without this, iOS silences playback when the ring switch is set to
-    // silent — which is where a lot of phones live, and it reads as "the app's
-    // audio is broken" rather than as a device setting.
-    setAudioModeAsync({ playsInSilentMode: true }).catch((e) =>
-      console.warn('Failed to set audio mode:', e)
-    );
-  }, []);
-
-  const toggle = useCallback(
-    (item: R2Item) => {
-      if (activeUrl === item.url) {
-        if (playerStatus.playing) player.pause();
-        else player.play();
-        return;
-      }
-      setActiveUrl(item.url);
-      player.replace({ uri: item.url });
-      player.play();
-    },
-    [activeUrl, player, playerStatus.playing]
-  );
+  // 546 items through one grouping pass, memoised on the manifest identity —
+  // which only changes when a fetch resolves, so this runs once per load and
+  // not on every playback tick.
+  const { series, standalone, recent } = useMemo(() => groupAudio(items), [items]);
 
   if (status === 'loading') {
     return (
@@ -110,42 +101,85 @@ export const AudioLibrary = ({ onScroll, bottomClearance }: AudioLibraryProps) =
 
   return (
     <FlatList
-      data={items}
+      // The tail of the page is the LIST, and the shelves ride in its header.
+      // Not a ScrollView: the standalone remainder is 254 rows on the live
+      // manifest, and mounting those on entry would cost more than the whole
+      // rest of the screen combined.
+      data={standalone}
       keyExtractor={(item) => item.url}
       onScroll={onScroll}
       scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={[styles.content, { paddingBottom: bottomClearance }]}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
-      // A list this long has to be virtualized; these are the same window
-      // settings the other long collections use.
-      initialNumToRender={10}
+      initialNumToRender={8}
       maxToRenderPerBatch={10}
       windowSize={7}
       removeClippedSubviews
       ListHeaderComponent={
-        <View style={styles.header}>
-          <Text style={styles.headerLabel}>Recordings</Text>
-          <Text style={styles.headerCount}>
-            {items.length}
-            {stale ? ' · offline copy' : ''}
-          </Text>
+        <View>
+          <SectionLabel label="Recently Added" />
+          <HScroll>
+            {recent.slice(0, PREVIEW_COUNT).map((item) => (
+              <AudioPosterCard
+                key={item.url}
+                title={item.title}
+                // The date when we have one, the file size when we do not —
+                // never a fabricated date, and never an empty line.
+                subtitle={formatAudioDate(item.date) ?? formatBytes(item.sizeBytes)}
+                isPlaying={audio.isPlaying(item.url)}
+                onPress={() => audio.toggle(item)}
+              />
+            ))}
+          </HScroll>
+
+          {series.length > 0 && (
+            <>
+              {/* Chevron into the full list — 63 series exist and six fit on
+                  a shelf, the same teaser-plus-collection split every video
+                  shelf uses. */}
+              <SectionLabel label="Series" onPress={() => push('/audio-series')} />
+              <HScroll>
+                {series.slice(0, PREVIEW_COUNT).map((s) => (
+                  <AudioPosterCard
+                    key={s.key}
+                    variant="series"
+                    title={s.label}
+                    subtitle={`${s.items.length} messages`}
+                    onPress={() =>
+                      push({
+                        pathname: '/audio-series',
+                        params: { series: s.label, title: s.label },
+                      })
+                    }
+                  />
+                ))}
+              </HScroll>
+            </>
+          )}
+
+          {standalone.length > 0 && (
+            <View style={styles.listHeadRow}>
+              <SectionLabel label="Single Recordings" />
+              <Text style={styles.listHeadCount}>
+                {standalone.length}
+                {stale ? ' · offline copy' : ''}
+              </Text>
+            </View>
+          )}
         </View>
       }
-      renderItem={({ item }) => {
-        const isActive = item.url === activeUrl;
-        return (
-          <AudioRow
-            title={item.title}
-            sizeLabel={formatBytes(item.sizeBytes)}
-            isPlaying={isActive && playerStatus.playing}
-            // Buffering a 100MB mp3 over mobile data is not instant, and a
-            // button that looks idle for four seconds gets tapped again.
-            isLoading={isActive && !playerStatus.isLoaded}
-            onPress={() => toggle(item)}
-          />
-        );
-      }}
+      renderItem={({ item }) => (
+        <AudioRow
+          title={item.title}
+          // Same rule as the shelf cards: a real date, or the size, never a guess.
+          context={formatAudioDate(item.date) ?? undefined}
+          sizeLabel={formatBytes(item.sizeBytes)}
+          isPlaying={audio.isPlaying(item.url)}
+          isLoading={audio.isLoading(item.url)}
+          onPress={() => audio.toggle(item)}
+        />
+      )}
     />
   );
 };
@@ -158,9 +192,7 @@ const styles = StyleSheet.create({
     paddingTop: theme.space.tight,
   },
   // Fills the page so EmptyState's own flex:1 has a real height to resolve
-  // against, and centres the loading spinner the same way. No padding: the
-  // centring must be governed by flex alone, so it stays correct whatever
-  // height the search bar and mode switch take on a given device.
+  // against, and centres the loading spinner the same way.
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -172,20 +204,16 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.body,
     color: theme.colors.graySecondary,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: theme.space.header,
+  // SectionLabel owns its own margins, so the count is laid over the row
+  // rather than added beside it — a sibling flex child would fight the
+  // label's own space-between layout.
+  listHeadRow: {
+    justifyContent: 'center',
   },
-  headerLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: theme.fontSize.caption,
-    letterSpacing: theme.editorial.trackLabel,
-    textTransform: 'uppercase',
-    color: theme.colors.graySecondary,
-  },
-  headerCount: {
+  listHeadCount: {
+    position: 'absolute',
+    right: 0,
+    bottom: theme.space.header,
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     color: theme.colors.grayIcon,

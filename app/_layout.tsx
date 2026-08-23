@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlaybackProvider } from '../providers/PlaybackProvider';
+import { AudioFileProvider } from '../providers/AudioFileProvider';
 import { PlayerHost } from '../components/player/PlayerHost';
 import { AnimatedSplash } from '../components/ui/AnimatedSplash';
 import * as SplashScreen from 'expo-splash-screen';
@@ -77,6 +78,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <PlaybackProvider>
+        {/* The mp3 player for the church's own R2 audio. Mounted here, above
+            the Stack, for the same reason PlaybackProvider is: playback has to
+            survive navigating between the Library's audio shelves and a series
+            screen. It creates its player with NO source, so mounting it costs
+            no network. */}
+        <AudioFileProvider>
         <Stack screenOptions={{ headerShown: false }}>
           {/* (tabs) is the initial route. There is no longer a /player
               route — playback lives in the persistent PlayerHost overlay
@@ -93,6 +100,7 @@ export default function RootLayout() {
         {/* Last child so it covers the app, including the player overlay.
             Unmounted once finished — it has no reason to stay in the tree. */}
         {!splashDone && <AnimatedSplash onDone={() => setSplashDone(true)} />}
+        </AudioFileProvider>
       </PlaybackProvider>
     </SafeAreaProvider>
   );

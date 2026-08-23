@@ -48,6 +48,14 @@ export interface R2Item {
   /** Absolute URL to the media file. See normalizeUrl for the encoding catch. */
   url: string;
   sizeBytes: number;
+  /**
+   * ISO-like local timestamp ('2026-03-08T08:18:09'), added by a one-time
+   * enrichment pass over the source files. OPTIONAL, and genuinely so: 521 of
+   * 546 audio items carry one, 25 do not. Everything that sorts on it must
+   * decide where an undated item goes rather than assuming one exists — see
+   * byRecency in utils/audioGrouping.ts, which sends them to the end.
+   */
+  date?: string;
 }
 
 export type R2ManifestKind = 'audio' | 'documents';
@@ -57,7 +65,12 @@ const MANIFEST_PATH: Record<R2ManifestKind, string> = {
   documents: '/manifests/documents-manifest.json',
 };
 
-const cacheKey = (kind: R2ManifestKind) => `r2:manifest:${kind}`;
+// VERSIONED. The v1 blobs on devices predate the manifest's `date` field, and
+// a 6-hour TTL means an app updated mid-window would sort a dateless cached
+// list until it expired — i.e. the recency ordering would silently not work on
+// exactly the devices that had used the app most recently. Bumping the key
+// retires those blobs immediately instead.
+const cacheKey = (kind: R2ManifestKind) => `r2:manifest:v2:${kind}`;
 
 /**
  * THE ENCODING CATCH, and why this is not just `encodeURI`.
@@ -120,6 +133,10 @@ function parseItems(json: unknown): R2Item[] {
       sourceFilename: typeof i.sourceFilename === 'string' ? i.sourceFilename : '',
       url: normalizeUrl(i.url),
       sizeBytes: typeof i.sizeBytes === 'number' ? i.sizeBytes : 0,
+      // Anything that is not a non-empty string is dropped to undefined, so
+      // downstream code has exactly two cases to handle instead of also
+      // guarding against '' and null.
+      date: typeof i.date === 'string' && i.date.length > 0 ? i.date : undefined,
     }));
 }
 
