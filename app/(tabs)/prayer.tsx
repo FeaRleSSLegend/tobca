@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, ActivityIndicator, Linking, Pressable } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
 import { prayerStyles } from '../../constants/styles/prayer.styles';
@@ -11,6 +11,7 @@ import { currentFocus, prayerResources, archivedFocuses } from '../../data/praye
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition, FadeInUp, staggerDelay } from '../../components/ui/motion';
 import { useTabBottomClearance } from '../../hooks/useBottomClearance';
+import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { useR2Manifest } from '../../hooks/useR2Manifest';
 import { formatBytes } from '../../services/r2';
 
@@ -54,18 +55,23 @@ import { formatBytes } from '../../services/r2';
 // position restore, position saving and save-for-offline, and starting it
 // replaces whatever was playing, which is the correct behaviour and is free.
 export default function PrayerScreen() {
+    const push = useGuardedPush();
     const bottomClearance = useTabBottomClearance();
     // The church's real PDFs, from the documents manifest in R2. Additive to
     // the sections above it: `prayerResources` and `archivedFocuses` are still
     // the hand-written data they always were, and are left untouched here.
     const documents = useR2Manifest('documents');
 
-    // Straight out to the system PDF viewer. No in-app reader: a PDF is a
-    // thing people save, print and share, and the OS viewer already does all
-    // three better than anything this app would ship.
-    const openDocument = (url: string) => {
-        Linking.openURL(url).catch((e) => console.warn('Failed to open document:', e));
-    };
+    // IN-APP now, not out to the system viewer.
+    //
+    // The old behaviour handed the file to Linking.openURL and the person left
+    // for Drive or Chrome — which reads as the app ending rather than as a
+    // document opening. A 21-day fasting guide is something you read ALONGSIDE
+    // the prayer focus above it, so it stays inside the app; see app/document
+    // for how it renders a PDF without a PDF library, and for the "open
+    // externally" escape hatch that survives from the old behaviour.
+    const openDocument = (url: string, title: string) =>
+        push({ pathname: '/document', params: { url, title } });
 
     return (
         <TabTransition>
@@ -151,7 +157,7 @@ export default function PrayerScreen() {
                                 <DocumentRow
                                     title={doc.title}
                                     sizeLabel={formatBytes(doc.sizeBytes)}
-                                    onPress={() => openDocument(doc.url)}
+                                    onPress={() => openDocument(doc.url, doc.title)}
                                 />
                             </FadeInUp>
                         ))}

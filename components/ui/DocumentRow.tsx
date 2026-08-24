@@ -13,9 +13,12 @@
 // makes every row look like a wall of white paper, and it says nothing a
 // filename does not.
 //
-// The trailing glyph is "open outside", not a chevron: tapping this leaves the
-// app for the system PDF viewer, and a chevron would promise an in-app screen
-// that does not exist.
+// The trailing glyph is a CHEVRON, and that is a factual claim about where the
+// tap goes. It used to be "open outside" because tapping handed the file to the
+// system PDF viewer; the document now opens on a screen inside the app
+// (app/document), so the outward-pointing glyph would be promising the wrong
+// thing. The in-app screen keeps an "open externally" escape hatch of its own —
+// but that is a fallback there, not what this row does.
 
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,8 +36,8 @@ export const DocumentRow = ({ title, sizeLabel, onPress }: DocumentRowProps) => 
   <PressableScale
     style={styles.row}
     onPress={onPress}
-    accessibilityRole="link"
-    accessibilityLabel={`${title}, PDF${sizeLabel ? `, ${sizeLabel}` : ''}, opens outside the app`}
+    accessibilityRole="button"
+    accessibilityLabel={`${title}, PDF${sizeLabel ? `, ${sizeLabel}` : ''}`}
   >
     <View style={styles.icon}>
       <Ionicons name="document-text-outline" size={18} color={theme.colors.slate} />
@@ -47,7 +50,7 @@ export const DocumentRow = ({ title, sizeLabel, onPress }: DocumentRowProps) => 
       <Text style={styles.meta}>{sizeLabel ? `PDF · ${sizeLabel}` : 'PDF'}</Text>
     </View>
 
-    <Ionicons name="open-outline" size={18} color={theme.colors.grayIcon} />
+    <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
   </PressableScale>
 );
 

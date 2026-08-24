@@ -78,7 +78,12 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
+import {
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  setAudioModeAsync,
+  requestNotificationPermissionsAsync,
+} from 'expo-audio';
 import type { R2Item } from '../services/r2';
 import { usePlayback } from './PlaybackProvider';
 import { getPosition, savePosition, clearPosition, mediaKey } from '../utils/playbackProgress';
@@ -172,6 +177,43 @@ const SAVE_INTERVAL_MS = 5000;
 /** Below this, a saved position is not worth restoring — resuming at 0:02
  *  reads as a bug rather than as a courtesy. */
 const RESUME_FLOOR = 10;
+
+// ---------------------------------------------------------------------------
+// CALLING A PLAYER THAT MAY ALREADY BE GONE
+//
+// useAudioPlayer swaps the AudioPlayer instance every time the source changes
+// (see the long note above), and useReleasingSharedObject releases the old one
+// as soon as React commits. Anything holding the previous instance — a timer, a
+// resolved promise, a callback captured before the swap — is then pointing at a
+// JS object whose native counterpart is gone, and expo-modules throws:
+//
+//   ERR_USING_RELEASED_SHARED_OBJECT
+//   "Cannot use shared object that was already released"
+//
+// That was not theoretical. It threw from inside this provider on device,
+// React treated it as a component error, and the whole provider subtree was
+// torn down — taking the MediaSession and the media foreground service with it,
+// which is what actually stopped background playback.
+//
+// A call on a released player is meaningless BY CONSTRUCTION: that player has
+// no source, no audio and no session, and a newer one has already replaced it.
+// So the correct behaviour is a no-op, not an exception. Every imperative call
+// goes through here.
+//
+// Anything that is NOT a released-object error is re-thrown — this swallows one
+// specific, well-understood race, not errors in general.
+function callPlayer<T>(label: string, fn: () => T): T | undefined {
+  try {
+    return fn();
+  } catch (e) {
+    const code = (e as { code?: string })?.code;
+    if (code === 'ERR_USING_RELEASED_SHARED_OBJECT') {
+      if (__DEV__) console.log(`[audio] skipped "${label}" on a released player`);
+      return undefined;
+    }
+    throw e;
+  }
+}
 
 export interface AudioQueue {
   /** The tracks next()/previous() move through, in display order. */
@@ -288,39 +330,103 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
 
   const restoredFor = useRef<string | null>(null);
   const finishedFor = useRef<string | null>(null);
+  const askedForNotifications = useRef(false);
 
   useEffect(() => {
     // Without this, iOS silences playback when the ring switch is set to
     // silent — which is where a lot of phones live, and it reads as "the app's
     // audio is broken" rather than as a device setting.
     //
-    // shouldPlayInBackground is deliberately NOT set: it needs the expo-audio
-    // config plugin plus a native rebuild (iOS background audio mode, an
-    // Android foreground service), and setting the flag without that is a
-    // promise the build cannot keep. In-app playback across navigation — what
-    // the mini bar is for — needs none of it.
-    setAudioModeAsync({ playsInSilentMode: true }).catch((e) =>
-      console.warn('Failed to set audio mode:', e)
-    );
+    // BACKGROUND PLAYBACK. All three of these are load-bearing:
+    //
+    //   playsInSilentMode      iOS silences playback when the ring switch is
+    //                          set to silent, which is where a lot of phones
+    //                          live, and it reads as "the app's audio is
+    //                          broken" rather than as a device setting.
+    //
+    //   shouldPlayInBackground keeps the audio session alive when the app is
+    //                          backgrounded or the screen is locked. Defaults
+    //                          to false. This was previously left off on
+    //                          purpose, because the config plugin had not been
+    //                          told to emit the native pieces; it now is (see
+    //                          app.json), so the flag is finally honest.
+    //
+    //   interruptionMode       MUST be 'doNotMix' for the lock-screen controls
+    //                          to work. Per expo-audio's own note on
+    //                          setActiveForLockScreen: without exclusive audio
+    //                          focus "the OS might not associate lock screen
+    //                          controls with your player". It is also the right
+    //                          behaviour for a sermon — a teaching playing
+    //                          under someone else's music helps nobody.
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: 'doNotMix',
+    }).catch((e) => console.warn('Failed to set audio mode:', e));
+
     // One reconcile at startup, so a saved file that no longer exists (app
     // reinstalled, storage offloaded) does not become the one recording that
     // cannot play. See utils/audioDownloads.
     reconcileIndex().then(setDownloads).catch(() => {});
   }, []);
 
-  // AUTOPLAY ON A NEW PLAYER. `player` is a new object exactly when the source
-  // changed, which is exactly when a new track was loaded — so this effect
-  // fires once per track and never on an unrelated re-render. play() before
-  // the file is ready is fine: it sets playWhenReady, the standard behaviour
-  // of the underlying players on both platforms.
+  // AUTOPLAY + LOCK SCREEN ON A NEW PLAYER.
+  //
+  // `player` is a new object exactly when the source changed, which is exactly
+  // when a new track was loaded — so this effect fires once per track and never
+  // on an unrelated re-render. play() before the file is ready is fine: it sets
+  // playWhenReady, the standard behaviour of the underlying players on both
+  // platforms.
+  //
+  // setActiveForLockScreen IS NOT COSMETIC ON ANDROID. From expo-audio's own
+  // note on shouldPlayInBackground: "On Android, you have to enable the
+  // lockscreen controls with setActiveForLockScreen for sustained background
+  // playback. Otherwise, the audio will stop after approximately 3 minutes of
+  // background playback (OS limitation)." Enabling the config plugin alone
+  // gets you three minutes of a 50-minute sermon. It also has to be re-called
+  // for every new player object, which is why it lives here rather than in the
+  // mount effect: a player that was never made active for the lock screen is
+  // not merely missing its notification, it is on a timer.
   useEffect(() => {
     if (!current) return;
-    player.setPlaybackRate(rate);
-    player.play();
+    callPlayer('autoplay.rate', () => player.setPlaybackRate(rate));
+    callPlayer('autoplay.play', () => player.play());
+
+    // Guarded like every other native call — and additionally because this one
+    // depends on a service being present in the built manifest. If it is ever
+    // missing (an older build, the plugin not applied) the correct outcome is
+    // "playback works, notification does not".
+    callPlayer('lockScreen.activate', () =>
+      player.setActiveForLockScreen(
+        true,
+        {
+          title: current.title,
+          // The speaker is the closest thing a sermon has to an artist, and
+          // the series is the closest thing it has to an album. Both are
+          // omitted rather than filled with a placeholder when the manifest
+          // does not know them (speaker is absent on ~20% of items) — a
+          // notification reading "Unknown" is worse than one reading only the
+          // title.
+          artist: current.speaker ?? undefined,
+          albumTitle: current.series ?? undefined,
+        },
+        {
+          // A live stream has no duration and nothing to seek within, so the
+          // lock screen is told to drop the scrub bar and the seek buttons
+          // rather than showing controls that cannot do anything. This is the
+          // Mixlr path already wired: a track with kind 'live' gets the right
+          // notification for free.
+          isLiveStream: current.kind === 'live',
+          showSeekForward: current.kind === 'recording',
+          showSeekBackward: current.kind === 'recording',
+        }
+      )
+    );
+
     // `rate` is intentionally not a dependency — setRate applies it directly,
     // and listing it here would restart playback on a speed change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player]);
+  }, [player, current]);
 
   const queueIndex = useMemo(
     () => (current ? queue.findIndex((t) => t.id === current.id) : -1),
@@ -333,6 +439,26 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
       // its own WebView; leaving it running under a sermon is two of them at
       // once, which is unambiguously a bug rather than a preference.
       closeVideo();
+
+      // ANDROID 13+ NOTIFICATION PERMISSION, asked ONCE, on the first play of
+      // the session.
+      //
+      // Android hides the media foreground-service notification without it,
+      // and that notification is the transport people reach for from the lock
+      // screen. expo-audio's config plugin does NOT add POST_NOTIFICATIONS for
+      // playback — only for background RECORDING (see withAudio.ts) — so
+      // nothing else requests it.
+      //
+      // Asked HERE rather than at startup, deliberately. A permission dialog
+      // on a cold launch, before the person has done anything, is the pattern
+      // everyone has learned to dismiss; asked at the moment audio starts, it
+      // is about something they can see happening. Fire and forget: playback
+      // has already begun and a denial costs the notification, not the sermon,
+      // so nothing may block or branch on the answer.
+      if (!askedForNotifications.current) {
+        askedForNotifications.current = true;
+        requestNotificationPermissionsAsync().catch(() => {});
+      }
       setCurrent(track);
       setQueue(next?.items?.length ? next.items : [track]);
       setQueueLabel(next?.label ?? null);
@@ -342,8 +468,8 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
   );
 
   const togglePlayPause = useCallback(() => {
-    if (status.playing) player.pause();
-    else player.play();
+    if (status.playing) callPlayer('toggle.pause', () => player.pause());
+    else callPlayer('toggle.play', () => player.play());
   }, [player, status.playing]);
 
   const toggle = useCallback(
@@ -377,8 +503,9 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
     // Read the position from the PLAYER rather than from state. Keeping the
     // live position out of the controls context is what stops every audio row
     // in the app re-rendering twice a second — see AudioProgressContext.
-    if (player.currentTime > RESTART_WINDOW || queueIndex <= 0) {
-      player.seekTo(0);
+    const at = callPlayer('previous.currentTime', () => player.currentTime) ?? 0;
+    if (at > RESTART_WINDOW || queueIndex <= 0) {
+      callPlayer('previous.restart', () => player.seekTo(0));
       return;
     }
     goToIndex(queueIndex - 1);
@@ -386,8 +513,10 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
 
   const seekTo = useCallback(
     (seconds: number) => {
-      const total = player.duration;
-      player.seekTo(Math.max(0, total > 0 ? Math.min(seconds, total) : seconds));
+      const total = callPlayer('seek.duration', () => player.duration) ?? 0;
+      callPlayer('seek.seekTo', () =>
+        player.seekTo(Math.max(0, total > 0 ? Math.min(seconds, total) : seconds))
+      );
     },
     [player]
   );
@@ -399,13 +528,18 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
       setRateState(nextRate);
       // shouldCorrectPitch defaults on, which keeps a sermon at 1.5x sounding
       // like a person talking faster rather than a chipmunk.
-      player.setPlaybackRate(nextRate);
+      callPlayer('setRate', () => player.setPlaybackRate(nextRate));
     },
     [player]
   );
 
   const close = useCallback(() => {
-    player.pause();
+    callPlayer('close.pause', () => player.pause());
+    // Drop the notification with the playback it describes. Without this the
+    // lock screen keeps a dead transport for a player that no longer exists,
+    // and tapping it does nothing. Guarded for the same reason as
+    // setActiveForLockScreen — dismissing must never be able to throw.
+    callPlayer('close.clearLockScreen', () => player.clearLockScreenControls());
     // Setting the track to null nulls the hook's source, which releases this
     // player — ExoPlayer.release() / AVPlayer teardown — and builds an empty
     // one. THIS is what frees the buffered file; there is no replace(null).
@@ -431,7 +565,7 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
         if (cancelled || !saved || saved.positionSeconds < RESUME_FLOOR) return;
         // A few seconds of run-up, so you rejoin mid-sentence rather than
         // exactly where a pause cut one in half.
-        player.seekTo(Math.max(0, saved.positionSeconds - 3));
+        callPlayer('restore.seekTo', () => player.seekTo(Math.max(0, saved.positionSeconds - 3)));
       })
       .catch(() => {});
     return () => {
@@ -445,8 +579,8 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
     if (!current || current.kind !== 'recording') return;
     const id = current.id;
     const persist = () => {
-      const at = player.currentTime;
-      const total = player.duration;
+      const at = callPlayer('persist.currentTime', () => player.currentTime) ?? 0;
+      const total = callPlayer('persist.duration', () => player.duration) ?? 0;
       if (at > 0 && total > 0) savePosition(id, at, total);
     };
     if (!status.playing) {
@@ -487,7 +621,7 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
   // a source that is still resolving is dropped on both platforms, which is how
   // a 1.5x listener ends up back at 1x on every track change.
   useEffect(() => {
-    if (status.isLoaded) player.setPlaybackRate(rate);
+    if (status.isLoaded) callPlayer('reassertRate', () => player.setPlaybackRate(rate));
   }, [status.isLoaded, rate, player]);
 
   // ---- offline -------------------------------------------------------------
