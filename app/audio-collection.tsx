@@ -37,7 +37,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { AudioListRow, AUDIO_ROW_ART } from '../components/ui/AudioListRow';
 import { AudioCover } from '../components/ui/AudioCover';
 import { PressableScale } from '../components/ui/motion';
-import { useR2Manifest } from '../hooks/useR2Manifest';
+import { useAudioManifest } from '../hooks/useAudioManifest';
 import { useAudioFiles, useAudioProgress, type AudioTrack } from '../providers/AudioFileProvider';
 import { groupAudio, formatAudioDate, formatClock, type AudioSeries } from '../utils/audioGrouping';
 import { buildTrackIndex, toQueue } from '../utils/audioTracks';
@@ -88,7 +88,9 @@ export default function AudioCollectionScreen() {
   // The manifest is already cached by the time anyone can reach this screen
   // (whatever you tapped rendered from it), so this is an AsyncStorage read
   // rather than a network call.
-  const { items, status } = useR2Manifest('audio');
+  // Same scope as the Audio tab that links here — a collection screen must
+  // not show a recording the tab it was opened from has excluded.
+  const { items, status } = useAudioManifest('library');
   const grouped = useMemo(() => groupAudio(items), [items]);
   const index = useMemo(
     () => buildTrackIndex(items, grouped.seriesByUrl),

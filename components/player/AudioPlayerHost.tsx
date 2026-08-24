@@ -84,7 +84,7 @@ export function AudioPlayerHost() {
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   const audio = useAudioFiles();
-  const { position: rawPosition, duration } = useAudioProgress();
+  const { position: rawPosition, duration, isSeeking } = useAudioProgress();
   const video = usePlayback();
 
   // NO MANIFEST READ HERE, deliberately. This host is mounted at the root of
@@ -179,6 +179,10 @@ export function AudioPlayerHost() {
     return Math.max(0, Math.min(1, x / w)) * d;
   };
 
+  /** The seconds the bar last displayed under the finger — see the release
+   *  handler for why the commit reads this instead of the event. */
+  const lastScrub = useRef<number | null>(null);
+
   const scrubResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -192,16 +196,40 @@ export function AudioPlayerHost() {
       // it is the same coordinate throughout. secondsAt() clamps, which is what
       // handles a finger that has slid past either end of the bar.
       onPanResponderGrant: (e) => {
-        scrubRef.current.scrubTo(secondsAtRef.current(e.nativeEvent.locationX));
+        lastScrub.current = secondsAtRef.current(e.nativeEvent.locationX);
+        scrubRef.current.scrubTo(lastScrub.current);
       },
       onPanResponderMove: (e) => {
-        scrubRef.current.scrubTo(secondsAtRef.current(e.nativeEvent.locationX));
+        lastScrub.current = secondsAtRef.current(e.nativeEvent.locationX);
+        scrubRef.current.scrubTo(lastScrub.current);
       },
-      onPanResponderRelease: (e) => {
-        scrubRef.current.seekTo(secondsAtRef.current(e.nativeEvent.locationX));
+      // COMMIT WHAT THE BAR LAST SHOWED, not a fresh coordinate read.
+      //
+      // This used to re-read e.nativeEvent.locationX on release, and on Android
+      // that value is stale on the up event — measured on device, a drag across
+      // the bar committed a seek at roughly the gesture's MIDPOINT rather than
+      // where the finger was lifted. That is the other half of the reported
+      // glitch, and the half that explains its strangest symptom: tapping the
+      // exact target worked, because a tap's grant and release are the same
+      // point, so a stale coordinate is still the right one.
+      //
+      // The last value the move handler displayed is by definition the position
+      // the user saw under their finger, so committing it makes the seek agree
+      // with the bar by construction rather than by two coordinate reads
+      // happening to match.
+      //
+      // NO scrubTo(null) here either: seekTo() takes the display over at the
+      // target and holds it until playback arrives. Releasing here would hand
+      // the bar back to a currentTime that is still pre-seek — the backward
+      // snap. See the seek note in AudioFileProvider.
+      onPanResponderRelease: () => {
+        if (lastScrub.current !== null) scrubRef.current.seekTo(lastScrub.current);
+        lastScrub.current = null;
+      },
+      onPanResponderTerminate: () => {
+        lastScrub.current = null;
         scrubRef.current.scrubTo(null);
       },
-      onPanResponderTerminate: () => scrubRef.current.scrubTo(null),
     })
   ).current;
 
@@ -567,7 +595,16 @@ ${url}`, url });
               <View style={styles.track}>
                 <View style={[styles.trackFill, { width: `${progress * 100}%` }]} />
               </View>
-              <View style={[styles.thumb, { left: Math.max(0, progress * trackWidth - 7) }]} />
+              {/* Grows while dragging — the one piece of feedback that tells
+                  you the bar has taken your finger, on a control whose whole
+                  reported problem was feeling like it had not. */}
+              <View
+                style={[
+                  styles.thumb,
+                  isSeeking && styles.thumbSeeking,
+                  { left: Math.max(0, progress * trackWidth - (isSeeking ? 10 : 7)) },
+                ]}
+              />
             </View>
             <View style={styles.times}>
               <Text style={styles.time}>{isLive ? 'LIVE' : formatClock(position)}</Text>
@@ -963,6 +1000,10 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.white,
+  },
+  thumbSeeking: {
+    width: 20,
+    height: 20,
   },
   times: {
     flexDirection: 'row',

@@ -68,7 +68,7 @@ import { SectionLabel } from '../ui/SectionLabel';
 import { HScroll } from '../ui/HScroll';
 import { SkeletonRow, SkeletonList } from '../ui/Skeletons';
 import { formatBytes } from '../../services/r2';
-import { useR2Manifest } from '../../hooks/useR2Manifest';
+import { useAudioManifest } from '../../hooks/useAudioManifest';
 import { useAudioFiles, type AudioTrack } from '../../providers/AudioFileProvider';
 import { groupAudio, formatAudioDate } from '../../utils/audioGrouping';
 import { buildTrackIndex, toQueue } from '../../utils/audioTracks';
@@ -128,7 +128,9 @@ function useContinueListening(tracks: AudioTrack[], activeId: string | null): Au
 
 export const AudioLibrary = ({ onScroll, bottomClearance }: AudioLibraryProps) => {
   const push = useGuardedPush();
-  const { items, status, stale, reload } = useR2Manifest('audio');
+  // SCOPED. Teachings, plus the service-embedded prayer segments that are
+  // dual-listed here and on the Prayer tab. See hooks/useAudioManifest.
+  const { items, status, stale, reload } = useAudioManifest('library');
   const audio = useAudioFiles();
 
   // Two passes over 546 items, both memoised on the manifest identity — which

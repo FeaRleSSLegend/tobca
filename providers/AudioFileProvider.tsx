@@ -178,6 +178,15 @@ const SAVE_INTERVAL_MS = 5000;
  *  reads as a bug rather than as a courtesy. */
 const RESUME_FLOOR = 10;
 
+/** How close the player has to get to a seek target before the scrub bar stops
+ *  being held there. A seek lands on a keyframe and status samples twice a
+ *  second, so an exact match would never arrive. */
+const SEEK_SETTLE_EPSILON = 1.5;
+
+/** Give up holding the bar after this long, even if the position never
+ *  arrives. A bar stuck at the wrong place is worse than a brief jump. */
+const SEEK_SETTLE_TIMEOUT_MS = 2000;
+
 // ---------------------------------------------------------------------------
 // CALLING A PLAYER THAT MAY ALREADY BE GONE
 //
@@ -269,6 +278,13 @@ interface AudioControlsValue {
 interface AudioProgressValue {
   /** Seconds. The DRAGGED value while a scrubber is in use. */
   position: number;
+  /**
+   * True while the displayed position is being driven by a drag or by a seek
+   * that has not landed yet — i.e. while `position` deliberately disagrees
+   * with the player. The UI can use it for drag affordances; nothing about
+   * playback changes.
+   */
+  isSeeking: boolean;
   /** Seconds, 0 until the player has read the file's header. */
   duration: number;
   buffering: boolean;
@@ -295,6 +311,7 @@ const AudioControlsContext = createContext<AudioControlsValue | null>(null);
 // ---------------------------------------------------------------------------
 const AudioProgressContext = createContext<AudioProgressValue>({
   position: 0,
+  isSeeking: false,
   duration: 0,
   buffering: false,
 });
@@ -313,6 +330,9 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(false);
   const [rate, setRateState] = useState<PlaybackRate>(1);
   const [scrubbing, setScrubbing] = useState<number | null>(null);
+  /** The position a seek is currently travelling to, while it travels. */
+  const pendingSeek = useRef<number | null>(null);
+  const seekTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [downloads, setDownloads] = useState<DownloadIndex>({});
   const [saving, setSaving] = useState<Record<string, true>>({});
 
@@ -511,17 +531,73 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
     goToIndex(queueIndex - 1);
   }, [player, goToIndex, queueIndex]);
 
+  // ---- SEEKING, AND WHY THE DISPLAY IS HELD AFTERWARDS ---------------------
+  //
+  // THE GLITCH THIS FIXES. Dragging the scrub bar showed the thumb jump
+  // backward and then forward, or snap back and stick until you tapped the
+  // exact target. The drag itself was already correct — `scrubbing` overrode
+  // the displayed position while the finger was down. The bug was at RELEASE:
+  // the caller did
+  //
+  //     seekTo(target);   // fires a native seek, returns immediately
+  //     scrubTo(null);    // display reverts to status.currentTime — NOW
+  //
+  // and status.currentTime is still the PRE-SEEK value, because the native
+  // seek has not landed yet and the status object only refreshes every 500ms.
+  // So for up to half a second the bar rendered the old position (the snap
+  // back), then jumped again when the update finally arrived.
+  //
+  // The fix is to keep overriding the display until the player's own reported
+  // position actually reaches the target. `scrubbing` therefore has two
+  // sources now — the live drag, and this settle window — and both mean the
+  // same thing to the renderer: "ignore currentTime, show this instead".
+  //
+  // PLAYBACK IS NEVER PAUSED for any of this. The audio keeps running under
+  // the drag exactly as before; only what the bar draws is affected.
+  /** Hand the display back to live playback, whichever way the seek ended. */
+  const releaseSeekHold = useCallback(() => {
+    if (seekTimer.current !== null) {
+      clearTimeout(seekTimer.current);
+      seekTimer.current = null;
+    }
+    pendingSeek.current = null;
+    setScrubbing(null);
+  }, []);
+
   const seekTo = useCallback(
     (seconds: number) => {
       const total = callPlayer('seek.duration', () => player.duration) ?? 0;
-      callPlayer('seek.seekTo', () =>
-        player.seekTo(Math.max(0, total > 0 ? Math.min(seconds, total) : seconds))
-      );
+      const target = Math.max(0, total > 0 ? Math.min(seconds, total) : seconds);
+
+      // Hold the display AT the target, and keep holding it. Released by the
+      // settle effect below once playback has caught up — or by this deadline
+      // if it never does.
+      pendingSeek.current = target;
+      setScrubbing(target);
+      if (seekTimer.current !== null) clearTimeout(seekTimer.current);
+      seekTimer.current = setTimeout(releaseSeekHold, SEEK_SETTLE_TIMEOUT_MS);
+
+      callPlayer('seek.seekTo', () => player.seekTo(target));
     },
-    [player]
+    [player, releaseSeekHold]
   );
 
-  const scrubTo = useCallback((seconds: number | null) => setScrubbing(seconds), []);
+  /**
+   * Called continuously while the bar is dragged. Passing a number takes the
+   * display over; passing null releases it — but note that a release is
+   * normally followed by seekTo(), which immediately takes it over again for
+   * the settle window. Only a CANCELLED gesture releases outright.
+   */
+  const scrubTo = useCallback(
+    (seconds: number | null) => {
+      if (seconds === null) {
+        releaseSeekHold();
+        return;
+      }
+      setScrubbing(seconds);
+    },
+    [releaseSeekHold]
+  );
 
   const setRate = useCallback(
     (nextRate: PlaybackRate) => {
@@ -616,6 +692,34 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
     if (hasNext) goToIndex(queueIndex + 1);
     // No wrap and no autoplay past the end. A series plays through and stops.
   }, [status.didJustFinish, status.currentTime, current, hasNext, goToIndex, queueIndex]);
+
+  // ---- RELEASING THE SEEK HOLD --------------------------------------------
+  //
+  // Two ways out, and they need different mechanisms:
+  //
+  //   caught up   the player's reported position is within SEEK_SETTLE_EPSILON
+  //               of where we asked it to go. Checked on each status tick.
+  //               Normal case, usually the very next tick.
+  //   timed out   the position never arrives — a failed seek, a track change
+  //               mid-gesture, a source that cannot seek. A bar stuck at a
+  //               position the audio is not at is a worse failure than the
+  //               glitch this all exists to fix, so there is a deadline.
+  //
+  // THE TIMEOUT IS ARMED IN seekTo, NOT IN THIS EFFECT, and that placement is
+  // the whole point. Armed here, it would be cleared and re-created on every
+  // status tick — and status ticks every 500ms against a 2000ms deadline, so
+  // it could never actually elapse. The one case the timeout exists for is the
+  // one where it would never have fired.
+  //
+  // The epsilon is generous (1.5s) because a seek lands on a keyframe, not on
+  // the exact millisecond requested, and because status only samples twice a
+  // second — demanding an exact match would never release.
+  useEffect(() => {
+    const target = pendingSeek.current;
+    if (target === null) return;
+    if (Math.abs(status.currentTime - target) > SEEK_SETTLE_EPSILON) return;
+    releaseSeekHold();
+  }, [status.currentTime, releaseSeekHold]);
 
   // Rate has to be re-asserted once the file is actually loaded: setting it on
   // a source that is still resolving is dropped on both platforms, which is how
@@ -727,6 +831,7 @@ export function AudioFileProvider({ children }: { children: React.ReactNode }) {
   const progress = useMemo<AudioProgressValue>(
     () => ({
       position: scrubbing ?? status.currentTime,
+      isSeeking: scrubbing !== null,
       duration: status.duration,
       buffering: status.isBuffering,
     }),

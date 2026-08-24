@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { theme } from '../../constants/theme';
 import { sharedStyles } from '../../constants/styles/sharedStyles';
@@ -11,6 +12,12 @@ import { currentFocus, prayerResources, archivedFocuses } from '../../data/praye
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition, FadeInUp, staggerDelay } from '../../components/ui/motion';
 import { useTabBottomClearance } from '../../hooks/useBottomClearance';
+import { AudioListRow, AUDIO_ROW_ART } from '../../components/ui/AudioListRow';
+import { useAudioManifest } from '../../hooks/useAudioManifest';
+import { useAudioFiles, useAudioProgress } from '../../providers/AudioFileProvider';
+import { buildTrackIndex } from '../../utils/audioTracks';
+import { formatAudioDate, formatClock, groupAudio } from '../../utils/audioGrouping';
+import { StyleSheet } from 'react-native';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { useR2Manifest } from '../../hooks/useR2Manifest';
 import { formatBytes } from '../../services/r2';
@@ -61,6 +68,31 @@ export default function PrayerScreen() {
     // the sections above it: `prayerResources` and `archivedFocuses` are still
     // the hand-written data they always were, and are left untouched here.
     const documents = useR2Manifest('documents');
+
+    // PRAYER RECORDINGS. The other half of the audio manifest — see
+    // utils/audioPurpose for how a title is decided to be prayer rather than
+    // teaching, and hooks/useAudioManifest for why the scope lives in one place.
+    //
+    // Note this list is NOT the complement of the Library's: the service-embedded
+    // prayer segments appear in both, because they are prayer AND part of the
+    // services they were recorded in.
+    const prayerAudio = useAudioManifest('prayer');
+    const audio = useAudioFiles();
+    // Duration is a live reading off the player, so only the loaded row has one.
+    const { duration } = useAudioProgress();
+
+    // Memoised on the manifest identity. groupAudio is run only to supply the
+    // series lookup buildTrackIndex expects; none of these 14 recordings is
+    // expected to belong to a series, and the map is simply empty when so.
+    const prayerTracks = useMemo(() => {
+        const { seriesByUrl } = groupAudio(prayerAudio.items);
+        return buildTrackIndex(prayerAudio.items, seriesByUrl).all;
+    }, [prayerAudio.items]);
+
+    const prayerSizeByUrl = useMemo(
+        () => new Map(prayerAudio.items.map((i) => [i.url, formatBytes(i.sizeBytes)])),
+        [prayerAudio.items]
+    );
 
     // IN-APP now, not out to the system viewer.
     //
@@ -122,6 +154,71 @@ export default function PrayerScreen() {
                     ))}
                 </HScroll>
 
+                {/* PRAYER AUDIO — recordings of prayer gatherings, split out
+                    of the audio manifest by utils/audioPurpose.
+
+                    ROWS ARE AudioListRow, the same component the Library's Audio
+                    tab uses, not a Prayer-tab lookalike. This is the same kind of
+                    object on a different tab: same artwork treatment, same
+                    title/speaker/date/duration, same currently-playing marker,
+                    and — because it goes through the same AudioFileProvider —
+                    the same mini player and the same resume position. A person
+                    who starts a recording here and opens the Library sees it
+                    still playing, which only holds because nothing here is a
+                    second implementation.
+
+                    Sits directly above Documents so the two resource sections —
+                    what you can listen to, what you can read — are neighbours.
+
+                    The section is omitted entirely when empty rather than
+                    showing a placeholder: on a manifest with no prayer
+                    recordings, a header over nothing is worse than no header. */}
+                {prayerTracks.length > 0 && (
+                    <>
+                        <SectionLabel label="Prayer Audio" />
+                        <View style={prayerAudioStyles.list}>
+                            {prayerTracks.map((track, i) => {
+                                const isActive = audio.isActive(track.id);
+                                return (
+                                    <View key={track.id}>
+                                        {i > 0 && <View style={prayerAudioStyles.divider} />}
+                                        <AudioListRow
+                                            title={track.title}
+                                            series={track.series}
+                                            speaker={track.speaker}
+                                            date={formatAudioDate(track.date)}
+                                            duration={
+                                                isActive && duration > 0 ? formatClock(duration) : null
+                                            }
+                                            sizeLabel={
+                                                track.sourceUrl
+                                                    ? prayerSizeByUrl.get(track.sourceUrl)
+                                                    : null
+                                            }
+                                            isActive={isActive}
+                                            isPlaying={audio.isPlaying(track.id)}
+                                            isLoading={audio.isLoading(track.id)}
+                                            isSaved={
+                                                !!track.sourceUrl && audio.isSaved(track.sourceUrl)
+                                            }
+                                            // The queue is this section, so
+                                            // next/previous move through the
+                                            // prayer recordings rather than
+                                            // jumping into Library teachings.
+                                            onPress={() =>
+                                                audio.toggle(track, {
+                                                    items: prayerTracks,
+                                                    label: 'Prayer Audio',
+                                                })
+                                            }
+                                        />
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    </>
+                )}
+
                 {/* DOCUMENTS — the real, downloadable guides. Placed next to
                     the resource shelf above because they are the same kind of
                     thing, and before Archive so live material outranks past
@@ -181,3 +278,18 @@ export default function PrayerScreen() {
         </TabTransition>
     );
 }
+
+const prayerAudioStyles = StyleSheet.create({
+    list: {
+        // SectionLabel owns the gap above; the list contributes nothing of its
+        // own, the same rule every other section on this screen follows.
+        marginTop: -theme.space.micro,
+    },
+    // The same hairline the Library's audio lists use, inset to the title's
+    // left edge so a prayer recording looks identical in both places.
+    divider: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: theme.colors.grayBorder,
+        marginLeft: AUDIO_ROW_ART + theme.space.tight + 4,
+    },
+});
