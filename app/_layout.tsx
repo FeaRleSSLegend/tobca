@@ -1,9 +1,11 @@
 // app/_layout.tsx
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlaybackProvider } from '../providers/PlaybackProvider';
 import { AudioFileProvider } from '../providers/AudioFileProvider';
+import { AppearanceProvider } from '../providers/AppearanceProvider';
 import { PlayerHost } from '../components/player/PlayerHost';
 import { AudioPlayerHost } from '../components/player/AudioPlayerHost';
 import { AnimatedSplash } from '../components/ui/AnimatedSplash';
@@ -78,6 +80,36 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      {/* THE APP-WIDE STATUS BAR DEFAULT.
+          'dark' means DARK ICONS, for a LIGHT background — which is what the
+          time, battery and signal sit on almost everywhere in this app.
+
+          Before this existed the app rendered no StatusBar at all, so Android
+          kept its platform default of light (white) icons and they vanished
+          against every screen: the app runs edge-to-edge, so the screen's own
+          background — theme.colors.bg, #F7F8F9 — is what shows behind the
+          status bar rather than a system-drawn strip.
+
+          AUDIT, all 15 routes: every one of them is theme.colors.bg or
+          colors.surface behind the status bar, so 'dark' is correct for all of
+          them and none needs an override. The three surfaces that are NOT
+          light are not routes at all — they are overlays and a scrolling
+          masthead, and each carries its own override:
+            components/player/PlayerHost.tsx       full-screen video, black
+            components/player/AudioPlayerHost.tsx  full player, dark gradient
+            app/playlist/[id].tsx                  scrimmed artwork masthead
+          Rendered first, so anything mounted later wins over it — which is
+          precisely how those three take control and hand it back. New screens
+          that need an override should use components/ui/ScreenStatusBar,
+          which is focus-scoped; see the note in that file for why a plain
+          <StatusBar> per screen is a trap inside a tab navigator. */}
+      <StatusBar style="dark" />
+      {/* The user's Light/Dark/System choice. Outermost of the app providers
+          because it is the only one nothing else depends on, and because the
+          dark-mode follow-up will need it to sit above everything that draws.
+          It stores the choice only — it does not restyle anything yet; see the
+          note at the top of AppearanceProvider.tsx. */}
+      <AppearanceProvider>
       <PlaybackProvider>
         {/* The mp3 player for the church's own R2 audio. Mounted here, above
             the Stack, for the same reason PlaybackProvider is: playback has to
@@ -114,6 +146,7 @@ export default function RootLayout() {
         {!splashDone && <AnimatedSplash onDone={() => setSplashDone(true)} />}
         </AudioFileProvider>
       </PlaybackProvider>
+      </AppearanceProvider>
     </SafeAreaProvider>
   );
 }

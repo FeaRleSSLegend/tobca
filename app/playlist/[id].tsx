@@ -16,6 +16,7 @@ import { theme } from '../../constants/theme';
 import { SmartImage } from '../../components/ui/SmartImage';
 import { PressableScale, FadeInUp, staggerDelay } from '../../components/ui/motion';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ScreenStatusBar } from '../../components/ui/ScreenStatusBar';
 import { Shimmer } from '../../components/ui/motion';
 import { Message } from '../../data/content';
 import { displayTitle, displaySubtitle } from '../../utils/contentGrouping';
@@ -41,6 +42,9 @@ export default function PlaylistScreen() {
   const [items, setItems] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  // True while the scrimmed artwork masthead still sits under the status bar.
+  // Starts true because the screen opens at offset 0, with the masthead there.
+  const [mastheadUnderStatusBar, setMastheadUnderStatusBar] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +92,30 @@ export default function PlaylistScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomClearance }}>
+      {/* THE ONE ROUTE WHOSE STATUS BAR CHANGES AS YOU SCROLL.
+          Everywhere else in the app the background under the status bar is a
+          fixed light colour and the app-wide 'dark' default in app/_layout.tsx
+          is right. Here it depends on scroll position: at rest the artwork
+          masthead — capped by a dark scrim so the back button reads — is under
+          the status bar and needs LIGHT icons; scroll the masthead away and
+          theme.colors.bg is under it, which needs DARK ones. A single fixed
+          choice is wrong half the time either way.
+
+          The threshold is the masthead's own height less roughly a status
+          bar's worth, so the icons flip just before the light content arrives
+          under them rather than just after. Held in state so the value only
+          changes at the crossing — a full re-render per scroll event would
+          cost far more than this screen gains. */}
+      <ScreenStatusBar style={mastheadUnderStatusBar ? 'light' : 'dark'} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: bottomClearance }}
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          const past = e.nativeEvent.contentOffset.y > heroHeight - 48;
+          setMastheadUnderStatusBar(!past);
+        }}
+      >
         {/* MASTHEAD — large artwork with a scrim the title sits on. */}
         <View style={[styles.masthead, { height: heroHeight }]}>
           {cover ? (

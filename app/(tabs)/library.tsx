@@ -97,12 +97,26 @@ export default function LibraryScreen() {
 
     const filterVisible = mode === 'video' ? videoScroll.visible : audioScroll.visible;
 
-    // Tapping a mode drives the same pager the swipe does, so the two input
-    // methods can never disagree about which mode is showing. The animated
-    // scroll IS the mode transition: the new library slides in while the old
-    // one leaves, which is why nothing here cross-fades or remounts — a mode
-    // change should read as moving between two places that both already
-    // exist, not as the screen being rebuilt.
+    // THE BRANCH FILTER'S REAL HEIGHT, reported by the row itself once it has
+    // laid out. It floats over the video page rather than sitting above it
+    // (see the long note in BranchFilter.tsx — collapsing its height mid-scroll
+    // is what caused the Video tab's scroll glitch), so the space it occupies
+    // has to be reserved here instead, as CONSTANT padding that does not change
+    // when the bar hides. Constant is the entire point: reserved space that
+    // never changes cannot fight the scroll position.
+    //
+    // Starts at 0 and only ever grows, matching what the row reports. On the
+    // very first frame the page is therefore 0pt short at the top for exactly
+    // as long as it takes the row to measure, which is before paint.
+    const [filterHeight, setFilterHeight] = useState(0);
+
+    // Tapping a mode scrolls the pager to it. The pager is TAP-DRIVEN ONLY —
+    // its own swipe is disabled (see scrollEnabled below) — so this is the one
+    // and only way the mode changes. The animated scroll IS the transition:
+    // the new library slides in while the old one leaves, which is why nothing
+    // here cross-fades or remounts. A mode change should read as moving
+    // between two places that both already exist, not as the screen being
+    // rebuilt.
     const goToMode = useCallback((next: LibraryMode) => {
         const index = MODES.indexOf(next);
         if (index < 0) return;
@@ -159,11 +173,21 @@ export default function LibraryScreen() {
         <ScreenWithWatermark style={sharedStyles.container}>
             <View style={sharedStyles.headerRow}>
                 <Text style={sharedStyles.screenTitle}>Library</Text>
-                <View style={sharedStyles.avatar}>
-                    <Text style={{ fontSize: theme.fontSize.body, fontFamily: theme.fontFamily.display, color: theme.colors.white }}>
-                        JN
-                    </Text>
-                </View>
+                {/* SETTINGS, replacing the "JN" initials disc that used to sit
+                    here. The disc was an avatar for an account that does not
+                    exist — the app has no sign-in, so it named a person who was
+                    never asked who they are and did nothing when tapped. A gear
+                    in the top-right is the one control people already look for
+                    there, and it now goes somewhere. */}
+                <PressableScale
+                    style={LibraryStyles.settingsBtn}
+                    onPress={() => push('/settings')}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Settings"
+                >
+                    <Ionicons name="settings-outline" size={20} color={theme.colors.navy} />
+                </PressableScale>
             </View>
 
             <SearchBar />
@@ -185,30 +209,31 @@ export default function LibraryScreen() {
                 />
             </View>
 
-            {/* VIDEO ONLY, and that is a data fact rather than a design
-                preference: the R2 audio manifest carries no branch field, so
-                on the Audio mode these pills would have nothing to filter by.
-                Leaving them visible would mean tapping "Wuse 2" emptied a list
-                that has no branch information at all — a control that lies
-                about what it did. They come back the moment audio items carry
-                a branch.
-
-                Auto-hides while scrolling down, returns on scroll up — the
-                same rule as the Bible reader's quick-nav, shared via
-                useAutoHideOnScroll rather than reimplemented. */}
-            {mode === 'video' && (
-                <BranchFilter value={branch} onChange={setBranch} visible={filterVisible} />
-            )}
+            {/* THE PAGER, plus the branch filter FLOATING OVER IT.
+                The stack exists so the filter row can be an overlay: it is
+                positioned absolutely at the top of this box (LibraryStyles.
+                filterOverlay), and the video page reserves its height as fixed
+                contentContainer padding. See BranchFilter.tsx for why — in
+                short, the row used to collapse its own height in normal flow,
+                which resized the scroll viewport mid-gesture and made the Video
+                tab jump and oscillate while scrolling. */}
+            <View style={{ flex: 1 }}>
 
             {/* THE PAGER.
-                A plain horizontal FlatList with pagingEnabled — deliberately
-                not a new dependency. The project has no react-native-pager-view
-                and no reanimated (Expo Go compatibility is a hard constraint
-                here), and a two-page swipe does not justify adding either.
-                windowSize/initialNumToRender are pinned so BOTH pages stay
-                mounted: unmounting the inactive page would throw away its
-                scroll position every time you switch, which is exactly the
-                thing that makes a paged UI feel cheap.
+                A plain horizontal FlatList — deliberately not a new dependency.
+                The project has no react-native-pager-view and no reanimated
+                (Expo Go compatibility is a hard constraint here), and two pages
+                do not justify adding either. windowSize/initialNumToRender are
+                pinned so BOTH pages stay mounted: unmounting the inactive page
+                would throw away its scroll position every time you switch,
+                which is exactly the thing that makes a paged UI feel cheap.
+
+                SWIPE IS OFF (scrollEnabled={false}). The mode is changed by the
+                MediaModeSwitch and by nothing else — see the note there. What
+                remains is a programmatically-scrolled container: scrollToIndex
+                still animates with scrolling disabled, so the tap still reads
+                as travelling between two places rather than a hard cut, and
+                both pages still stay mounted.
 
                 Page width is the CONTENT width, not the window width — this
                 list sits inside sharedStyles.container, which already applies
@@ -221,6 +246,18 @@ export default function LibraryScreen() {
                 keyExtractor={(p) => p}
                 horizontal
                 pagingEnabled
+                // NO SWIPE BETWEEN MODES. Two reasons it is gone rather than
+                // kept as a second way in:
+                //   - it was undiscoverable, and a gesture nobody knows about
+                //     is only ever triggered by accident;
+                //   - every shelf on both pages is itself a horizontal
+                //     scroller, so the pager was permanently arbitrating for
+                //     the same axis as its own children. With it disabled the
+                //     shelves are the only horizontal scrollers on the screen
+                //     and cannot lose a pan to an ancestor.
+                // The shelves keep their own scrolling entirely: this flag is
+                // scoped to THIS list and does not inherit.
+                scrollEnabled={false}
                 showsHorizontalScrollIndicator={false}
                 initialNumToRender={MODES.length}
                 windowSize={MODES.length}
@@ -230,14 +267,6 @@ export default function LibraryScreen() {
                     offset: pageWidth * index,
                     index,
                 })}
-                // Momentum end, not onScroll: committing the mode mid-drag
-                // would flip the mode switch back and forth while the finger
-                // is still moving.
-                onMomentumScrollEnd={(e) => {
-                    const index = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
-                    const next = MODES[index];
-                    if (next && next !== mode) setMode(next);
-                }}
                 // height:'100%' on the page wrapper so a page's child can
                 // resolve flex:1 against the pager's real height — without it
                 // the Audio page's empty state has no height to centre within.
@@ -248,7 +277,15 @@ export default function LibraryScreen() {
                                 showsVerticalScrollIndicator={false}
                                 onScroll={videoScroll.onScroll}
                                 scrollEventThrottle={16}
-                                contentContainerStyle={{ paddingBottom: bottomClearance }}
+                                // paddingTop is the space the floating filter
+                                // sits in. FIXED, whether the bar is showing or
+                                // hidden: content passes under a hidden bar
+                                // rather than the page re-laying itself out,
+                                // which is the whole fix.
+                                contentContainerStyle={{
+                                    paddingTop: filterHeight,
+                                    paddingBottom: bottomClearance,
+                                }}
                             >
                     {/* A branch with no content is a fact worth stating. Without
                         this the screen would just render as a blank scroll and
@@ -445,6 +482,35 @@ export default function LibraryScreen() {
                     </View>
                 )}
             />
+
+            {/* VIDEO ONLY, and that is a data fact rather than a design
+                preference: the R2 audio manifest carries no branch field, so
+                on the Audio mode these pills would have nothing to filter by.
+                Leaving them visible would mean tapping "Wuse 2" emptied a list
+                that has no branch information at all — a control that lies
+                about what it did. They come back the moment audio items carry
+                a branch.
+
+                Auto-hides while scrolling down, returns on scroll up — the
+                same rule as the Bible reader's quick-nav, shared via
+                useAutoHideOnScroll rather than reimplemented.
+
+                RENDERED AFTER THE PAGER, not before it. It is absolutely
+                positioned, and later siblings paint on top — the same reason
+                LogoWatermark is written first in ScreenWithWatermark. No
+                zIndex needed, and none wanted: negative/positive zIndex on
+                Android has already bitten this codebase once. */}
+            {mode === 'video' && (
+                <BranchFilter
+                    value={branch}
+                    onChange={setBranch}
+                    visible={filterVisible}
+                    style={LibraryStyles.filterOverlay}
+                    onMeasure={setFilterHeight}
+                />
+            )}
+
+            </View>
         </ScreenWithWatermark>
         </TabTransition>
     );

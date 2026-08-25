@@ -64,6 +64,37 @@ export const LibraryStyles = StyleSheet.create({
   hScrollCard: {
     width: theme.layout.rowCard.width,
   },
+  // The gear in the header, where the "JN" avatar disc used to be. Same 32pt
+  // footprint so the title row's height is unchanged, but no fill: the disc
+  // was solid navy because it stood in for a photo, and a filled circle around
+  // a utility glyph would out-shout the page title next to it. hitSlop on the
+  // control takes the real target past 44pt.
+  settingsBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // THE BRANCH FILTER'S POSITION on this screen: floated over the top of the
+  // pager rather than stacked above it.
+  //
+  // This is the layout half of the Video-tab scroll-glitch fix. In flow, the
+  // row hid by collapsing its own height, which resized the scroll viewport
+  // underneath it mid-gesture — see the full mechanism in BranchFilter.tsx.
+  // Out of flow it can hide by translating instead, and the scroller's box
+  // never changes size at all. The video page reserves the row's measured
+  // height as fixed contentContainer padding, so content still starts below
+  // the pills; it just passes UNDER them on the way out.
+  //
+  // No zIndex: it is rendered as a later sibling than the pager, and later
+  // siblings paint on top. Android has dropped negatively-indexed views from
+  // this app's tree before, so paint order is the safer lever.
+  filterOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
   // NOTE: filterView / filterRow / filteredCountLabel / gridContainer /
   // gridItem were removed in the discovery-hub redesign — the pill row and
   // in-place filtered grid they styled moved to the collection screens

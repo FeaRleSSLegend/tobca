@@ -31,6 +31,7 @@ import {
   Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
@@ -389,6 +390,18 @@ export function PlayerHost() {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {/* LIGHT STATUS BAR ICONS WHILE THE FULL PLAYER IS UP.
+          Expanded, this covers the screen with theme.colors.black under the
+          status bar, so the app's default dark icons disappear into it.
+
+          Conditional MOUNT, not a conditional style: React Native applies the
+          last StatusBar entry pushed onto its stack, so collapsing back to the
+          floating mini window unmounts this and the app-wide 'dark' default in
+          app/_layout.tsx resumes on its own. The collapsed floating window is
+          a small rect in the middle of the screen and correctly gets nothing —
+          the screen behind it keeps its own style. */}
+      {expanded && <StatusBar style="light" animated />}
+
       {/* Full black backdrop — only visible when expanded, tap-through when
           collapsed so the app stays usable behind the floating window. */}
       <Animated.View

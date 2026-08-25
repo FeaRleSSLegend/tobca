@@ -47,6 +47,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSegments } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import {
@@ -379,6 +380,24 @@ ${url}`, url });
   // ---------------------------------------------------------------------------
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {/* LIGHT STATUS BAR ICONS WHILE THE FULL PLAYER IS UP.
+          The expanded sheet fills the screen with a dark gradient (palette →
+          navy → black) that runs under the status bar, and the app's default
+          dark icons were invisible on it.
+
+          Mounted conditionally rather than styled conditionally, and that is
+          the point: React Native keeps a STACK of StatusBar entries and applies
+          the last one mounted, so collapsing the player unmounts this and the
+          app-wide 'dark' default in app/_layout.tsx takes over again by itself.
+          Nothing has to remember to put it back.
+
+          Deliberately NOT ScreenStatusBar: this is an overlay, not a route. It
+          has no focus state to key off, and it is already topmost whenever it
+          is visible. The MINI BAR gets nothing — it docks above the tab bar,
+          nowhere near the status bar, and the screen behind it keeps its own
+          style. */}
+      {expanded && <StatusBar style="light" animated />}
+
       {/* ---------------- MINI BAR ---------------- */}
       <Animated.View
         style={[
