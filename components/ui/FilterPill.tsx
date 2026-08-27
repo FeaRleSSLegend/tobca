@@ -47,7 +47,7 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
             // as VerseOfDayCard's shareBtn: extend the tappable area with
             // hitSlop instead of growing the pill itself, so a row of these
             // doesn't get visually heavier just to satisfy touch-target math.
-            hitSlop={8}
+            hitSlop={theme.control.hitSlop.sm}
             accessibilityRole="button"
             // Active state was previously conveyed by color alone (navy fill
             // vs white) — invisible to a screen reader. selected:true is what
@@ -66,8 +66,15 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
 const useStyle = makeThemedStyles((c) => ({
     pillStyle: {
         borderRadius: theme.radius.full,
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
+        // The `sm` control pair. A pill row is the one place a sub-44pt
+        // control is right - a row of 44pt pills is a wall - so the height is
+        // 36 and the tap target is restored with control.hitSlop.sm on the
+        // pressable itself. Height rather than paddingVertical: the label's
+        // line box varies with the OS text-size setting, and a padding-derived
+        // height made the pills in one row disagree by a point or two.
+        height: theme.control.height.sm,
+        paddingHorizontal: theme.control.padX.sm,
+        justifyContent: 'center',
         alignItems: 'center',
         // Without this, Pressable inside a horizontal ScrollView stretches
         // to fill the scroll container's full height — turning a pill into

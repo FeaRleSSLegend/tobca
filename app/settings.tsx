@@ -152,6 +152,10 @@ export default function SettingsScreen() {
         <PressableScale
           style={styles.backBtn}
           onPress={() => router.back()}
+          // Drawn at 32pt. Back is the most-used control on a pushed
+          // screen and it sits in the hardest corner to reach, so it gets the
+          // hitSlop that lifts it to the 44pt floor.
+          hitSlop={theme.control.hitSlop.iconSm}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
@@ -339,21 +343,35 @@ const useStyles = makeThemedStyles((c) => ({
     backgroundColor: c.border,
     marginLeft: theme.spacing.lg + 28 + theme.spacing.md,
   },
+  // The row that holds the three appearance options. Its padding is the
+  // CARD's inset, so it matches the 16pt the rows in every other card on this
+  // screen use, rather than the 12 it had - which is what made the control
+  // look wedged into its card.
   segment: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    padding: theme.spacing.md,
+    padding: theme.spacing.lg,
   },
+  // WHY THIS LOOKED CRAMPED, specifically. It had no height and no horizontal
+  // padding at all: the height fell out of `paddingVertical: 12` plus a line
+  // of 13pt text, landing at ~40pt (under the 44 floor), and with zero side
+  // padding the icon sat hard against the left edge of its own box while the
+  // label ran to the right one. Three items in a flex row then squeezed
+  // "System" hardest, so the control read as progressively tighter left to
+  // right.
+  //
+  // Now an explicit `md` control with its paired side padding, so the icon and
+  // label have the same air on both sides and all three items are the same
+  // comfortable height.
   segmentItem: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    // Was `theme.space.micro + 2`, i.e. 6, which is on neither scale. This is
-    // an icon sitting next to its own label, which is precisely what
-    // `space.tight` is defined to mean.
-    gap: theme.space.tight,
-    paddingVertical: theme.spacing.md,
+    // An icon sitting next to its own label, which is what `control.gap.md` is.
+    gap: theme.control.gap.md,
+    height: theme.control.height.md,
+    paddingHorizontal: theme.control.padX.sm,
     borderRadius: theme.radius.sm,
     borderWidth: theme.layout.cardBorderWidth,
     borderColor: c.border,

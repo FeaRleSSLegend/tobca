@@ -152,7 +152,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail
           accessibilityRole="button"
           accessibilityLabel="Watch the live stream"
         >
-          <Ionicons name="play" size={16} color={c.pink} style={{ marginLeft: theme.space.hairline }} />
+          <Ionicons name="play" size={16} color={c.accentOnLight} style={{ marginLeft: theme.space.hairline }} />
           <Text style={liveStyles.primaryBtnText}>Watch now</Text>
         </PressableScale>
       </View>
@@ -186,8 +186,12 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail
         accessibilityLabel={`Add ${nextService.name} to calendar`}
       >
         <View style={liveStyles.primaryBtn}>
-          <Ionicons name="calendar-outline" size={15} color={c.navy} />
-          <Text style={[liveStyles.primaryBtnText, { color: c.navy }]}>
+          <Ionicons name="calendar-outline" size={15} color={c.inkOnLight} />
+          {/* inkOnLight rather than the sheet's accent: "Add to Calendar" is
+              the quieter, secondary variant of this control, so it is ink on
+              white rather than brand pink on white. Both are literal, because
+              the pill under them is. */}
+          <Text style={[liveStyles.primaryBtnText, { color: c.inkOnLight }]}>
             Add to Calendar
           </Text>
         </View>
@@ -232,13 +236,16 @@ const useHeroStyles = makeThemedStyles((c) => ({
     alignSelf: 'flex-start',
     marginTop: theme.spacing.lg,
   },
+  // Was 46 tall with 24pt side padding - a third set of numbers for the same
+  // control. Now the shared `md` pair, so the hero CTA and the gradient card's
+  // button are the same object at the same size.
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.sm,
-    height: 46,
-    paddingHorizontal: theme.spacing.xxl,
+    gap: theme.control.gap.md,
+    height: theme.control.height.md,
+    paddingHorizontal: theme.control.padX.md,
     borderRadius: theme.radius.full,
     backgroundColor: c.white,
   },

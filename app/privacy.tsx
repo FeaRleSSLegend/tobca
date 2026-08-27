@@ -64,6 +64,10 @@ export default function PrivacyScreen() {
         <PressableScale
           style={styles.backBtn}
           onPress={() => router.back()}
+          // Drawn at 32pt. Back is the most-used control on a pushed
+          // screen and it sits in the hardest corner to reach, so it gets the
+          // hitSlop that lifts it to the 44pt floor.
+          hitSlop={theme.control.hitSlop.iconSm}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >

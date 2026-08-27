@@ -133,6 +133,59 @@ export const space = {
 // them. section (24) > header (12) > tight (8) encodes that directly.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// CONTROLS — the sizing rules for anything you can tap.
+//
+// WHY THIS EXISTS. An audit of every interactive element found declared
+// heights of 22, 24, 26, 28, 30, 32, 36, 40, 42, 44, 46, 50, 52, 54, 56 and
+// 60, most of them written where they were needed and none of them agreeing.
+// Two consequences, both of which were reported as "looks off" rather than as
+// a spacing bug, because that is how this always surfaces:
+//
+//   - controls that sit next to each other are a few points different in
+//     height, which reads as sloppiness without being locatable;
+//   - anything under 44pt is below Apple's HIG minimum and several were drawn
+//     at 28-32 with no hitSlop, so they were genuinely hard to hit.
+//
+// THREE HEIGHTS, and a control picks the one that matches its JOB rather than
+// inventing a number:
+//
+//   sm  36  a chip in a dense row (filter pills, small toggles). Below the
+//           44pt floor ON PURPOSE - a row of 44pt pills is a wall - so it
+//           MUST be paired with `hitSlop.sm`, which restores the real target.
+//   md  44  the default. Buttons, fields, segmented items, menu rows.
+//   lg  52  a screen's single primary action.
+//
+// PADDING IS PAIRED WITH HEIGHT, not chosen separately: a 44pt control with
+// 12pt of side padding looks pinched, and a 36pt one with 20pt looks stretched.
+// Use padX[size] with height[size].
+//
+// THE ONE RULE THAT MATTERS MOST: a control's TAP TARGET is never smaller than
+// `minTarget`, whatever it is drawn at. If the drawn height is below it, the
+// difference is made up with hitSlop, which costs no layout and no pixels.
+// ---------------------------------------------------------------------------
+export const control = {
+  /** Drawn height. Pick by job; see the note above. */
+  height: { sm: 36, md: 44, lg: 52 },
+  /** Horizontal padding, paired with the height of the same name. */
+  padX: { sm: 12, md: 16, lg: 20 },
+  /** Icon-to-label gap inside a control. `md` is the default. */
+  gap: { sm: 6, md: 8 },
+  /** Square icon-only buttons: a bare glyph, no label. */
+  icon: { sm: 32, md: 40, lg: 44 },
+  /** Apple HIG's minimum comfortable target. Nothing tappable falls below it. */
+  minTarget: 44,
+  /**
+   * hitSlop that lifts each drawn size to `minTarget`. Symmetric, so the
+   * target stays centred on the control.
+   *   sm  36 -> 44   iconSm 32 -> 44
+   */
+  hitSlop: {
+    sm: { top: 4, bottom: 4, left: 4, right: 4 },
+    iconSm: { top: 6, bottom: 6, left: 6, right: 6 },
+  },
+} as const;
+
 export const radius = {
   sm: 12,   // small cards, pills
   md: 14,   // standard cards
@@ -271,6 +324,7 @@ export const editorial = {
 // Bundled export so you can do: import { theme } from '@/constants/theme'
 export const theme = {
   colors,
+  control,
   gradient,
   spacing,
   radius,

@@ -27,15 +27,23 @@ export const ReadingViewport = ({
       <View style={styles.header}>
         <Text style={styles.reference}>{reference} ({translation.toUpperCase()})</Text>
         <View style={styles.controls}>
-          <Pressable 
+          <Pressable
             onPress={() => setFontSize(prev => Math.max(12, prev - 2))}
             style={styles.sizeBtn}
+            // Drawn at 28pt, which is well under the 44pt floor. hitSlop lifts
+            // the target without making the control heavier on screen.
+            hitSlop={theme.control.hitSlop.iconSm}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease text size"
           >
             <Text style={styles.sizeBtnText}>A-</Text>
           </Pressable>
-          <Pressable 
+          <Pressable
             onPress={() => setFontSize(prev => Math.min(20, prev + 2))}
             style={styles.sizeBtn}
+            hitSlop={theme.control.hitSlop.iconSm}
+            accessibilityRole="button"
+            accessibilityLabel="Increase text size"
           >
             <Text style={styles.sizeBtnText}>A+</Text>
           </Pressable>

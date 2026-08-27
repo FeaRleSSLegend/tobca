@@ -85,6 +85,22 @@ export interface Palette {
    *  light-coloured shadow on a dark ground is a glow. */
   shadow: string;
 
+  // ---- Ink for surfaces that DO NOT follow the theme ----
+  // The mirror image of `mediaPlaceholder`. That token exists because some
+  // surfaces are dark in both appearances (artwork frames, the video stage);
+  // these exist because some are LIGHT in both — a white pill on the brand
+  // gradient, a play disc on a photo. Their background is `white` in both
+  // palettes, so their FOREGROUND has to be literal too.
+  //
+  // This is the `navy` trap in its least obvious form. A white button drawn
+  // with `c.navy` text looks perfect in light mode and renders white-on-white
+  // in dark (measured: 1.21:1), because `navy` is the primary-TEXT role and
+  // inverts. Reaching for these instead is what makes that impossible.
+  /** Primary ink on a surface that is light in BOTH appearances. */
+  inkOnLight: string;
+  /** The brand accent on a surface that is light in BOTH appearances. */
+  accentOnLight: string;
+
   // ---- Accents ----
   /** The accent as a MARK: text, icons, thin rules, progress fills. Lifted in
    *  dark so it stays legible against a dark ground. */
@@ -165,6 +181,8 @@ export const lightPalette: Palette = {
   skeletonBase: '#E9EDF0',          // was: theme.colors.grayBorder
   skeletonSheen: 'rgba(255,255,255,0.55)',
   shadow: '#1A3247',                // was: theme.colors.navy
+  inkOnLight: '#1A3247',
+  accentOnLight: '#F80068',
 
   accent: '#F80068',
   accentFill: '#F80068',
@@ -298,6 +316,11 @@ export const darkPalette: Palette = {
   // Black, not the light theme's navy. A navy shadow over a dark ground is
   // lighter than the ground and renders as a halo around the element.
   shadow: '#000000',
+  // IDENTICAL to the light palette, and that is the entire point: the surfaces
+  // these are drawn on are white in both appearances, so their ink must not
+  // move either.
+  inkOnLight: '#1A3247',
+  accentOnLight: '#F80068',
 
   accent: '#F54284',
   accentFill: '#DF115C',

@@ -45,22 +45,32 @@ export const ScriptureReader = ({
       <View style={styles.header}>
         <Text style={styles.reference}>{reference}</Text>
         <View style={styles.controls}>
-          <Pressable 
+          <Pressable
             onPress={() => setFontSize(prev => Math.max(12, prev - 2))}
             style={styles.controlBtn}
+            // 28pt drawn, 44pt target. Same fix as ReadingViewport's pair.
+            hitSlop={theme.control.hitSlop.iconSm}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease text size"
           >
             <Text style={styles.controlText}>A-</Text>
           </Pressable>
-          <Pressable 
+          <Pressable
             onPress={() => setFontSize(prev => Math.min(20, prev + 2))}
             style={styles.controlBtn}
+            hitSlop={theme.control.hitSlop.iconSm}
+            accessibilityRole="button"
+            accessibilityLabel="Increase text size"
           >
             <Text style={styles.controlText}>A+</Text>
           </Pressable>
           {onTranslationChange && (
-            <Pressable 
+            <Pressable
               onPress={() => onTranslationChange(translation === 'niv' ? 'asv' : 'niv')}
               style={[styles.controlBtn, styles.translationBtn]}
+              hitSlop={theme.control.hitSlop.iconSm}
+              accessibilityRole="button"
+              accessibilityLabel={`Translation, ${translation.toUpperCase()}. Tap to switch.`}
             >
               <Text style={styles.controlText}>
                 {translation.toUpperCase()}

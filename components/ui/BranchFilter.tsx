@@ -28,11 +28,15 @@
 //      as one jump. Growing the viewport also grows layoutMeasurement.height,
 //      and near the end of the content the native scroller then CLAMPS
 //      contentOffset down to keep the last pixel at the bottom. That clamp
-//      arrives as a negative dy — which useAutoHideOnScroll reads as "the user
-//      scrolled up", shows the bar, shrinks the viewport, un-clamps the
-//      offset, which arrives as a positive dy, which hides the bar again. A
-//      closed feedback loop between the hide decision and the layout that
-//      decision causes, needing no further user input to keep running.
+//      arrives as a negative dy — which the OLD delta-reading hook read as
+//      "the user scrolled up", showing the bar, shrinking the viewport,
+//      un-clamping the offset, which arrives as a positive dy, hiding the bar
+//      again. A closed feedback loop between the hide decision and the layout
+//      that decision causes, needing no further user input to keep running.
+//      (This paragraph describes the OLD delta-reading hook. The row is now
+//      driven by scroll POSITION rather than by deltas, so the loop it
+//      describes can no longer form even in principle — but the reason the row
+//      must not resize is unchanged, which is why the note stays.)
 //
 //   3. THE COST PER FRAME. Height is not native-driver-able, so every frame of
 //      the 240ms collapse re-ran layout for the pager and BOTH of its mounted
@@ -59,25 +63,34 @@
 // row's height any more, so it can simply be measured where it sits.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View, ScrollView, Animated, StyleSheet } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { theme } from '../../constants/theme';
 import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { branches } from '../../data/branches';
 import { FilterPill } from './FilterPill';
-import { MOTION } from './motion';
 import type { BranchFilter as BranchFilterValue } from '../../hooks/useMessages';
 
 interface BranchFilterProps {
   value: BranchFilterValue;
   onChange: (next: BranchFilterValue) => void;
   /**
-   * Auto-hide state, driven by the host screen's useAutoHideOnScroll — the
-   * same rule the Bible reader's quick-nav uses. Defaults to shown, so a
-   * screen that doesn't care can ignore it entirely.
+   * SCROLL-LINKED collapse, 0 = shown, 1 = hidden, driven by the host's
+   * useScrollCollapse. This is an animated node, not a boolean: the row's
+   * position is a continuous function of the scroll offset rather than a state
+   * the row animates towards. See hooks/useScrollCollapse for why that
+   * distinction is the whole interaction.
+   *
+   * Omitted entirely by a screen that does not scroll-collapse this row, in
+   * which case it simply stays put.
    */
-  visible?: boolean;
+  progress?: Animated.AnimatedInterpolation<number>;
+  /**
+   * The JS-side mirror of `progress`, for pointerEvents and accessibility —
+   * the two things that cannot read an animated node.
+   */
+  collapsed?: boolean;
   /**
    * Positioning, supplied by the host. This component does not decide where it
    * lives — the Library floats it over its pager — but it ALWAYS hides by
@@ -97,7 +110,8 @@ interface BranchFilterProps {
 export const BranchFilter = ({
   value,
   onChange,
-  visible = true,
+  progress,
+  collapsed = false,
   style,
   onMeasure,
 }: BranchFilterProps) => {
@@ -106,19 +120,40 @@ export const BranchFilter = ({
   // hardcoding it would break both the host's reserved space and the distance
   // this thing has to travel to get itself off screen.
   const [rowHeight, setRowHeight] = useState(0);
-  const anim = useRef(new Animated.Value(1)).current; // 1 shown → 0 hidden
 
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: visible ? 1 : 0,
-      duration: MOTION.base,
-      // NATIVE DRIVER, now that this animates opacity and transform only. The
-      // old height animation could not use it, which is what made the hide
-      // cost a JS-thread layout pass per frame mid-scroll.
-      useNativeDriver: true,
-    }).start();
-  }, [visible, anim]);
+  // NO TIMING ANIMATION. There is nothing to animate TO: `progress` already
+  // holds where the bar should be, continuously, derived from the live scroll
+  // offset on the UI thread. The old version started a 200ms Animated.timing
+  // every time a boolean flipped, which is what made the movement read as a
+  // separate event that happened after the gesture rather than as part of it.
+  //
+  // Movement leads and opacity follows, deliberately: the row stays fully
+  // opaque through the first 60% of its travel and only fades over the last
+  // stretch, so what you notice is the bar sliding away rather than a fade.
+  // MEMOISED on the two things they actually derive from. Without this, a new
+  // multiplication node was built on every render — including the two renders
+  // per gesture that `collapsed` causes — and swapping a native-driven node
+  // out mid-scroll is exactly the kind of thing that shows up as a one-frame
+  // jump.
+  const travel = useMemo(
+    () => (progress ? Animated.multiply(progress, -rowHeight) : 0),
+    [progress, rowHeight]
+  );
+  const fade = useMemo(
+    () =>
+      progress
+        ? progress.interpolate({
+            inputRange: [0, 0.6, 1],
+            outputRange: [1, 1, 0],
+            extrapolate: 'clamp',
+          })
+        : 1,
+    [progress]
+  );
 
+  // AFTER the hooks, never before them: an early return above a useMemo makes
+  // the hook count conditional. Harmless while `branches` is a module constant,
+  // and a crash the day it is not.
   if (branches.length < 2) return null;
 
   return (
@@ -127,29 +162,22 @@ export const BranchFilter = ({
         styles.wrap,
         style,
         {
-          opacity: anim,
-          transform: [
-            {
-              // Slides up under the header above it. Until the first
-              // measurement this is a translate of 0, which is correct: the
-              // bar starts visible and has nowhere to go yet.
-              translateY: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-rowHeight, 0],
-              }),
-            },
-          ],
+          opacity: fade,
+          // Slides up under the header above it. Until the first measurement
+          // rowHeight is 0, so this is a translate of 0 — correct: the bar
+          // starts visible and has nowhere to go yet.
+          transform: [{ translateY: travel }],
         },
       ]}
       // A hidden bar must not eat taps meant for the content it is sitting
       // over. Opacity 0 alone would still swallow them.
-      pointerEvents={visible ? 'auto' : 'none'}
+      pointerEvents={collapsed ? 'none' : 'auto'}
     >
       <View
         style={styles.row}
         accessibilityRole="tablist"
-        accessibilityElementsHidden={!visible}
-        importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
+        accessibilityElementsHidden={collapsed}
+        importantForAccessibility={collapsed ? 'no-hide-descendants' : 'auto'}
         onLayout={(e) => {
           const h = Math.round(e.nativeEvent.layout.height);
           // Only ever grow. The row must be able to report a bigger height

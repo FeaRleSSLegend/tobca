@@ -107,7 +107,7 @@ export const AppMenu = () => {
       <PressableScale
         style={styles.trigger}
         onPress={() => setOpen(true)}
-        hitSlop={10}
+        hitSlop={theme.control.hitSlop.iconSm}
         accessibilityRole="button"
         accessibilityLabel="More"
         accessibilityHint="Settings, giving, about the church and sharing"

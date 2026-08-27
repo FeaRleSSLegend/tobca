@@ -77,7 +77,6 @@ import { getInProgress } from '../../utils/playbackProgress';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
 
 interface AudioLibraryProps {
-  onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
   bottomClearance: number;
 }
 
@@ -127,7 +126,11 @@ function useContinueListening(tracks: AudioTrack[], activeId: string | null): Au
   }, [keys, tracks, activeId]);
 }
 
-export const AudioLibrary = ({ onScroll, bottomClearance }: AudioLibraryProps) => {
+// No `onScroll`: the branch filter renders on the VIDEO page only (the audio
+// manifest carries no branch field), so there was never anything on this page
+// for a scroll handler to collapse. It used to be handed one anyway, which
+// kept a second auto-hide state alive to drive nothing.
+export const AudioLibrary = ({ bottomClearance }: AudioLibraryProps) => {
   const styles = useStyles();
   const push = useGuardedPush();
   // SCOPED. Teachings, plus the service-embedded prayer segments that are
@@ -239,8 +242,6 @@ export const AudioLibrary = ({ onScroll, bottomClearance }: AudioLibraryProps) =
 
   return (
     <ScrollView
-      onScroll={onScroll}
-      scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={[styles.content, { paddingBottom: bottomClearance }]}
     >

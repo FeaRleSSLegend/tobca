@@ -57,7 +57,7 @@ export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
       {/* Visual affordance only — the whole card is the tap target now, so
           a nested Pressable here would just swallow the press. */}
       <View style={styles.playButton}>
-        <Ionicons name="play" size={18} color={c.pink} style={{ marginLeft: theme.space.hairline }} />
+        <Ionicons name="play" size={18} color={c.accentOnLight} style={{ marginLeft: theme.space.hairline }} />
       </View>
 
       <View>

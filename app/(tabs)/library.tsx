@@ -1,11 +1,11 @@
-import { View, Text, ScrollView, FlatList, useWindowDimensions } from 'react-native';
+import { Animated, View, Text, ScrollView, FlatList, useWindowDimensions } from 'react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { useTabBottomClearance } from '../../hooks/useBottomClearance';
-import { useAutoHideOnScroll } from '../../hooks/useAutoHideOnScroll';
+import { useScrollCollapse } from '../../hooks/useScrollCollapse';
 import { theme } from '../../constants/theme';
 import { useThemeColors } from '../../hooks/useTheme';
 import { useSharedStyles } from '../../constants/styles/sharedStyles';
@@ -85,21 +85,21 @@ export default function LibraryScreen() {
     const { width: windowWidth } = useWindowDimensions();
     const pageWidth = windowWidth - theme.layout.screenPadding * 2;
 
-    // ONE AUTO-HIDE STATE PER PAGE, not one shared between them.
+    // ONE COLLAPSE STATE, on the VIDEO page only — which is now the honest
+    // shape, because the filter row renders on the video page only (see the
+    // note at its render site). The old code kept a second instance for Audio
+    // so the two pages would not share a hidden/shown boolean; with the
+    // position derived from the video page's own scroll offset there is no
+    // shared state left to keep apart, and Audio simply does not collapse
+    // anything.
     //
-    // The filter bar is shared furniture, but "should the bar be hidden right
-    // now" is a fact about the page you are LOOKING AT. With a single shared
-    // instance, scrolling Video down would leave the bar hidden after swiping
-    // to Audio — even with Audio sitting at offset 0, where the bar must
-    // always be shown. Each page tracks its own scroll; the visible bar simply
-    // reads whichever page is active.
-    const videoScroll = useAutoHideOnScroll();
-    const audioScroll = useAutoHideOnScroll();
+    // `filterHeight` is the travel distance: the bar moves exactly its own
+    // height and no further. It is 0 until the row measures itself, and the
+    // hook guards that case.
 
     const [mode, setMode] = useState<LibraryMode>('video');
     const pagerRef = useRef<FlatList<LibraryMode>>(null);
 
-    const filterVisible = mode === 'video' ? videoScroll.visible : audioScroll.visible;
 
     // THE BRANCH FILTER'S REAL HEIGHT, reported by the row itself once it has
     // laid out. It floats over the video page rather than sitting above it
@@ -113,6 +113,11 @@ export default function LibraryScreen() {
     // very first frame the page is therefore 0pt short at the top for exactly
     // as long as it takes the row to measure, which is before paint.
     const [filterHeight, setFilterHeight] = useState(0);
+
+    // The scroll-linked collapse for the video page's filter row. Travel
+    // distance is the row's own measured height, so it moves exactly far
+    // enough to clear itself and no further.
+    const videoCollapse = useScrollCollapse(filterHeight);
 
     // Tapping a mode scrolls the pager to it. The pager is TAP-DRIVEN ONLY —
     // its own swipe is disabled (see scrollEnabled below) — so this is the one
@@ -258,9 +263,18 @@ export default function LibraryScreen() {
                 renderItem={({ item }) => (
                     <View style={{ width: pageWidth, height: '100%' }}>
                         {item === 'video' ? (
-                            <ScrollView
+                            // Animated.ScrollView, NOT ScrollView: a native
+                            // Animated.event attached to a plain ScrollView is
+                            // silently inert, and the bar would simply never
+                            // move. This is the one line that makes the whole
+                            // interaction native-driven.
+                            <Animated.ScrollView
                                 showsVerticalScrollIndicator={false}
-                                onScroll={videoScroll.onScroll}
+                                onScroll={videoCollapse.onScroll}
+                                // 16 keeps the JS-side mirror (pointerEvents,
+                                // accessibility) responsive. The MOVEMENT does
+                                // not depend on it at all — that runs on the
+                                // UI thread off the same native scroll node.
                                 scrollEventThrottle={16}
                                 // paddingTop is the space the floating filter
                                 // sits in. FIXED, whether the bar is showing or
@@ -449,12 +463,9 @@ export default function LibraryScreen() {
                         <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
                     </PressableScale>
 
-                            </ScrollView>
+                            </Animated.ScrollView>
                         ) : (
-                            <AudioLibrary
-                                onScroll={audioScroll.onScroll}
-                                bottomClearance={bottomClearance}
-                            />
+                            <AudioLibrary bottomClearance={bottomClearance} />
                         )}
                     </View>
                 )}
@@ -468,9 +479,11 @@ export default function LibraryScreen() {
                 about what it did. They come back the moment audio items carry
                 a branch.
 
-                Auto-hides while scrolling down, returns on scroll up — the
-                same rule as the Bible reader's quick-nav, shared via
-                useAutoHideOnScroll rather than reimplemented.
+                SCROLL-LINKED, not auto-hidden: its position is a continuous
+                function of this page's scroll offset, evaluated on the UI
+                thread, so it moves with the content rather than playing an
+                animation after a threshold is crossed. See
+                hooks/useScrollCollapse.
 
                 RENDERED AFTER THE PAGER, not before it. It is absolutely
                 positioned, and later siblings paint on top — the same reason
@@ -481,7 +494,8 @@ export default function LibraryScreen() {
                 <BranchFilter
                     value={branch}
                     onChange={setBranch}
-                    visible={filterVisible}
+                    progress={videoCollapse.progress}
+                    collapsed={videoCollapse.collapsed}
                     style={LibraryStyles.filterOverlay}
                     onMeasure={setFilterHeight}
                 />

@@ -73,25 +73,44 @@ const liveStylesFactory = (c: Palette) => StyleSheet.create({
   // CTA treatment and CurrentMessageCard's play button; a gradient button
   // on a gradient card has no visible edge. Full-width with a label
   // because the card has exactly one action and it should say what it is.
+  // THE BUG THIS FIXES: there was no `alignSelf` here. The wrapper is a
+  // block-level child of a column flex container, so it inherited
+  // alignItems:'stretch' and ran the FULL WIDTH of the card - and `primaryBtn`
+  // below centres its content, so a 15pt icon and two words sat marooned in the
+  // middle of a card-wide pill with ~120pt of empty white on either side. That
+  // is the "huge empty pill" on the service card, and it hit "Watch now" on
+  // the live variant identically, because both render this same style.
+  //
+  // A secondary action HUGS ITS LABEL. LiveCard's hero `ctaSlot` already did
+  // this (`alignSelf: 'flex-start'`); this is the same rule applied to the
+  // control that needed it.
   primaryBtnWrapper: {
+    alignSelf: 'flex-start',
     marginTop: theme.spacing.md,
     borderRadius: theme.radius.full,
     overflow: 'hidden',
   },
   primaryBtn: {
-    minHeight: 44,
+    // One of the three control heights rather than a local minHeight, and its
+    // PAIRED horizontal padding - see the `control` note in constants/theme.
+    height: theme.control.height.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.sm,
+    gap: theme.control.gap.md,
     backgroundColor: c.white,
     borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.xl,
+    paddingHorizontal: theme.control.padX.md,
   },
+  // accentOnLight, NOT `pink`. This label sits on `primaryBtn`, which is
+  // `white` in BOTH appearances because it is a pill on the brand gradient.
+  // `pink` is lifted for legibility against DARK grounds, so in dark mode it
+  // was being drawn at 3.50:1 on white — and the Add to Calendar variant, which
+  // overrode this to `navy`, rendered at 1.21:1. White on white.
   primaryBtnText: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodyBold,
-    color: c.pink,
+    color: c.accentOnLight,
   },
   // Local override for the one spot sharedStyles.overlineText's pink
   // doesn't work — everywhere else it's pink-on-white, here it's sitting on

@@ -96,7 +96,11 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = 
             <Ionicons
               name={canMarkAsRead ? 'checkmark-circle' : 'lock-closed'}
               size={18}
-              color={canMarkAsRead ? c.pink : 'rgba(255,255,255,0.6)'}
+              // ENABLED: the glyph sits on the white pill, so it takes the
+              // literal accent. DISABLED: the pill becomes a translucent wash
+              // over the gradient, so the glyph is literal white instead. Two
+              // different grounds, neither of which follows the theme.
+              color={canMarkAsRead ? c.accentOnLight : 'rgba(255,255,255,0.6)'}
             />
             <Text style={[styles.markBtnText, !canMarkAsRead && styles.markBtnTextDisabled]}>
               Mark as Read
@@ -189,10 +193,12 @@ const useStyles = makeThemedStyles((c) => ({
   markBtnDisabled: {
     backgroundColor: 'rgba(255,255,255,0.18)',
   },
+  // Same white-pill-on-a-gradient case as LiveCard's buttons, and it had the
+  // same white-on-white failure in dark mode.
   markBtnText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.bodyLg,
-    color: c.navy,
+    color: c.inkOnLight,
   },
   markBtnTextDisabled: {
     color: 'rgba(255,255,255,0.75)',
