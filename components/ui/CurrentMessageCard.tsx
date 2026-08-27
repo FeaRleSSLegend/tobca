@@ -82,7 +82,10 @@ const useStyles = makeThemedStyles((c) => ({
     overflow: 'hidden',
     // The one owner of the gap between the branch filter and the hero card.
     marginTop: theme.space.section,
-    backgroundColor: c.navy, // paints the frame while the image loads
+    // The frame painted while the artwork loads. NOT `navy`: that is the
+    // primary-text role and inverts to near-white, so every hero card
+    // flashed a white block before its image arrived.
+    backgroundColor: c.mediaPlaceholder,
   },
   playButton: {
     position: 'absolute',

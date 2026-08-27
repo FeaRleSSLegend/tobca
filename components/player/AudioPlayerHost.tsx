@@ -870,7 +870,9 @@ const useMiniStyles = makeThemedStyles((c) => ({
     position: 'absolute',
     borderRadius: theme.radius.md,
     backgroundColor: c.surface,
-    shadowColor: c.textPrimary,
+    // c.shadow, never a text token: textPrimary is near-white in dark, so
+    // the mini bar was casting a white halo onto the screen behind it.
+    shadowColor: c.shadow,
     shadowOpacity: 0.16,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },

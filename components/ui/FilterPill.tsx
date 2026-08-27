@@ -83,9 +83,16 @@ const useStyle = makeThemedStyles((c) => ({
     // one state and not the other changes the pill's outer size by 2pt when
     // it is selected, which makes a row of pills twitch as the selection
     // moves along it.
+    // accentFill, not `pink`. A selected pill is a FILL with a label on it,
+    // and the mark-weight accent is too luminous to sit under text on a dark
+    // ground. Identical in light mode; deeper and calmer in dark.
     pillActive: {
-        backgroundColor: c.pink,
+        backgroundColor: c.accentFill,
     },
+    // grayBorder, deliberately NOT surfaceSunken: these pills float over the
+    // screen background, and surfaceSunken IS the background in light mode, so
+    // an unselected pill would vanish. This value works in both appearances -
+    // a grey fill on light, a lifted fill on dark.
     pillInactive: {
         backgroundColor: c.grayBorder,
     },

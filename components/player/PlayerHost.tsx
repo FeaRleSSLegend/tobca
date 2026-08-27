@@ -602,7 +602,7 @@ function ActionButton({ icon, label, onPress, disabled, primary }: {
 }) {
   const styles = useStyles();
   const c = useThemeColors();
-  const tint = disabled ? c.grayIcon : primary ? c.white : c.navy;
+  const tint = disabled ? c.textMuted : primary ? c.onFillStrong : c.textPrimary;
   return (
     <PressableScale
       onPress={onPress}
@@ -631,7 +631,7 @@ function ModeChip({ label, icon, active, onPress }: { label: string; icon: keyof
   const c = useThemeColors();
   return (
     <Pressable onPress={onPress} style={[styles.modeChip, active && styles.modeChipActive]} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={label}>
-      <Ionicons name={icon} size={15} color={active ? c.white : c.slate} />
+      <Ionicons name={icon} size={15} color={active ? c.onFillStrong : c.textSecondary} />
       <Text style={[styles.modeChipText, active && styles.modeChipTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -702,7 +702,7 @@ const useStyles = makeThemedStyles((c) => ({
     height: 64, borderRadius: theme.radius.md, paddingHorizontal: theme.spacing.xs,
     borderWidth: 1, borderColor: c.grayBorder, backgroundColor: c.surface,
   },
-  actionBtnPrimary: { backgroundColor: c.navy, borderColor: c.navy },
+  actionBtnPrimary: { backgroundColor: c.fillStrong, borderColor: c.fillStrong },
   // Softer than the live buttons but still a real surface — a flat opacity
   // drop on the whole control is what made these read as broken before.
   actionBtnDisabled: { backgroundColor: c.bg, borderColor: c.grayBorder },
@@ -719,9 +719,9 @@ const useStyles = makeThemedStyles((c) => ({
   unavailableText: { fontFamily: theme.fontFamily.body, color: c.grayIcon, textAlign: 'center', fontSize: theme.fontSize.body },
   modeRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xl },
   modeChip: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, paddingHorizontal: theme.spacing.lg, minHeight: 40, borderRadius: theme.radius.full, borderWidth: 1, borderColor: c.grayBorder, backgroundColor: c.surface },
-  modeChipActive: { backgroundColor: c.navy, borderColor: c.navy },
+  modeChipActive: { backgroundColor: c.fillStrong, borderColor: c.fillStrong },
   modeChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: c.slate },
-  modeChipTextActive: { color: c.white },
+  modeChipTextActive: { color: c.onFillStrong },
   seriesCard: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginTop: theme.spacing.xl, padding: theme.spacing.lg, backgroundColor: c.pinkWash, borderRadius: theme.radius.md, borderWidth: theme.layout.cardBorderWidth, borderColor: c.pinkTintEdge },
   seriesIcon: {
     width: 36, height: 36, borderRadius: theme.radius.full,

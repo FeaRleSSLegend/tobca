@@ -69,7 +69,7 @@ const useStyles = makeThemedStyles((c) => ({
     // both tiles in a row identical even if one image fails to load.
     height: 96,
     borderRadius: theme.radius.sm,
-    backgroundColor: c.slate,
+    backgroundColor: c.mediaPlaceholder,
     marginBottom: theme.spacing.sm,
     overflow: 'hidden',
   },

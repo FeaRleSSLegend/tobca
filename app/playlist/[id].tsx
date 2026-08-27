@@ -183,7 +183,7 @@ export default function PlaylistScreen() {
                 {/* The play glyph's bounding box carries empty space on its
                     left, so it reads as off-centre next to the label unless
                     nudged back a point. */}
-                <Ionicons name="play" size={20} color={c.white} style={styles.playBtnIcon} />
+                <Ionicons name="play" size={20} color={c.onFillStrong} style={styles.playBtnIcon} />
                 <Text style={styles.playBtnText}>Play all</Text>
               </PressableScale>
             </View>
@@ -251,7 +251,8 @@ const ACTION_HEIGHT = 54;
 
 const useStyles = makeThemedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
-  masthead: { backgroundColor: c.navy, justifyContent: 'flex-end' },
+  // Sits under the playlist artwork, so it is a media frame, not a surface.
+  masthead: { backgroundColor: c.mediaPlaceholder, justifyContent: 'flex-end' },
   mastheadSafe: { flex: 1, justifyContent: 'space-between' },
   topScrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
   backBtn: {
@@ -280,11 +281,11 @@ const useStyles = makeThemedStyles((c) => ({
     // grows (a longer word, a larger accessibility text size).
     paddingHorizontal: theme.spacing.xl,
     height: ACTION_HEIGHT,
-    backgroundColor: c.navy,
+    backgroundColor: c.fillStrong,
     borderRadius: theme.radius.full,
     // A soft lift in the button's own color — enough to seat it above the
     // page as the primary action without reading as a drop shadow.
-    shadowColor: c.navy,
+    shadowColor: c.shadow,
     shadowOpacity: 0.22,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -294,7 +295,7 @@ const useStyles = makeThemedStyles((c) => ({
   playBtnText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.cardTitle,
-    color: c.white,
+    color: c.onFillStrong,
     letterSpacing: 0.2,
     // Android pads text vertically inside its own line box, which pushed the
     // label a couple of points below the icon's centre line. Off, plus an

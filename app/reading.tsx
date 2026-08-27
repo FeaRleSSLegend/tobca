@@ -609,7 +609,7 @@ const useStyles = makeThemedStyles((c) => ({
     justifyContent: 'center',
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: c.navy,
+    borderColor: c.textPrimary,
   },
   retryText: {
     fontFamily: theme.fontFamily.bodySemibold,
@@ -649,14 +649,14 @@ const useStyles = makeThemedStyles((c) => ({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(10,22,33,0.08)',
+    borderColor: c.border,
   },
   // Selection has to survive being drawn on top of five different fills, so
   // it is a heavy ring plus the checkmark rather than a colour change - the
   // old 1pt-to-2pt border shift was nearly invisible on the darker swatches.
   swatchSelected: {
     borderWidth: 3,
-    borderColor: c.navy,
+    borderColor: c.textPrimary,
   },
   removeBtn: {
     flexDirection: 'row',

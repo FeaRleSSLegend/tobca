@@ -161,7 +161,7 @@ const useStyles = makeThemedStyles((c) => ({
     width: 44,
     height: 44,
     borderRadius: theme.radius.full,
-    backgroundColor: c.pink,
+    backgroundColor: c.accentFill,
     alignItems: 'center',
     justifyContent: 'center',
     // Optical centring: a play triangle's visual mass sits left of its box.

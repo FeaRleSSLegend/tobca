@@ -84,7 +84,7 @@ const useStyles = makeThemedStyles((c) => ({
   streakContainer: {
     width: 70,
     flexShrink: 0,
-    backgroundColor: c.navy,
+    backgroundColor: c.fillStrong,
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.sm,

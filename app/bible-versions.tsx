@@ -158,7 +158,7 @@ const useStyles = makeThemedStyles((c) => ({
   // Selection carries a border change AND the checkmark — never color
   // alone, so the state survives color-vision differences.
   cardSelected: {
-    borderColor: c.navy,
+    borderColor: c.fillStrong,
   },
   cardTop: {
     flexDirection: 'row',
@@ -170,13 +170,13 @@ const useStyles = makeThemedStyles((c) => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radius.sm,
-    backgroundColor: c.navy,
+    backgroundColor: c.fillStrong,
     alignItems: 'center',
   },
   abbrText: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.bodyLg,
-    color: c.white,
+    color: c.onFillStrong,
     letterSpacing: 0.5,
   },
   nameWrap: {

@@ -171,7 +171,11 @@ const useStyles = makeThemedStyles((c) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: c.white,
+    // Follows the appearance. A white full-screen splash flashing before a
+    // dark app is the most jarring frame the app can show, and it was doing
+    // it on every cold start in dark mode. app.json's native splash has a
+    // matching `dark` variant so the handoff is invisible in both themes.
+    backgroundColor: c.background,
     alignItems: 'center',
     justifyContent: 'center',
     // Above everything, including the player host overlay.

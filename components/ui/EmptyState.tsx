@@ -84,13 +84,13 @@ const useStyles = makeThemedStyles((c) => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: c.navy,
+    borderColor: c.textPrimary,
     minHeight: 44,
     justifyContent: 'center',
   },
   actionText: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodySemibold,
-    color: c.navy,
+    color: c.textPrimary,
   },
 }));

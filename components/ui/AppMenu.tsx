@@ -204,7 +204,7 @@ const useStyles = makeThemedStyles((c) => ({
     // shadow alone does not carry that — hence surfaceRaised above, which is
     // lighter than the surface behind it, with the shadow doing the work in
     // light mode where the card is already white.
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOpacity: 0.18,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 8 },

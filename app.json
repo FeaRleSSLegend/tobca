@@ -36,7 +36,13 @@
           "image": "./assets/brand-logo.png",
           "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#F7F8F9",
+          "dark": {
+            "image": "./assets/brand-logo.png",
+            "imageWidth": 220,
+            "resizeMode": "contain",
+            "backgroundColor": "#12171C"
+          }
         }
       ],
       "expo-image",

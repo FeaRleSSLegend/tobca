@@ -140,7 +140,7 @@ const useStyles = makeThemedStyles((c) => ({
   box: {
     // Clips the gradient and the bleeding watermark to the rounded corners.
     overflow: 'hidden',
-    backgroundColor: c.navy,
+    backgroundColor: c.mediaPlaceholder,
   },
   inner: {
     position: 'absolute',

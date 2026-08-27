@@ -173,7 +173,9 @@ const useStyles = makeThemedStyles((c) => ({
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(248,0,104,0.10)',
+    // Was a hardcoded 10% light-accent wash. accentTint is the same idea
+    // expressed once, and it tracks the accent instead of freezing a copy.
+    backgroundColor: c.accentTint,
   },
   numberBlock: {
     flex: 1,

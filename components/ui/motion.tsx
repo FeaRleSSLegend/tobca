@@ -324,7 +324,7 @@ export const Shimmer = ({ style, width = 400 }: ShimmerProps) => {
 
   return (
     <View style={[{ overflow: 'hidden' }, style]}>
-      <View style={{ flex: 1, backgroundColor: c.grayBorder }} />
+      <View style={{ flex: 1, backgroundColor: c.skeletonBase }} />
       <Animated.View
         style={{
           ...StyleSheet_absoluteFill,
@@ -335,7 +335,9 @@ export const Shimmer = ({ style, width = 400 }: ShimmerProps) => {
           // A soft white band sweeping across the gray base — the
           // highlight. Kept low-contrast so it reads as a sheen, not a
           // flash.
-          colors={['transparent', 'rgba(255,255,255,0.55)', 'transparent']}
+          // Themed: a white band at the light theme's 0.55 opacity sweeping
+          // across a dark skeleton is a strobe, not a sheen.
+          colors={['transparent', c.skeletonSheen, 'transparent']}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={{ flex: 1 }}

@@ -126,8 +126,11 @@ const useStyles = makeThemedStyles((c) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.lg,
-    backgroundColor: '#FBF7F0',
-    borderColor: '#F0E9DD',
+    // Was a hardcoded cream pastel, so it had no dark form at all and
+    // rendered as a bright block at night. warmWash is the same cream in
+    // light and a low-saturation warm dark at the same role in dark.
+    backgroundColor: c.warmWash,
+    borderColor: c.warmWashEdge,
     borderWidth: 1,
     borderRadius: theme.radius.lg,
     padding: theme.spacing.lg,
@@ -135,8 +138,8 @@ const useStyles = makeThemedStyles((c) => ({
     marginTop: theme.space.section,
   },
   cardDone: {
-    backgroundColor: '#F1F9F5',
-    borderColor: '#DCEEE4',
+    backgroundColor: c.successWash,
+    borderColor: c.successWashEdge,
   },
   dial: {
     width: 52,

@@ -102,7 +102,7 @@ const useStyles = makeThemedStyles((c) => ({
   },
   thumbnail: {
     height: 72,
-    backgroundColor: c.slate,
+    backgroundColor: c.mediaPlaceholder,
     alignItems: 'center',
     justifyContent: 'center',
   },

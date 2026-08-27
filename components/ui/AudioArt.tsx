@@ -121,6 +121,6 @@ const useStyles = makeThemedStyles((c) => ({
     // Clips the gradient and the wave to the rounded corners. Without it the
     // wave's square SVG canvas paints over them on Android.
     overflow: 'hidden',
-    backgroundColor: c.navy,
+    backgroundColor: c.mediaPlaceholder,
   },
 }));

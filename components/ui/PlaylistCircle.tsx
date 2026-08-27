@@ -59,7 +59,7 @@ const useStyles = makeThemedStyles((c) => ({
     width: TILE_WIDTH,
     height: TILE_HEIGHT,
     borderRadius: theme.radius.sm,
-    backgroundColor: c.navy,
+    backgroundColor: c.mediaPlaceholder,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',

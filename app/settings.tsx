@@ -185,7 +185,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name={opt.icon}
                     size={18}
-                    color={active ? c.textOnAccent : c.textSecondary}
+                    color={active ? c.onFillStrong : c.textSecondary}
                   />
                   <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
                     {opt.label}
@@ -362,9 +362,14 @@ const useStyles = makeThemedStyles((c) => ({
   // Filled, not merely tinted: selection here has to survive at a glance and
   // in greyscale, and the icon swaps colour with it so it is never carried by
   // hue alone.
+  // fillStrong, NOT the accent. Two reasons: the accent version was a
+  // regression I introduced in the dark-mode pass (this control was navy
+  // before, so light mode had quietly changed), and a segmented control is a
+  // three-wide row where a saturated fill reads as a pink block rather than as
+  // a selection.
   segmentItemActive: {
-    backgroundColor: c.accent,
-    borderColor: c.accent,
+    backgroundColor: c.fillStrong,
+    borderColor: c.fillStrong,
   },
   segmentText: {
     fontFamily: theme.fontFamily.bodySemibold,
@@ -372,7 +377,7 @@ const useStyles = makeThemedStyles((c) => ({
     color: c.textSecondary,
   },
   segmentTextActive: {
-    color: c.textOnAccent,
+    color: c.onFillStrong,
   },
   // A note belongs to the card above it, so its horizontal padding matches the
   // card's rows and its top gap is the label-to-thing step. The bottom is the

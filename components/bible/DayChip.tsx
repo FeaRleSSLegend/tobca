@@ -22,7 +22,7 @@ export const DayChip = ({ day, dayNumber, status }: DayChipProps) => {
         status === 'today' && styles.circleToday,
       ]}>
         {status === 'completed' && (
-          <Ionicons name="checkmark" size={14} color={c.white} />
+          <Ionicons name="checkmark" size={14} color={c.onFillStrong} />
         )}
         {/* A snowflake, never a checkmark: the day was protected, not read. */}
         {status === 'frozen' && (
@@ -60,7 +60,7 @@ const useStyles = makeThemedStyles((c) => ({
     marginBottom: theme.spacing.xs,
   },
   circleCompleted: {
-    backgroundColor: c.navy,
+    backgroundColor: c.fillStrong,
   },
   circleFrozen: {
     backgroundColor: c.frostFill,

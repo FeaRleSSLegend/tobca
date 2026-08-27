@@ -49,7 +49,7 @@ interface TabIconProps {
 export default function TabIcon({ icon, label, focused }: TabIconProps) {
   const styles = useStyles();
   const c = useThemeColors();
-  const color = focused ? c.navy : c.grayIcon;
+  const color = focused ? c.textPrimary : c.textMuted;
   const iconName = (focused ? icon : `${icon}-outline`) as IoniconName;
 
   const active = useRef(new Animated.Value(focused ? 1 : 0)).current;
@@ -162,7 +162,10 @@ const useStyles = makeThemedStyles((c) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(40,72,104,0.08)',
+    // Was a hardcoded navy wash, which is invisible on a dark tab bar: the
+    // active tab simply lost its pill at night. fillSubtle is a tint in
+    // light and a lift in dark, so the pill reads in both.
+    backgroundColor: c.fillSubtle,
     borderRadius: 14,
   },
   label: {

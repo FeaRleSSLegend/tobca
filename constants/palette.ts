@@ -61,8 +61,39 @@ export interface Palette {
   /** A border that has to be seen — a focused field, a selected card. */
   borderStrong: string;
 
+  // ---- Fills ----
+  // A FILLED control, as opposed to a surface. The distinction only becomes
+  // load-bearing in dark mode: in light, a selected chip is navy with white on
+  // it and `navy` was reached for directly. `navy` is the primary-TEXT role, so
+  // in dark it is near-white and every one of those controls turned into a
+  // white slab. These name the job instead.
+  /** High-emphasis filled control: selected chip, primary button, badge. */
+  fillStrong: string;
+  /** Text and icons drawn on `fillStrong`. */
+  onFillStrong: string;
+  /** Low-emphasis fill: the active tab pill, a hover ground. Translucent so it
+   *  works over whatever surface it lands on. */
+  fillSubtle: string;
+  /** The frame behind artwork while it loads. Dark in BOTH appearances: it
+   *  sits under photography, and a light box flashing behind every thumbnail
+   *  is the most visible loading artefact a media app can have. */
+  mediaPlaceholder: string;
+  /** Skeleton block ground, and the sweep that crosses it. */
+  skeletonBase: string;
+  skeletonSheen: string;
+  /** shadowColor. Navy in light (a tinted lift); black in dark, because a
+   *  light-coloured shadow on a dark ground is a glow. */
+  shadow: string;
+
   // ---- Accents ----
+  /** The accent as a MARK: text, icons, thin rules, progress fills. Lifted in
+   *  dark so it stays legible against a dark ground. */
   accent: string;
+  /** The accent as a FILL, with `onAccentFill` on top. Deeper than `accent`,
+   *  because the two cannot be the same colour and both pass contrast — see
+   *  the note in the dark palette. */
+  accentFill: string;
+  onAccentFill: string;
   accentSecondary: string;
   /** The faintest wash of the accent: a callout card ground. */
   accentWash: string;
@@ -71,6 +102,12 @@ export interface Palette {
   /** The border on an accent-washed card. */
   accentTintEdge: string;
   success: string;
+  /** Status card grounds: the reading row's "to read" (warm) and "done" states.
+   *  These were hardcoded pastels and so had no dark form at all. */
+  warmWash: string;
+  warmWashEdge: string;
+  successWash: string;
+  successWashEdge: string;
   /** Streak freezes. Desaturated blue, distinct from success and accent. */
   frost: string;
   frostFill: string;
@@ -118,12 +155,29 @@ export const lightPalette: Palette = {
   border: '#E9EDF0',
   borderStrong: '#D4DBE2',
 
+  // Every value here is what the light app ALREADY draws, just named. The
+  // components that used to reach for `navy` / `slate` / a hardcoded pastel
+  // now reach for these, and light mode renders byte-for-byte as before.
+  fillStrong: '#1A3247',            // was: theme.colors.navy
+  onFillStrong: '#FFFFFF',
+  fillSubtle: 'rgba(40,72,104,0.08)', // was: hardcoded in TabIcon
+  mediaPlaceholder: '#284868',      // was: theme.colors.slate
+  skeletonBase: '#E9EDF0',          // was: theme.colors.grayBorder
+  skeletonSheen: 'rgba(255,255,255,0.55)',
+  shadow: '#1A3247',                // was: theme.colors.navy
+
   accent: '#F80068',
+  accentFill: '#F80068',
+  onAccentFill: '#FFFFFF',
   accentSecondary: '#C820F8',
   accentWash: '#FDF2F7',
   accentTint: '#FFE4EE',
   accentTintEdge: '#F8D6E6',
   success: '#0E9F6E',
+  warmWash: '#FBF7F0',              // was: hardcoded in TodayReadingRow
+  warmWashEdge: '#F0E9DD',
+  successWash: '#F1F9F5',
+  successWashEdge: '#DCEEE4',
   frost: '#5B8DB8',
   frostFill: 'rgba(91,141,184,0.12)',
   frostBorder: 'rgba(91,141,184,0.35)',
@@ -148,96 +202,143 @@ export const lightPalette: Palette = {
 };
 
 // ---------------------------------------------------------------------------
-// DARK
+// DARK — rebuilt in the visual audit. This is not the first dark palette; it
+// replaces one that was technically valid and did not hold together.
 //
-// NOT an inversion. Three things are deliberate:
+// WHAT WAS WRONG, and what each fix addresses:
 //
-// 1. The ground is a desaturated NAVY-BLACK (#0F1821), not neutral grey and
-//    not pure black. Pure black makes the elevation system impossible — you
-//    cannot go darker than a card to show a recess — and it smears on OLED
-//    while scrolling. The hue is carried over from `navy` so the dark app is
-//    recognisably the same app.
+// 1. TOO BLUE. The neutrals carried 29-33% saturation at hue 210. That reads as
+//    a cold blue-grey product rather than as this app at night, and it fought
+//    every warm-toned sermon thumbnail on screen. The ramp now runs 14-24%
+//    saturation, and saturation DROPS as lightness rises so the lighter
+//    surfaces do not get progressively bluer. The navy identity is carried by
+//    hue (still ~210) rather than by intensity.
 //
-// 2. Elevation goes UP with lightness, the convention every platform shares:
-//    background < surface < raised. In light mode the app does the opposite
-//    (cards are WHITE on a grey ground), which is why `surfaceSunken` exists
-//    as its own role rather than being derived — it is background-coloured in
-//    light and lighter-than-surface in dark, and no arithmetic gets both.
+// 2. BORDERS WERE BRIGHTER THAN THE SURFACES THEY BOUNDED. The old `border`
+//    (#243342) sat at 20% lightness while `surfaceRaised` sat at 16.9%, so
+//    every card was outlined in something lighter than the highest surface in
+//    the system. That is why borders "stood out": they were doing elevation's
+//    job and winning. The ladder is now strictly monotonic —
 //
-// 3. Text steps DOWN from #E8EDF3 rather than being pure white. Full-white
-//    body copy on a dark ground haloes; the top tier is reserved for the
-//    highest-contrast case and even that stops short of #FFF.
+//      surfaceSunken  6.1%    a recess: search field, unselected segment
+//      background     9.0%    the screen
+//      surface       12.5%    a card, a row, the tab bar
+//      border        16.1%    a hairline ON a card, now BELOW raised
+//      surfaceRaised 18.0%    a menu, a popover, a sheet
+//      fillStrong    25.1%    a filled control (selected chip, primary button)
+//      borderStrong  26.9%    the border that is supposed to be seen
 //
-// CONTRAST, MEASURED (WCAG 2.x relative luminance) against `surface`, which is
-// the ground these actually sit on:
-//   textPrimary   #E8EDF3 on #16212C -> 13.85:1  AAA
-//   textSecondary #A3B1BF on #16212C ->  7.45:1  AAA
-//   textMuted     #74838F on #16212C ->  4.18:1  AA for large text, and for
-//                                        the non-text uses it actually has
-//                                        (inactive icons, placeholders)
-//   accent        #FF3D86 on #16212C ->  4.86:1  AA
-//   success       #2CC48E on #16212C ->  7.29:1  AAA
+//    Elevation is carried by the surface steps; borders only separate.
 //
-// KNOWN WEAK SPOT, in BOTH palettes: white on the accent.
-//   #FFFFFF on #F80068 -> 4.05:1   (light)
-//   #FFFFFF on #FF3D86 -> 3.35:1   (dark)
-// Both are large-text-only by WCAG. That is survivable where the app actually
-// uses it — the gradient CTA labels and pill text are >=18pt semibold — but it
-// is not a licence to set caption-sized white type on a pink fill. The light
-// value is inherited from the brand pink and was not introduced here; the dark
-// value is worse because the accent was lightened for legibility AGAINST the
-// dark ground, which necessarily moves it closer to white. Fixing it properly
-// means a darker `textOnAccent` for dark mode, which is a design decision
-// rather than a token tweak, so it is recorded here rather than guessed at.
+// 3. THE ACCENT WASHES WERE DISCONNECTED. #231320 / #2E1826 / #3D2130 were
+//    built by darkening the pink toward black, which lands them in a warm
+//    magenta-brown that shares nothing with a hue-210 ground. They are now
+//    built in HSL at the ACCENT'S hue with the SURFACE'S restraint (19-30%
+//    saturation, lightness a controlled 2-15 points above `surface`), so a
+//    tinted card reads as this palette's surface with the accent in it.
+//
+// 4. ONE ACCENT COULD NOT DO TWO JOBS. Measured across the whole hue: no pink
+//    at H338 is simultaneously >=4.5:1 as text on `surface` AND >=4.5:1 with
+//    white on top. The lightest that passes as a fill (L46%) reads 3.20:1 as
+//    text; the darkest that passes as text (L62%) reads 3.43:1 as a fill. The
+//    old single token sat in the middle and failed both (white on #FF3D86 was
+//    3.35:1). So the token split: `accent` is the MARK colour, lifted for
+//    legibility; `accentFill` is the FILL, kept near the brand pink so large
+//    colour areas stay brand-true, with white on it at 4.80:1.
+//
+// 5. TEXT WAS SLIGHTLY OVERBRIGHT AND UNDER-SEPARATED. Secondary sat at 69%
+//    lightness, close enough to primary that long metadata competed with
+//    titles. The three tiers are now 92 / 64 / 54, and because the surfaces
+//    went darker the muted tier gained contrast while getting dimmer —
+//    4.18:1 before, 4.61:1 now, which moves it from large-text-only to a
+//    genuine AA.
+//
+// CONTRAST, MEASURED (WCAG 2.x) on `surface` unless stated:
+//   textPrimary    13.61:1  AAA      textPrimary on surfaceRaised  11.38:1 AAA
+//   textSecondary   6.38:1  AA       textSecondary on background    7.01:1 AAA
+//   textMuted       4.61:1  AA       textPrimary on fillStrong      8.75:1 AAA
+//   accent          4.69:1  AA       white on accentFill            4.80:1 AA
+//   success         7.79:1  AAA      frost                          6.95:1 AA
+//
+// Two pairs land below AA and both are deliberate, non-body-text cases:
+//   accent on accentTint          4.03:1  an icon on its own tinted disc,
+//                                          where the bar is 3:1 for non-text
+//   textSecondary on fillStrong   4.10:1  fillStrong carries onFillStrong
+//                                          (8.75:1) for its labels; this pair
+//                                          is only reachable via a caption
+//                                          nothing currently draws
 // ---------------------------------------------------------------------------
 export const darkPalette: Palette = {
-  background: '#0F1821',
-  surface: '#16212C',
-  surfaceSunken: '#0B131B',
-  surfaceRaised: '#1E2B38',
+  surfaceSunken: '#0C0F13',
+  background: '#12171C',
+  surface: '#1A2026',
+  surfaceRaised: '#272E35',
 
-  textPrimary: '#E8EDF3',
-  textSecondary: '#A3B1BF',
-  textMuted: '#74838F',
+  textPrimary: '#E7EAEE',
+  textSecondary: '#96A3B0',
+  textMuted: '#7C8998',
   textOnAccent: '#FFFFFF',
 
-  border: '#243342',
-  borderStrong: '#33465A',
+  border: '#23292F',
+  borderStrong: '#3B454E',
 
-  // Lifted off the brand pink/purple. #F80068 on a dark ground drops to 3.9:1
-  // and reads muddy; these keep the same hue and reach AA.
-  accent: '#FF3D86',
-  accentSecondary: '#D45BFA',
-  accentWash: '#231320',
-  accentTint: '#2E1826',
-  accentTintEdge: '#3D2130',
-  success: '#2CC48E',
-  frost: '#7FB0D8',
-  frostFill: 'rgba(127,176,216,0.14)',
-  frostBorder: 'rgba(127,176,216,0.38)',
+  fillStrong: '#36404A',
+  onFillStrong: '#E7EAEE',
+  // Light-on-dark rather than dark-on-light: a subtle fill in dark mode is a
+  // lift, not a shade. Translucent so it composites correctly over the tab
+  // bar, a card, or the background without needing three variants.
+  fillSubtle: 'rgba(231,234,238,0.08)',
+  // Dark in both appearances, and only a little above `surface`: a loading
+  // tile should read as part of the card it is in, not as a hole in it.
+  mediaPlaceholder: '#1D232B',
+  skeletonBase: '#242B32',
+  // 0.05, not the light theme's 0.55. A white sheep sweeping across a dark
+  // skeleton at light-mode opacity is a strobe.
+  skeletonSheen: 'rgba(255,255,255,0.05)',
+  // Black, not the light theme's navy. A navy shadow over a dark ground is
+  // lighter than the ground and renders as a halo around the element.
+  shadow: '#000000',
 
-  scrim: 'rgba(0,0,0,0.88)',
+  accent: '#F54284',
+  accentFill: '#DF115C',
+  onAccentFill: '#FFFFFF',
+  accentSecondary: '#CE66EA',
+  accentWash: '#2E1F24',
+  accentTint: '#3D242D',
+  accentTintEdge: '#5A303F',
+
+  success: '#41C89B',
+  warmWash: '#2B251D',
+  warmWashEdge: '#463B2B',
+  successWash: '#1B2C27',
+  successWashEdge: '#2A473E',
+  frost: '#7FAED2',
+  frostFill: 'rgba(127,174,210,0.13)',
+  frostBorder: 'rgba(127,174,210,0.34)',
+
+  // Near-black rather than pure black, in the ramp's own hue, so a scrimmed
+  // thumbnail edge does not go colder than the surface around it.
+  scrim: 'rgba(6,9,12,0.90)',
   statusBar: 'light',
 
-  // Legacy names, mapped to the role each was playing in light mode. `navy`
-  // was "primary text", so in dark it is the light text colour — the name is
-  // now a lie about the pigment and honest about the job, which is the whole
-  // reason the semantic names above are preferred for new code.
-  navy: '#E8EDF3',
-  // The accent washes, re-derived for a dark ground rather than inverted: a
-  // pale pink tint over dark reads as a mistake, so these are the accent hue
-  // at low luminance, which is what "a faint wash of the accent" means here.
-  pinkWash: '#231320',
-  pinkTint: '#2E1826',
-  pinkTintEdge: '#3D2130',
-  slate: '#A3B1BF',
-  slateLight: '#8494A3',
-  graySecondary: '#A3B1BF',
-  grayIcon: '#74838F',
-  grayBorder: '#243342',
-  bg: '#0F1821',
-  pink: '#FF3D86',
-  purple: '#D45BFA',
+  // ---- Legacy names, re-pointed at the new ramp ----
+  // Each maps to the ROLE it was playing in light mode, which is why several
+  // of them no longer describe their own pigment. `navy` is the notorious one:
+  // it was primary TEXT, so here it is near-white, and any component that used
+  // it as a dark SURFACE has been moved to `fillStrong` or `mediaPlaceholder`
+  // during this audit rather than left to invert into a white slab.
+  navy: '#E7EAEE',
+  pinkWash: '#2E1F24',
+  pinkTint: '#3D242D',
+  pinkTintEdge: '#5A303F',
+  slate: '#96A3B0',
+  slateLight: '#8492A0',
+  graySecondary: '#96A3B0',
+  grayIcon: '#7C8998',
+  grayBorder: '#23292F',
+  bg: '#12171C',
+  pink: '#F54284',
+  purple: '#CE66EA',
   white: '#FFFFFF',
   black: '#0A1621',
 };

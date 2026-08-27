@@ -244,7 +244,7 @@ const useStyles = makeThemedStyles((c) => ({
     marginBottom: theme.spacing.lg,
     // Two-part shadow: a tight one for crispness, the soft spread for
     // atmosphere. A single large blur reads as fog rather than elevation.
-    shadowColor: c.navy,
+    shadowColor: c.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
@@ -306,7 +306,7 @@ const useStyles = makeThemedStyles((c) => ({
     // Inter-card spacing is the group's `gap` — see sectionGroup.
     borderWidth: 1,
     borderColor: c.grayBorder,
-    shadowColor: c.navy,
+    shadowColor: c.shadow,
     shadowOpacity: 0.05,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },

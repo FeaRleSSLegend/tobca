@@ -114,12 +114,15 @@ const liveStylesFactory = (c: Palette) => StyleSheet.create({
     height: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: c.white,
+    backgroundColor: c.surface,
   },
   servicePillToday: {
     // merge with servicePill: [servicePill, isToday && servicePillToday]
-    backgroundColor: c.navy,
-    borderColor: c.navy,
+    // fillStrong, not `navy`: this is a FILLED pill, and `navy` is the
+    // primary-text role, so in dark it turned into a white slab with white
+    // text on it.
+    backgroundColor: c.fillStrong,
+    borderColor: c.fillStrong,
   },
   serviceTime: {
     fontFamily: theme.fontFamily.display,
@@ -127,7 +130,7 @@ const liveStylesFactory = (c: Palette) => StyleSheet.create({
     color: c.slate,
   },
   serviceTimeToday: {
-    color: c.white,
+    color: c.onFillStrong,
   },
   serviceNameToday: {
     color: 'rgba(255,255,255,0.7)',
@@ -138,8 +141,8 @@ const liveStylesFactory = (c: Palette) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
-    backgroundColor: c.white,
-    borderColor: c.grayBorder,
+    backgroundColor: c.surface,
+    borderColor: c.border,
     borderWidth: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radius.md,
@@ -148,7 +151,9 @@ const liveStylesFactory = (c: Palette) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: theme.radius.sm,
-    backgroundColor: c.slateLight,
+    // A frame under artwork. `slateLight` is a TEXT role, so in dark this was
+    // a pale grey square behind every thumbnail on Home.
+    backgroundColor: c.mediaPlaceholder,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -157,7 +162,7 @@ const liveStylesFactory = (c: Palette) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: c.pink,
+    backgroundColor: c.accentFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

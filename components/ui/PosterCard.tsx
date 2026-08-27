@@ -48,7 +48,7 @@ const useStyles = makeThemedStyles((c) => ({
     width: theme.layout.rowCard.width,
     height: theme.layout.rowCard.height,
     borderRadius: theme.radius.sm,
-    backgroundColor: c.slate,
+    backgroundColor: c.mediaPlaceholder,
     marginBottom: theme.spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',

@@ -94,7 +94,7 @@ const useStyles = makeThemedStyles((c) => ({
     padding: theme.spacing.xs,
     gap: theme.spacing.xs,
     // Soft lift so it reads as floating above the page, not printed on it.
-    shadowColor: c.black,
+    shadowColor: c.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -109,7 +109,7 @@ const useStyles = makeThemedStyles((c) => ({
     paddingHorizontal: theme.spacing.sm,
   },
   tabActive: {
-    backgroundColor: c.navy,
+    backgroundColor: c.fillStrong,
   },
   tabText: {
     fontFamily: theme.fontFamily.bodySemibold,
@@ -117,6 +117,6 @@ const useStyles = makeThemedStyles((c) => ({
     color: c.graySecondary,
   },
   tabTextActive: {
-    color: c.white,
+    color: c.onFillStrong,
   },
 }));

@@ -101,7 +101,7 @@ export const SkeletonRow = ({ cards = 3 }: { cards?: number }) => {
 
 const useStyles = makeThemedStyles((c) => ({
   box: {
-    backgroundColor: c.grayBorder,
+    backgroundColor: c.skeletonBase,
     borderRadius: theme.radius.sm,
     overflow: 'hidden',
   },
