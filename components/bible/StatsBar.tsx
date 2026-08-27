@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 interface StatsBarProps {
   streak: number;
@@ -8,6 +9,7 @@ interface StatsBarProps {
 }
 
 export const StatsBar = ({ streak, completed, percentage }: StatsBarProps) => {
+  const styles = useStyles();
   return (
     <View>
       <View style={styles.row}>
@@ -31,7 +33,7 @@ export const StatsBar = ({ streak, completed, percentage }: StatsBarProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   row: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
@@ -39,9 +41,9 @@ const styles = StyleSheet.create({
   },
   box: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     borderRadius: theme.radius.sm,
     padding: theme.spacing.sm,
     alignItems: 'center',
@@ -50,26 +52,26 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.sectionHeading,
     fontWeight: '700',
-    color: theme.colors.navy,
+    color: c.navy,
   },
   label: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.03,
     marginTop: theme.spacing.xs,
   },
   track: {
     height: 6,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     borderRadius: theme.radius.full,
     overflow: 'hidden',
     marginBottom: theme.spacing.xs,
   },
   fill: {
     height: '100%',
-    backgroundColor: theme.colors.pink,
+    backgroundColor: c.pink,
     borderRadius: theme.radius.full,
   },
-});
+}));

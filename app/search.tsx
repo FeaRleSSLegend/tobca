@@ -50,7 +50,8 @@ import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
-import { searchStyles } from '../constants/styles/search.styles';
+import { makeThemedStyles, useThemeColors } from '../hooks/useTheme';
+import { useSearchStyles } from '../constants/styles/search.styles';
 import { MessageCard } from '../components/ui/MessageCard';
 import { GroupCard } from '../components/ui/GroupCard';
 import { ScreenWithWatermark } from '../components/ui/ScreenWithWatermark';
@@ -96,7 +97,10 @@ const RecentChip = ({
   term: string;
   onPress: () => void;
   onRemove: () => void;
-}) => (
+}) => {
+  const searchStyles = useSearchStyles();
+  const c = useThemeColors();
+  return (
   <View style={searchStyles.chip}>
     <PressableScale
       containerStyle={searchStyles.chipPress}
@@ -116,12 +120,16 @@ const RecentChip = ({
       accessibilityRole="button"
       accessibilityLabel={`Remove ${term} from recent searches`}
     >
-      <Ionicons name="close" size={14} color={theme.colors.graySecondary} />
+      <Ionicons name="close" size={14} color={c.graySecondary} />
     </Pressable>
   </View>
 );
+}
 
 export default function SearchScreen() {
+  const searchStyles = useSearchStyles();
+  const styles = useStyles();
+  const c = useThemeColors();
   const router = useRouter();
   const push = useGuardedPush();
   const { play } = usePlayback();
@@ -206,15 +214,15 @@ export default function SearchScreen() {
     <ScreenWithWatermark style={searchStyles.container}>
       <View style={searchStyles.header}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={searchStyles.backBtn}>
-          <Ionicons name="chevron-back" size={26} color={theme.colors.navy} />
+          <Ionicons name="chevron-back" size={26} color={c.navy} />
         </Pressable>
 
         <View style={searchStyles.inputWrap}>
-          <Ionicons name="search" size={18} color={theme.colors.grayIcon} />
+          <Ionicons name="search" size={18} color={c.grayIcon} />
           <TextInput
             autoFocus
             placeholder="Search sermons, audio, and more"
-            placeholderTextColor={theme.colors.grayIcon}
+            placeholderTextColor={c.grayIcon}
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={submit}
@@ -223,7 +231,7 @@ export default function SearchScreen() {
           />
           {query.length > 0 && (
             <Pressable onPress={() => setQuery('')} hitSlop={8} style={searchStyles.clearBtn}>
-              <Ionicons name="close-circle" size={18} color={theme.colors.grayIcon} />
+              <Ionicons name="close-circle" size={18} color={c.grayIcon} />
             </Pressable>
           )}
         </View>
@@ -397,12 +405,12 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   // Matches the divider the Audio tab's own lists use, so an audio row looks
   // the same here as it does where it lives.
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     marginLeft: AUDIO_ROW_ART + theme.space.tight + 4,
   },
-});
+}));

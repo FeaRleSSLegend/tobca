@@ -1,5 +1,5 @@
 // app/settings.tsx
-// The app's settings, reached from the gear in the Library header.
+// The app's settings, reached from the header menu (components/ui/AppMenu).
 //
 // KEPT SHORT ON PURPOSE. A church app has very little to configure: there are
 // no accounts, no sync, no notification categories, no content preferences.
@@ -7,31 +7,52 @@
 // real one; the result is a page of rows that do nothing, which teaches people
 // that nothing in here is worth opening. Four sections, every row real:
 //
-//   APPEARANCE  Light / Dark / System. The choice persists; the THEMING does
-//               not exist yet, and the screen says so in as many words rather
-//               than letting someone tap Dark and conclude the app is broken.
-//               See providers/AppearanceProvider.tsx for why that is a
-//               separate project.
-//   ABOUT       Privacy, and the church's own accounts as the way to reach a
-//               human. No invented support email — the Socials screen already
-//               lists the real, verifiable accounts, and a made-up address in
-//               a settings screen is worse than no address at all.
+//   APPEARANCE  Light / Dark / System, and it NOW ACTUALLY WORKS. The choice
+//               persists and the app redraws in it. See
+//               providers/AppearanceProvider and constants/palette.ts. The
+//               screen no longer carries the "saved but not applied" apology
+//               it shipped with, because that is no longer true.
+//   ABOUT       The church, privacy, and the church's own accounts as the way
+//               to reach a human. No invented support email: the Socials
+//               screen already lists the real, verifiable accounts, and a
+//               made-up address in a settings screen is worse than none.
 //   DISPLAY     A read-only report of the OS text-size setting. This is the
 //               one row that would not exist in a generic settings screen, and
 //               it earns its place: "the app is bigger on my phone than in the
 //               emulator" is a question about this number, and there was no way
 //               to see it. It is stated as information, not offered as a
-//               control — the app must follow the OS accessibility setting.
+//               control: the app must follow the OS accessibility setting.
 //   VERSION     Read from app.json through expo-constants at runtime. Never
 //               typed in here: a hardcoded version string is wrong the first
 //               time someone bumps app.json and nobody notices for months.
+//
+// TWO SWEEPS APPLIED TO THIS FILE:
+//
+// SPACING. The screen mixed the two scales arbitrarily — `spacing` (the
+// component-internal 4/8/12/16/20/24/32 scale) and `space` (the layout scale
+// with four named steps) — picking whichever came to hand, plus one computed
+// value, `theme.space.micro + 2`, which is 6 and is on neither scale. That is
+// exactly the failure constants/theme.ts warns about in its own comments: when
+// a value is off-scale, nothing distinguishes it from its neighbours and the
+// rhythm reads as random. The rule now applied here, which is the rule that
+// file states: `space` governs the gaps BETWEEN blocks, `spacing` governs
+// padding INSIDE a component, and nothing is arithmetic on a token. The
+// section-label gap also moved from `tight` (8) to `header` (12) to match
+// sharedStyles.sectionHeaderRow, so a section header sits the same distance
+// above its content here as it does on every other screen in the app.
+//
+// EM DASHES. Removed from every user-facing string on this screen, per the
+// project's no-em-dash preference. The version fallback was itself a bare em
+// dash character standing in for an unknown version, which is the same problem
+// wearing a hat; it now says so in words.
 
-import { View, Text, ScrollView, StyleSheet, PixelRatio } from 'react-native';
+import { View, Text, ScrollView, PixelRatio } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { theme } from '../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../hooks/useTheme';
 import { PressableScale } from '../components/ui/motion';
 import { useGuardedPush } from '../hooks/useGuardedPush';
 import { useStackBottomClearance } from '../hooks/useBottomClearance';
@@ -50,7 +71,7 @@ const APPEARANCE_OPTIONS: {
   { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
 ];
 
-/** The repeating "icon · label · value/chevron" row. */
+/** The repeating "icon, label, value/chevron" row. */
 const SettingsRow = ({
   icon,
   label,
@@ -62,16 +83,17 @@ const SettingsRow = ({
   value?: string;
   onPress?: () => void;
 }) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+
   const body = (
     <>
       <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={17} color={theme.colors.slate} />
+        <Ionicons name={icon} size={17} color={c.slate} />
       </View>
       <Text style={styles.rowLabel}>{label}</Text>
       {value ? <Text style={styles.rowValue}>{value}</Text> : null}
-      {onPress ? (
-        <Ionicons name="chevron-forward" size={17} color={theme.colors.grayIcon} />
-      ) : null}
+      {onPress ? <Ionicons name="chevron-forward" size={17} color={c.textMuted} /> : null}
     </>
   );
 
@@ -97,6 +119,8 @@ const SettingsRow = ({
 export default function SettingsScreen() {
   const router = useRouter();
   const push = useGuardedPush();
+  const styles = useStyles();
+  const c = useThemeColors();
   const bottomClearance = useStackBottomClearance();
   const { preference, setPreference, hydrated } = useAppearance();
 
@@ -104,7 +128,7 @@ export default function SettingsScreen() {
   // app.json declares; the build number only exists once a native build has
   // assigned one, so it is appended only when it is actually there rather
   // than rendered as "1.0.0 (undefined)".
-  const version = Constants.expoConfig?.version ?? '—';
+  const version = Constants.expoConfig?.version ?? 'Unknown';
   const build =
     Constants.expoConfig?.android?.versionCode ?? Constants.expoConfig?.ios?.buildNumber;
   const versionLabel = build ? `${version} (${build})` : version;
@@ -116,9 +140,10 @@ export default function SettingsScreen() {
   //
   // NOT the whole story, which is why the note below names both settings:
   // Android has a SECOND control, "Display size", which changes screen DENSITY
-  // rather than font scale. It makes everything bigger — text, cards, icons —
-  // and getFontScale() stays at 1.0 throughout, so a phone that looks larger
-  // than an emulator at 100% here is almost certainly on a raised Display size.
+  // rather than font scale. It makes everything bigger, text, cards and icons
+  // alike, and getFontScale() stays at 1.0 throughout, so a phone that looks
+  // larger than an emulator at 100% here is almost certainly on a raised
+  // Display size.
   const fontScalePercent = Math.round(PixelRatio.getFontScale() * 100);
 
   return (
@@ -130,7 +155,7 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={26} color={theme.colors.navy} />
+          <Ionicons name="chevron-back" size={26} color={c.textPrimary} />
         </PressableScale>
         <Text style={styles.title}>Settings</Text>
       </View>
@@ -160,7 +185,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name={opt.icon}
                     size={18}
-                    color={active ? theme.colors.white : theme.colors.graySecondary}
+                    color={active ? c.textOnAccent : c.textSecondary}
                   />
                   <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
                     {opt.label}
@@ -170,17 +195,25 @@ export default function SettingsScreen() {
             })}
           </View>
 
-          {/* THE HONEST NOTE. It is not a disclaimer bolted on — it is the
-              only thing that makes the control above defensible to ship. */}
+          {/* The note that used to say the choice was saved but not applied is
+              gone, because it is no longer true. What replaced it is the one
+              thing about this control that is not self-evident: what "System"
+              actually follows. */}
           <Text style={styles.note}>
-            Your choice is saved, but the app is still light-only for now. Dark
-            colours are coming in a later update.
+            System follows your phone's own light or dark setting, and changes with it straight
+            away.
           </Text>
         </View>
 
         {/* ---------------- ABOUT ---------------- */}
         <Text style={styles.sectionLabel}>ABOUT</Text>
         <View style={styles.card}>
+          <SettingsRow
+            icon="information-circle-outline"
+            label="About the Church"
+            onPress={() => push('/about')}
+          />
+          <View style={styles.divider} />
           <SettingsRow
             icon="shield-checkmark-outline"
             label="Privacy"
@@ -206,11 +239,10 @@ export default function SettingsScreen() {
             value={`${fontScalePercent}%`}
           />
           <Text style={styles.note}>
-            This is your phone's own text-size setting, not an app setting. The
-            app follows it on purpose so everything stays readable. If the app
-            looks larger or smaller than you expect, check both Text size and
-            Display size under your phone's Display settings — Display size
-            changes how big everything is without changing this number.
+            This is your phone's own text-size setting, not an app setting. The app follows it on
+            purpose so everything stays readable. If the app looks larger or smaller than you
+            expect, check both Text size and Display size under your phone's Display settings.
+            Display size changes how big everything is without changing this number.
           </Text>
         </View>
 
@@ -224,10 +256,10 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -236,7 +268,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.layout.screenPadding,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: theme.layout.cardBorderWidth,
-    borderBottomColor: theme.colors.grayBorder,
+    borderBottomColor: c.border,
   },
   backBtn: {
     width: 32,
@@ -247,25 +279,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: theme.fontSize.bodyLg,
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.navy,
+    color: c.textPrimary,
   },
   content: {
     padding: theme.layout.screenPadding,
   },
   // Small caps, the same register SectionLabel and MediaModeSwitch use for a
-  // label that names the block under it.
+  // label that names the block under it. `section` above it and `header`
+  // below, which is the pairing sharedStyles.sectionHeaderRow uses on every
+  // other screen: the header groups downward with what it labels.
   sectionLabel: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
     letterSpacing: theme.editorial.trackLabel,
-    color: theme.colors.grayIcon,
+    color: c.textMuted,
     marginTop: theme.space.section,
-    marginBottom: theme.space.tight,
+    marginBottom: theme.space.header,
   },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.border,
     borderRadius: theme.radius.md,
     overflow: 'hidden',
   },
@@ -274,15 +308,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    // 14 rather than a scale step: with the 28pt icon disc this lands the row
-    // on the 48pt tap target the rest of the app uses (layout.tabTapTarget).
+    // 14 rather than a scale step, and this one IS justified: with the 28pt
+    // icon disc it lands the row exactly on the 48pt tap target the rest of
+    // the app uses (layout.tabTapTarget). A token would land on 44 or 52.
     paddingVertical: 14,
   },
   rowIcon: {
     width: 28,
     height: 28,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.surfaceSunken,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -290,18 +325,18 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.navy,
+    color: c.textPrimary,
   },
   rowValue: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.graySecondary,
+    color: c.textSecondary,
   },
   // Inset to the label, not full-bleed: a divider that starts under the icon
   // groups the rows instead of slicing the card in half.
   divider: {
     height: theme.layout.cardBorderWidth,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.border,
     marginLeft: theme.spacing.lg + 28 + theme.spacing.md,
   },
   segment: {
@@ -314,36 +349,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.space.micro + 2,
+    // Was `theme.space.micro + 2`, i.e. 6, which is on neither scale. This is
+    // an icon sitting next to its own label, which is precisely what
+    // `space.tight` is defined to mean.
+    gap: theme.space.tight,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radius.sm,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
-    backgroundColor: theme.colors.bg,
+    borderColor: c.border,
+    backgroundColor: c.surfaceSunken,
   },
   // Filled, not merely tinted: selection here has to survive at a glance and
   // in greyscale, and the icon swaps colour with it so it is never carried by
   // hue alone.
   segmentItemActive: {
-    backgroundColor: theme.colors.navy,
-    borderColor: theme.colors.navy,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   segmentText: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.graySecondary,
+    color: c.textSecondary,
   },
   segmentTextActive: {
-    color: theme.colors.white,
+    color: c.textOnAccent,
   },
+  // A note belongs to the card above it, so its horizontal padding matches the
+  // card's rows and its top gap is the label-to-thing step. The bottom is the
+  // card's own internal padding, not a layout gap, hence `spacing`.
   note: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     lineHeight: theme.fontSize.caption * 1.5,
-    color: theme.colors.graySecondary,
+    color: c.textSecondary,
     paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.space.tight,
     paddingBottom: theme.spacing.lg,
-    paddingTop: theme.space.micro,
   },
   versionBlock: {
     alignItems: 'center',
@@ -353,11 +394,11 @@ const styles = StyleSheet.create({
   versionText: {
     fontFamily: theme.fontFamily.displaySemibold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.graySecondary,
+    color: c.textSecondary,
   },
   versionMeta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.grayIcon,
+    color: c.textMuted,
   },
-});
+}));

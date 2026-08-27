@@ -29,7 +29,7 @@ import { View, Text, FlatList, SectionList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGuardedPush } from '../hooks/useGuardedPush';
 import { Ionicons } from '@expo/vector-icons';
-import { seeAllStyles } from '../constants/styles/seeAll.styles';
+import { useSeeAllStyles } from '../constants/styles/seeAll.styles';
 import { theme } from '../constants/theme';
 import { CardGrid } from '../components/ui/CardGrid';
 import { CollectionShell } from '../components/ui/CollectionShell';
@@ -64,7 +64,9 @@ import {
 // scroll longest. The trailing count answers "how deep is this bucket"
 // before scrolling into it — cheap orientation for month groups that can
 // hold anything from 1 to 12 services.
-const GroupHeader = ({ label, count }: { label: string; count?: number }) => (
+const GroupHeader = ({ label, count }: { label: string; count?: number }) => {
+  const seeAllStyles = useSeeAllStyles();
+  return (
   <View style={seeAllStyles.groupHeaderRow}>
     <Text style={seeAllStyles.groupHeader} accessibilityRole="header">
       {label}
@@ -72,6 +74,7 @@ const GroupHeader = ({ label, count }: { label: string; count?: number }) => (
     {count !== undefined && <Text style={seeAllStyles.groupHeaderCount}>{count}</Text>}
   </View>
 );
+}
 
 const messageRow = (m: Message, onPress?: () => void) => (
   <MessageCard
@@ -118,6 +121,7 @@ function SeriesCollection({ groups, loading, onOpenGroup }: {
 }) {
   const [query, setQuery] = useState('');
   const [pill, setPill] = useState('All');
+  const seeAllStyles = useSeeAllStyles();
   const bottomClearance = useStackBottomClearance();
 
   const rows = useMemo<SeriesRow[]>(() => {
@@ -255,6 +259,7 @@ function MessageListCollection({
   const { play } = usePlayback();
   const [query, setQuery] = useState('');
   const [pill, setPill] = useState('All');
+  const seeAllStyles = useSeeAllStyles();
   const bottomClearance = useStackBottomClearance();
 
   const { sections, visibleCount } = useMemo(() => {
@@ -323,6 +328,7 @@ function MessageListCollection({
 // ---------------------------------------------------------------------------
 
 function PlaylistsCollection() {
+  const seeAllStyles = useSeeAllStyles();
   const router = useRouter();
   const push = useGuardedPush();
   const { playlists, loading } = usePlaylists();
@@ -393,6 +399,7 @@ function FilteredGroupCollection({ label, messages, loading }: {
   messages: Message[];
   loading: boolean;
 }) {
+  const seeAllStyles = useSeeAllStyles();
   const [query, setQuery] = useState('');
 
   const items = useMemo(() => {

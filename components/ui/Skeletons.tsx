@@ -1,6 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
-import { sharedStyles } from '../../constants/styles/sharedStyles';
+import { makeThemedStyles } from '../../hooks/useTheme';
+import { useSharedStyles } from '../../constants/styles/sharedStyles';
 import { Shimmer } from './motion';
 
 /**
@@ -20,12 +21,15 @@ import { Shimmer } from './motion';
  * travel; percentage-width boxes pass a reasonable pixel estimate.
  */
 
-const Box = ({ style, width }: { style?: object; width?: number }) => (
-  <Shimmer style={[styles.box, style]} width={width} />
-);
+const Box = ({ style, width }: { style?: object; width?: number }) => {
+  const styles = useStyles();
+  return <Shimmer style={[styles.box, style]} width={width} />;
+};
 
 // Stand-in for a vertical list of MessageCard rows (Services / Recently Added).
-export const SkeletonList = ({ rows = 4 }: { rows?: number }) => (
+export const SkeletonList = ({ rows = 4 }: { rows?: number }) => {
+  const styles = useStyles();
+  return (
   <View style={styles.listWrap} accessibilityLabel="Loading content">
     {Array.from({ length: rows }).map((_, i) => (
       <View key={i} style={styles.row}>
@@ -38,9 +42,12 @@ export const SkeletonList = ({ rows = 4 }: { rows?: number }) => (
     ))}
   </View>
 );
+}
 
 // Stand-in for a 2-column tile grid (Series) or circle grid (Playlists).
-export const SkeletonGrid = ({ tiles = 4 }: { tiles?: number }) => (
+export const SkeletonGrid = ({ tiles = 4 }: { tiles?: number }) => {
+  const styles = useStyles();
+  return (
   <View style={styles.gridWrap} accessibilityLabel="Loading content">
     {Array.from({ length: tiles }).map((_, i) => (
       <View key={i} style={styles.tile}>
@@ -51,6 +58,7 @@ export const SkeletonGrid = ({ tiles = 4 }: { tiles?: number }) => (
     ))}
   </View>
 );
+}
 
 // Stand-in for a horizontal preview row on the Library hub.
 //
@@ -70,7 +78,10 @@ export const SkeletonGrid = ({ tiles = 4 }: { tiles?: number }) => (
 // So the label placeholder is part of the shelf skeleton, and it reuses
 // sectionHeaderRow itself rather than restating 24/12 here — one source for
 // the rhythm means the skeleton cannot drift from the real layout later.
-export const SkeletonRow = ({ cards = 3 }: { cards?: number }) => (
+export const SkeletonRow = ({ cards = 3 }: { cards?: number }) => {
+  const sharedStyles = useSharedStyles();
+  const styles = useStyles();
+  return (
   <View accessibilityLabel="Loading content">
     <View style={sharedStyles.sectionHeaderRow}>
       <Box style={styles.labelLine} width={110} />
@@ -86,10 +97,11 @@ export const SkeletonRow = ({ cards = 3 }: { cards?: number }) => (
     </View>
   </View>
 );
+}
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   box: {
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     borderRadius: theme.radius.sm,
     overflow: 'hidden',
   },
@@ -164,4 +176,4 @@ const styles = StyleSheet.create({
     width: theme.layout.rowCard.width,
     height: theme.layout.rowCard.height,
   },
-});
+}));

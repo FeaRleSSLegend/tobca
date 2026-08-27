@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { theme } from '../../constants/theme';
-import { sharedStyles } from '../../constants/styles/sharedStyles';
-import { prayerStyles } from '../../constants/styles/prayer.styles';
+import { useSharedStyles } from '../../constants/styles/sharedStyles';
+import { usePrayerStyles } from '../../constants/styles/prayer.styles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
-import { FocusCard } from '../../components/ui/FocusCard';
-import { HScroll } from '../../components/ui/HScroll';
-import { DocCard } from '../../components/ui/DocCard';
+import { ContinueCard, ContinueCardEmpty } from '../../components/ui/ContinueCard';
 import { DocumentRow } from '../../components/ui/DocumentRow';
-import { currentFocus, prayerResources, archivedFocuses } from '../../data/prayer';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { useContinueListening } from '../../hooks/useContinueListening';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition, FadeInUp, staggerDelay } from '../../components/ui/motion';
 import { useTabBottomClearance } from '../../hooks/useBottomClearance';
@@ -18,6 +17,7 @@ import { useAudioFiles, useAudioProgress } from '../../providers/AudioFileProvid
 import { buildTrackIndex } from '../../utils/audioTracks';
 import { formatAudioDate, formatClock, groupAudio } from '../../utils/audioGrouping';
 import { StyleSheet } from 'react-native';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { useR2Manifest } from '../../hooks/useR2Manifest';
 import { formatBytes } from '../../services/r2';
@@ -61,12 +61,25 @@ import { formatBytes } from '../../services/r2';
 // that surface is taken). kind: 'live' already tells the player to skip
 // position restore, position saving and save-for-offline, and starting it
 // replaces whatever was playing, which is the correct behaviour and is free.
+// The same teaser count the Library's shelves and the Audio hub use, for the
+// same reason: a capped preview says "there is more behind this header", and
+// the full list is a place you navigate to rather than a tail you fall into.
+// See components/library/AudioLibrary.tsx, which is where this pattern is
+// written down.
+const PREVIEW_COUNT = 6;
+
 export default function PrayerScreen() {
+    const prayerAudioStyles = usePrayerAudioStyles();
+    const c = useThemeColors();
+    const sharedStyles = useSharedStyles();
+    const prayerStyles = usePrayerStyles();
     const push = useGuardedPush();
     const bottomClearance = useTabBottomClearance();
-    // The church's real PDFs, from the documents manifest in R2. Additive to
-    // the sections above it: `prayerResources` and `archivedFocuses` are still
-    // the hand-written data they always were, and are left untouched here.
+    // The church's real PDFs, from the documents manifest in R2. This is now
+    // the ONLY document surface on the screen: the hand-written
+    // `prayerResources` and `archivedFocuses` shelves that used to sit around
+    // it — five cards, five invented page counts, no files — are gone, and
+    // data/prayer.ts with them.
     const documents = useR2Manifest('documents');
 
     // PRAYER RECORDINGS. The other half of the audio manifest — see
@@ -89,6 +102,15 @@ export default function PrayerScreen() {
         return buildTrackIndex(prayerAudio.items, seriesByUrl).all;
     }, [prayerAudio.items]);
 
+    // The six rows actually drawn. The QUEUE handed to the player stays
+    // `prayerTracks` (the whole list) — capping the preview is a layout
+    // decision and must not leak into the transport, or "next" would stop dead
+    // at the sixth row.
+    const prayerPreview = useMemo(
+        () => prayerTracks.slice(0, PREVIEW_COUNT),
+        [prayerTracks]
+    );
+
     const prayerSizeByUrl = useMemo(
         () => new Map(prayerAudio.items.map((i) => [i.url, formatBytes(i.sizeBytes)])),
         [prayerAudio.items]
@@ -105,6 +127,31 @@ export default function PrayerScreen() {
     const openDocument = (url: string, title: string) =>
         push({ pathname: '/document', params: { url, title } });
 
+    // THE ONE THING TO RESUME, if there is one. Scoped to `prayerTracks`, so a
+    // half-finished Library teaching never surfaces on this tab. Re-read on
+    // focus and whenever the loaded track changes — see the hook.
+    const { entry: continueEntry, ready } = useContinueListening(
+        prayerTracks,
+        audio.track?.id ?? null
+    );
+
+    // Straight into the full player at the saved position. The seek is NOT
+    // done here: providers/AudioFileProvider restores a 'recording' track's
+    // position itself the moment the source loads, so passing the track is the
+    // whole of "resume" — doing it again here would be a second implementation
+    // of the same behaviour, and they would drift.
+    //
+    // Already-loaded is a separate branch on purpose: play() on the current
+    // track rebuilds the player and would restart the file someone is
+    // listening to right now. Expanding is what they actually want.
+    const resumeContinue = () => {
+        if (!continueEntry) return;
+        if (!audio.isActive(continueEntry.track.id)) {
+            audio.play(continueEntry.track, { items: prayerTracks, label: 'Prayer Audio' });
+        }
+        audio.expand();
+    };
+
     return (
         <TabTransition>
         <ScreenWithWatermark style={sharedStyles.container}>
@@ -118,41 +165,43 @@ export default function PrayerScreen() {
                 ]}
                 showsVerticalScrollIndicator={false}
             >
-                <View style={sharedStyles.headerRow}>
-                    <Text style={sharedStyles.screenTitle}>Prayer</Text>
-                    <View style={sharedStyles.avatar}>
-                        <Text style={{ fontSize: theme.fontSize.body, fontFamily: theme.fontFamily.display, color: theme.colors.white }}>
-                            JN
-                        </Text>
-                    </View>
-                </View>
+                <ScreenHeader title="Prayer" />
 
-                {/* Same call as Library's Current Message card — this is
-                    Prayer's hero, and it already carries its own "Prayer &
-                    Fasting" eyebrow, so an outer SectionLabel here was
-                    saying the same thing twice. */}
-                <FocusCard focus={currentFocus} />
+                {/* CONTINUE LISTENING — the slot the static "Prayer &
+                    Fasting / Day 8 of 21" gradient card used to hold. That card
+                    and its dead "View Full Focus" link are gone; see the note
+                    in components/ui/ContinueCard for why nothing replaced them
+                    in kind. This reads utils/playbackProgress, scoped to this
+                    tab's own recordings, so it is only ever showing something
+                    the person actually started here.
 
-                {/* The "Live Prayer Audio — Coming Soon" tag that used to sit
-                    here directly contradicted the AudioPlayer docked at the
-                    bottom of this same screen, which is already playable and
-                    says "Streaming audio" in its own subtitle. Removed rather
-                    than reworded — the player itself is the signal that this
-                    exists now, and this gap doubles as the breathing room
-                    before the utility lists below, the same pause Live and
-                    Plan both add after their hero moment. */}
-                {/* The 24pt spacer that used to sit here is gone: SectionLabel
-                    below already carries a 24pt section margin of its own, so
-                    the two stacked into a 48pt hole — the same doubled gap
-                    Live had, from the same cause. One owner per gap. */}
-                <SectionLabel label="Prayer Resources" />
-                <HScroll>
-                    {prayerResources.map((r, i) => (
-                        <FadeInUp key={r.id} delay={staggerDelay(i)}>
-                            <DocCard name={r.name} subtitle={`${r.pages} pages`} />
-                        </FadeInUp>
+                    Nothing renders until the manifest has landed AND the store
+                    has been read (`ready`): the alternative is the empty state
+                    appearing for a frame on every visit and then being replaced,
+                    which looks like a bug even though both states are true in
+                    turn.
+
+                    The "Prayer Resources" shelf that used to follow it is gone
+                    too — its three cards were hand-written literals with
+                    invented page counts and a fileUrl of 'REPLACE_ME'. The real
+                    PDFs are the Documents section below, which reads the R2
+                    manifest. */}
+                {ready &&
+                    (continueEntry ? (
+                        <ContinueCard
+                            title={continueEntry.track.title}
+                            subtitle={
+                                continueEntry.track.speaker ??
+                                continueEntry.track.series ??
+                                formatAudioDate(continueEntry.track.date)
+                            }
+                            positionSeconds={continueEntry.positionSeconds}
+                            durationSeconds={continueEntry.durationSeconds}
+                            onPress={resumeContinue}
+                        />
+                    ) : (
+                        <ContinueCardEmpty />
                     ))}
-                </HScroll>
 
                 {/* PRAYER AUDIO — recordings of prayer gatherings, split out
                     of the audio manifest by utils/audioPurpose.
@@ -175,9 +224,29 @@ export default function PrayerScreen() {
                     recordings, a header over nothing is worse than no header. */}
                 {prayerTracks.length > 0 && (
                     <>
-                        <SectionLabel label="Prayer Audio" />
+                        {/* CAPPED, with the chevron into the full list — the
+                            exact "All Recordings" pattern from the Library's
+                            Audio hub, into the same collection screen
+                            (app/audio-collection.tsx, now with a `prayer`
+                            section that reads the prayer SCOPE of the
+                            manifest). This was a flat list of every prayer
+                            recording, which on a tab that also carries
+                            Continue, Documents and whatever comes next made
+                            the screen bottomless. */}
+                        <SectionLabel
+                            label="Prayer Audio"
+                            onPress={
+                                prayerTracks.length > PREVIEW_COUNT
+                                    ? () =>
+                                          push({
+                                              pathname: '/audio-collection',
+                                              params: { section: 'prayer', title: 'Prayer Audio' },
+                                          })
+                                    : undefined
+                            }
+                        />
                         <View style={prayerAudioStyles.list}>
-                            {prayerTracks.map((track, i) => {
+                            {prayerPreview.map((track, i) => {
                                 const isActive = audio.isActive(track.id);
                                 return (
                                     <View key={track.id}>
@@ -216,6 +285,11 @@ export default function PrayerScreen() {
                                 );
                             })}
                         </View>
+                        {prayerTracks.length > PREVIEW_COUNT && (
+                            <Text style={prayerAudioStyles.moreHint}>
+                                {prayerTracks.length} recordings
+                            </Text>
+                        )}
                     </>
                 )}
 
@@ -223,10 +297,24 @@ export default function PrayerScreen() {
                     the resource shelf above because they are the same kind of
                     thing, and before Archive so live material outranks past
                     material. */}
-                <SectionLabel label="Documents" />
+                {/* Same compacting as Prayer Audio above, into
+                    app/documents.tsx — the CollectionShell full list. Renamed
+                    from "Documents" to "Prayer Resources" so the header and
+                    the screen it opens agree on what this is; "Documents" was
+                    a description of the file type rather than of the section.
+                    The chevron only appears when there is genuinely more than
+                    the preview shows. */}
+                <SectionLabel
+                    label="Prayer Resources"
+                    onPress={
+                        documents.items.length > PREVIEW_COUNT
+                            ? () => push('/documents')
+                            : undefined
+                    }
+                />
                 {documents.status === 'loading' ? (
                     <View style={prayerStyles.docsStatus}>
-                        <ActivityIndicator color={theme.colors.pink} />
+                        <ActivityIndicator color={c.accent} />
                     </View>
                 ) : documents.status === 'error' ? (
                     // An inline retry, not a full-screen empty state: this is
@@ -248,30 +336,33 @@ export default function PrayerScreen() {
                         </Text>
                     </View>
                 ) : (
-                    <View style={prayerStyles.docsList}>
-                        {documents.items.map((doc, i) => (
-                            <FadeInUp key={doc.url} delay={staggerDelay(i)}>
-                                <DocumentRow
-                                    title={doc.title}
-                                    sizeLabel={formatBytes(doc.sizeBytes)}
-                                    onPress={() => openDocument(doc.url, doc.title)}
-                                />
-                            </FadeInUp>
-                        ))}
-                    </View>
+                    <>
+                        <View style={prayerStyles.docsList}>
+                            {documents.items.slice(0, PREVIEW_COUNT).map((doc, i) => (
+                                <FadeInUp key={doc.url} delay={staggerDelay(i)}>
+                                    <DocumentRow
+                                        title={doc.title}
+                                        sizeLabel={formatBytes(doc.sizeBytes)}
+                                        onPress={() => openDocument(doc.url, doc.title)}
+                                    />
+                                </FadeInUp>
+                            ))}
+                        </View>
+                        {documents.items.length > PREVIEW_COUNT && (
+                            <Text style={prayerAudioStyles.moreHint}>
+                                {documents.items.length} documents
+                            </Text>
+                        )}
+                    </>
                 )}
 
-                <SectionLabel label="Archive" />
-                <HScroll>
-                    {archivedFocuses.map((f, i) => (
-                        // Distinct icon from the resource guides above — same
-                        // DocCard, but these represent past focuses, not PDFs,
-                        // and looked identical to the row above at a glance.
-                        <FadeInUp key={f.month} delay={staggerDelay(i)}>
-                            <DocCard name={f.title} subtitle={`${f.pages} pages`} icon="archive-outline" />
-                        </FadeInUp>
-                    ))}
-                </HScroll>
+                {/* The "Archive" shelf that used to close this screen is gone
+                    with the rest of data/prayer: two DocCards titled "June
+                    Focus" and "May Focus", each captioned with a page count
+                    ("6 pages", "5 pages") for a PDF that does not exist and was
+                    never linked — tapping one did nothing. There is no archive
+                    behind it to render honestly, so nothing stands in its
+                    place. */}
             </ScrollView>
 
         </ScreenWithWatermark>
@@ -279,17 +370,27 @@ export default function PrayerScreen() {
     );
 }
 
-const prayerAudioStyles = StyleSheet.create({
+const usePrayerAudioStyles = makeThemedStyles((c) => ({
     list: {
         // SectionLabel owns the gap above; the list contributes nothing of its
         // own, the same rule every other section on this screen follows.
         marginTop: -theme.space.micro,
     },
+    // Byte-for-byte the Library hub's own "N recordings" footnote — same
+    // placement, same register. It answers "how much is behind that chevron"
+    // without making the person tap to find out.
+    moreHint: {
+        marginTop: theme.space.header,
+        fontFamily: theme.fontFamily.body,
+        fontSize: theme.fontSize.caption,
+        color: c.textMuted,
+        textAlign: 'center',
+    },
     // The same hairline the Library's audio lists use, inset to the title's
     // left edge so a prayer recording looks identical in both places.
     divider: {
         height: StyleSheet.hairlineWidth,
-        backgroundColor: theme.colors.grayBorder,
+        backgroundColor: c.border,
         marginLeft: AUDIO_ROW_ART + theme.space.tight + 4,
     },
-});
+}));

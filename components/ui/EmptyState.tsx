@@ -2,6 +2,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PressableScale } from './motion';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface EmptyStateProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -23,10 +24,13 @@ interface EmptyStateProps {
  * Announced as a live region so screen-reader users hear the state change
  * when results vanish, rather than the list going silently blank.
  */
-export const EmptyState = ({ icon, title, subtitle, actionLabel, onAction }: EmptyStateProps) => (
+export const EmptyState = ({ icon, title, subtitle, actionLabel, onAction }: EmptyStateProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+  return (
   <View style={styles.wrap} accessibilityLiveRegion="polite">
     <View style={styles.iconCircle}>
-      <Ionicons name={icon} size={26} color={theme.colors.grayIcon} />
+      <Ionicons name={icon} size={26} color={c.grayIcon} />
     </View>
     <Text style={styles.title}>{title}</Text>
     {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -42,8 +46,9 @@ export const EmptyState = ({ icon, title, subtitle, actionLabel, onAction }: Emp
     ) : null}
   </View>
 );
+}
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrap: {
     flex: 1,
     alignItems: 'center',
@@ -56,7 +61,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.xs,
@@ -64,13 +69,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: theme.fontSize.bodyLg,
     fontFamily: theme.fontFamily.bodySemibold,
-    color: theme.colors.navy,
+    color: c.navy,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textAlign: 'center',
   },
   actionBtn: {
@@ -79,13 +84,13 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.navy,
+    borderColor: c.navy,
     minHeight: 44,
     justifyContent: 'center',
   },
   actionText: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodySemibold,
-    color: theme.colors.navy,
+    color: c.navy,
   },
-});
+}));

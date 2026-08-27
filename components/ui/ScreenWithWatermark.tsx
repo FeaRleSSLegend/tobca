@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import { SafeAreaView, Edge } from 'react-native-safe-area-context';
 import { theme } from '../../constants/theme';
+import { useThemeColors } from '../../hooks/useTheme';
 import { LogoWatermark } from './LogoWatermark';
 
 interface ScreenWithWatermarkProps {
@@ -21,11 +22,14 @@ interface ScreenWithWatermarkProps {
 // with SafeAreaView as a flex sibling stacked on top of it, rather than a
 // child of it. sharedStyles.container's background moves up to this outer
 // View so the watermark shows through underneath it.
-export const ScreenWithWatermark = ({ children, edges = ['top', 'left', 'right'], style }: ScreenWithWatermarkProps) => (
-  <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+export const ScreenWithWatermark = ({ children, edges = ['top', 'left', 'right'], style }: ScreenWithWatermarkProps) => {
+  const c = useThemeColors();
+  return (
+  <View style={{ flex: 1, backgroundColor: c.bg }}>
     <LogoWatermark />
     <SafeAreaView edges={edges} style={[style, { backgroundColor: 'transparent' }]}>
       {children}
     </SafeAreaView>
   </View>
 );
+}

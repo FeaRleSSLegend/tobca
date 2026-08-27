@@ -1,11 +1,20 @@
 // library.styles.ts
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { lightPalette, type Palette } from '../palette';
+import { makeThemedSheet } from '../../hooks/useTheme';
 
-export const LibraryStyles = StyleSheet.create({
+// THEMED, with a light-only compatibility export — the same two-exposure
+// shape constants/styles/sharedStyles.ts documents, and for the same reason:
+// this sheet is read by screens that have been converted and by screens that
+// have not, and both have to keep working while the migration finishes.
+//
+//   useLibraryStyles()   follows the active appearance. Use this.
+//   LibraryStyles     frozen against the light palette, for unconverted callers.
+const LibraryStylesFactory = (c: Palette) => StyleSheet.create({
   // Filled + fully rounded, deliberately NOT the bordered-white-card recipe
   // every other surface on this screen uses. Fill is grayBorder (a visible
-  // light-gray tone), NOT theme.colors.bg — bg is literally the screen's
+  // light-gray tone), NOT c.bg — bg is literally the screen's
   // own background color, so a search bar filled with it had zero contrast
   // against the page and the pill shape was invisible despite being coded
   // correctly. grayBorder reads as a "recessed field," the standard
@@ -15,7 +24,7 @@ export const LibraryStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     borderRadius: theme.radius.full,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
@@ -34,7 +43,7 @@ export const LibraryStyles = StyleSheet.create({
   searchPlaceholder: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
   // Fixed-width wrapper for a GridCard riding in a horizontal preview row
   // — GridCard sizes itself flex-first for 2/3-col grids, so inside an
@@ -64,17 +73,8 @@ export const LibraryStyles = StyleSheet.create({
   hScrollCard: {
     width: theme.layout.rowCard.width,
   },
-  // The gear in the header, where the "JN" avatar disc used to be. Same 32pt
-  // footprint so the title row's height is unchanged, but no fill: the disc
-  // was solid navy because it stood in for a photo, and a filled circle around
-  // a utility glyph would out-shout the page title next to it. hitSlop on the
-  // control takes the real target past 44pt.
-  settingsBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  // settingsBtn moved to sharedStyles: the gear is no longer Library's, it is
+  // rendered for all four tabs by components/ui/ScreenHeader.
   // THE BRANCH FILTER'S POSITION on this screen: floated over the top of the
   // pager rather than stacked above it.
   //
@@ -123,8 +123,8 @@ export const LibraryStyles = StyleSheet.create({
         padding: theme.space.related,
         borderRadius: theme.radius.md,
         borderWidth: theme.layout.cardBorderWidth,
-        borderColor: theme.colors.grayBorder,
-        backgroundColor: theme.colors.surface,
+        borderColor: c.grayBorder,
+        backgroundColor: c.surface,
     },
     socialsBadge: {
         width: 40,
@@ -136,12 +136,17 @@ export const LibraryStyles = StyleSheet.create({
     socialsTitle: {
         fontSize: theme.fontSize.bodyLg,
         fontFamily: theme.fontFamily.bodySemibold,
-        color: theme.colors.navy,
+        color: c.navy,
     },
     socialsMeta: {
         fontSize: theme.fontSize.caption,
         fontFamily: theme.fontFamily.body,
-        color: theme.colors.graySecondary,
+        color: c.graySecondary,
         marginTop: theme.space.hairline,
     },
 });
+
+/** Themed. Follows the active appearance. Prefer this. */
+export const useLibraryStyles = makeThemedSheet(LibraryStylesFactory);
+/** @deprecated Light-only. Kept while screens are still being converted. */
+export const LibraryStyles = LibraryStylesFactory(lightPalette);

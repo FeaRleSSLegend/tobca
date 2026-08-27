@@ -1,11 +1,13 @@
 import { ScrollView, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 interface HScrollProps {
   children: React.ReactNode;
 }
 
 export const HScroll = ({ children }: HScrollProps) => {
+  const styles = useStyles();
   return (
     <ScrollView
       horizontal
@@ -36,7 +38,7 @@ export const HScroll = ({ children }: HScrollProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   content: {
     // The shelf gap is a shelf metric, not a generic one — it belongs with
     // the card width it is tuned against (see layout.rowCard), because the
@@ -52,4 +54,4 @@ const styles = StyleSheet.create({
     // the gap above and below a shelf; the shelf contributes nothing.
     paddingVertical: 0,
   },
-});
+}));

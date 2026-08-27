@@ -5,6 +5,7 @@ import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface GroupCardProps {
   title: string;
@@ -24,7 +25,10 @@ interface GroupCardProps {
  * because tapping this opens a collection of messages, not playback of
  * one — same icon-per-meaning reasoning GridCard applies to its types.
  */
-export const GroupCard = React.memo(({ title, subtitle, thumbnail, onPress }: GroupCardProps) => (
+export const GroupCard = React.memo(({ title, subtitle, thumbnail, onPress }: GroupCardProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+  return (
   <PressableScale
     // containerStyle, not style: `card` is pure layout (flex: 1 for the
     // 2-col grid) and has to land on the element the grid measures.
@@ -45,7 +49,7 @@ export const GroupCard = React.memo(({ title, subtitle, thumbnail, onPress }: Gr
         />
       )}
       <View style={styles.iconBadge}>
-        <Ionicons name="albums" size={14} color={theme.colors.white} />
+        <Ionicons name="albums" size={14} color={c.white} />
       </View>
     </View>
     <Text style={styles.title} numberOfLines={2}>
@@ -53,9 +57,10 @@ export const GroupCard = React.memo(({ title, subtitle, thumbnail, onPress }: Gr
     </Text>
     <Text style={styles.subtitle}>{subtitle}</Text>
   </PressableScale>
-));
+);
+});
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   card: {
     flex: 1,
   },
@@ -64,7 +69,7 @@ const styles = StyleSheet.create({
     // both tiles in a row identical even if one image fails to load.
     height: 96,
     borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.slate,
+    backgroundColor: c.slate,
     marginBottom: theme.spacing.sm,
     overflow: 'hidden',
   },
@@ -79,13 +84,13 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
+    color: c.navy,
     lineHeight: 17,
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginTop: theme.space.hairline,
   },
-});
+}));

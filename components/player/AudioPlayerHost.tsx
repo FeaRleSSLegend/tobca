@@ -63,6 +63,7 @@ import { AudioArt } from '../ui/AudioArt';
 import { AudioCover } from '../ui/AudioCover';
 import { PlayingBars } from '../ui/PlayingBars';
 import { PressableScale } from '../ui/motion';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 // ---- Mini bar geometry ------------------------------------------------------
 // EXPORTED because the bar floats over every scrolling screen, so each of them
@@ -81,6 +82,9 @@ export function audioMiniBarFootprint(): number {
 const EXPAND_MS = 340;
 
 export function AudioPlayerHost() {
+  // The mini bar follows the app's appearance; the full player below does
+  // not, and the sheet definitions say why.
+  const miniStyles = useMiniStyles();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const segments = useSegments();
@@ -401,7 +405,7 @@ ${url}`, url });
       {/* ---------------- MINI BAR ---------------- */}
       <Animated.View
         style={[
-          styles.mini,
+          miniStyles.mini,
           {
             bottom: dockBottom,
             left: MINI_BAR_MARGIN + theme.layout.screenPadding / 2,
@@ -416,21 +420,21 @@ ${url}`, url });
         pointerEvents={expanded ? 'none' : 'auto'}
         {...miniResponder.panHandlers}
       >
-        <View style={styles.miniInner}>
+        <View style={miniStyles.miniInner}>
           {/* The whole bar reopens the player EXCEPT the two controls, which
               stop propagation by being separate pressables on top. */}
           <Pressable
-            style={styles.miniTap}
+            style={miniStyles.miniTap}
             onPress={audio.expand}
             accessibilityRole="button"
             accessibilityLabel={`Open player, ${track.title}`}
           >
             <AudioArt seed={seed} width={40} height={40} radius={theme.radius.sm} />
-            <View style={styles.miniBody}>
-              <Text style={styles.miniTitle} numberOfLines={1}>
+            <View style={miniStyles.miniBody}>
+              <Text style={miniStyles.miniTitle} numberOfLines={1}>
                 {track.title}
               </Text>
-              <Text style={styles.miniMeta} numberOfLines={1}>
+              <Text style={miniStyles.miniMeta} numberOfLines={1}>
                 {[speaker, series].filter(Boolean).join(' · ') || 'Audio'}
               </Text>
             </View>
@@ -439,7 +443,7 @@ ${url}`, url });
           <Pressable
             onPress={audio.togglePlayPause}
             hitSlop={8}
-            style={styles.miniPlay}
+            style={miniStyles.miniPlay}
             accessibilityRole="button"
             accessibilityLabel={audio.playing ? 'Pause' : 'Play'}
           >
@@ -450,14 +454,14 @@ ${url}`, url });
                 name={audio.playing ? 'pause' : 'play'}
                 size={20}
                 color={theme.colors.pink}
-                style={audio.playing ? undefined : styles.playNudge}
+                style={audio.playing ? undefined : miniStyles.playNudge}
               />
             )}
           </Pressable>
           <Pressable
             onPress={audio.close}
             hitSlop={8}
-            style={styles.miniClose}
+            style={miniStyles.miniClose}
             accessibilityRole="button"
             accessibilityLabel="Stop playback"
           >
@@ -467,8 +471,8 @@ ${url}`, url });
           {/* A hairline progress line along the bar's bottom edge. The mini bar
               has no room for a scrubber, but "how far in am I" is the one thing
               it can still answer for free. */}
-          <View style={styles.miniProgressTrack}>
-            <View style={[styles.miniProgressFill, { width: `${progress * 100}%` }]} />
+          <View style={miniStyles.miniProgressTrack}>
+            <View style={[miniStyles.miniProgressFill, { width: `${progress * 100}%` }]} />
           </View>
         </View>
       </Animated.View>
@@ -670,7 +674,7 @@ ${url}`, url });
                   name={audio.playing ? 'pause' : 'play'}
                   size={30}
                   color={theme.colors.white}
-                  style={audio.playing ? undefined : styles.playNudgeLg}
+                  style={audio.playing ? undefined : miniStyles.playNudgeLg}
                 />
               )}
             </PressableScale>
@@ -840,7 +844,23 @@ const SecondaryAction = ({
   </Pressable>
 );
 
-const styles = StyleSheet.create({
+// THE MINI BAR IS THEMED; THE FULL PLAYER IS NOT, AND THAT IS THE POINT.
+//
+// These two surfaces have opposite requirements, which is why they are two
+// sheets rather than one:
+//
+//   THE MINI BAR floats over whatever screen you are on. It is a card in the
+//   app's own chrome — white with navy type in light mode — so in dark mode it
+//   has to become a dark card with light type, or it is a white slab hovering
+//   over a dark app: the single most visible seam dark mode can have.
+//
+//   THE FULL PLAYER is dark in BOTH appearances, deliberately, the same way
+//   the video viewport is black in both. It draws white type on a
+//   palette-derived gradient that ends in navy and black. Running those
+//   through the palette would be actively wrong: `navy` maps to the PRIMARY
+//   TEXT role, so in dark mode `theme.colors.navy` is #E8EDF3, and the
+//   gradient's dark end would turn light. Its colours stay literal.
+const useMiniStyles = makeThemedStyles((c) => ({
   // ---- mini bar ----
   // OUTER: the lift only. No overflow:'hidden' here — on iOS that property
   // cancels a shadow entirely, and this bar floats over scrolling content, so
@@ -849,8 +869,8 @@ const styles = StyleSheet.create({
   mini: {
     position: 'absolute',
     borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surface,
-    shadowColor: theme.colors.navy,
+    backgroundColor: c.surface,
+    shadowColor: c.textPrimary,
     shadowOpacity: 0.16,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
@@ -865,7 +885,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.md,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.border,
     overflow: 'hidden',
   },
   miniTap: {
@@ -881,12 +901,12 @@ const styles = StyleSheet.create({
   miniTitle: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
+    color: c.textPrimary,
   },
   miniMeta: {
     fontFamily: theme.fontFamily.body,
     fontSize: 11,
-    color: theme.colors.graySecondary,
+    color: c.textSecondary,
   },
   miniPlay: {
     width: 34,
@@ -906,11 +926,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 2,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.border,
   },
   miniProgressFill: {
     height: 2,
-    backgroundColor: theme.colors.pink,
+    backgroundColor: c.accent,
   },
   playNudge: {
     marginLeft: 2,
@@ -918,7 +938,9 @@ const styles = StyleSheet.create({
   playNudgeLg: {
     marginLeft: 4,
   },
+}));
 
+const styles = StyleSheet.create({
   // ---- full player ----
   groundScrim: {
     // Knocks the palette back so white type sits on it comfortably at every

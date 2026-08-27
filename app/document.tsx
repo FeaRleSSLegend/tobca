@@ -48,6 +48,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../hooks/useTheme';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { EmptyState } from '../components/ui/EmptyState';
 
@@ -57,6 +58,8 @@ export function googleViewerUrl(pdfUrl: string): string {
 }
 
 export default function DocumentScreen() {
+  const styles = useStyles();
+  const c = useThemeColors();
   const { url, title } = useLocalSearchParams<{ url?: string; title?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -94,7 +97,7 @@ export default function DocumentScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={26} color={theme.colors.navy} />
+          <Ionicons name="chevron-back" size={26} color={c.navy} />
         </Pressable>
         <View style={styles.titleWrap}>
           <Text style={styles.title} numberOfLines={1}>
@@ -111,7 +114,7 @@ export default function DocumentScreen() {
           accessibilityRole="button"
           accessibilityLabel="Open this document outside the app"
         >
-          <Ionicons name="open-outline" size={20} color={theme.colors.grayIcon} />
+          <Ionicons name="open-outline" size={20} color={c.grayIcon} />
         </Pressable>
       </View>
 
@@ -182,7 +185,7 @@ export default function DocumentScreen() {
           accessibilityRole="button"
           accessibilityLabel="Open this document outside the app"
         >
-          <Ionicons name="open-outline" size={15} color={theme.colors.graySecondary} />
+          <Ionicons name="open-outline" size={15} color={c.graySecondary} />
           <Text style={styles.fallbackLabel}>Not displaying? Open externally</Text>
         </Pressable>
       )}
@@ -190,10 +193,10 @@ export default function DocumentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   header: {
     flexDirection: 'row',
@@ -214,22 +217,22 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.pageTitle,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   stage: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
   },
   web: {
     flex: 1,
     // The viewer's own page is white; matching it stops a grey flash between
     // the WebView attaching and the document painting.
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
   },
   // Covers the WebView rather than replacing it, so the page underneath is
   // already laid out and nothing jumps when the loader lifts.
@@ -242,18 +245,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.space.tight,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
   },
   loadingLabel: {
     marginTop: theme.space.tight,
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   loadingHint: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
   fallbackBar: {
     flexDirection: 'row',
@@ -262,12 +265,12 @@ const styles = StyleSheet.create({
     gap: theme.space.micro + 2,
     paddingTop: theme.spacing.md,
     borderTopWidth: theme.layout.cardBorderWidth,
-    borderTopColor: theme.colors.grayBorder,
-    backgroundColor: theme.colors.bg,
+    borderTopColor: c.grayBorder,
+    backgroundColor: c.bg,
   },
   fallbackLabel: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
-});
+}));

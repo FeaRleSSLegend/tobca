@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { PressableScale } from './motion';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface ReadingCardProps {
   date?: string;
@@ -18,6 +19,8 @@ export const ReadingCard = ({
   streak = 14,
   onPress 
 }: ReadingCardProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <PressableScale onPress={onPress} style={styles.container}>
       <View style={styles.leftContent}>
@@ -25,7 +28,7 @@ export const ReadingCard = ({
         <Text style={styles.verse} numberOfLines={2}>{verse}</Text>
         <View style={styles.cta}>
           <Text style={styles.ctaText}>Continue reading</Text>
-          <Ionicons name="chevron-forward" size={14} color={theme.colors.slate} />
+          <Ionicons name="chevron-forward" size={14} color={c.slate} />
         </View>
       </View>
       <View style={styles.streakContainer}>
@@ -36,12 +39,12 @@ export const ReadingCard = ({
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   container: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     borderRadius: theme.radius.md,
     overflow: 'hidden',
     marginTop: theme.spacing.xs,
@@ -57,13 +60,13 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.slate,
+    color: c.slate,
     marginBottom: theme.spacing.xs,
   },
   verse: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
+    color: c.navy,
     lineHeight: 19,
     fontStyle: 'italic',
     marginBottom: theme.spacing.sm,
@@ -76,12 +79,12 @@ const styles = StyleSheet.create({
   ctaText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.slate,
+    color: c.slate,
   },
   streakContainer: {
     width: 70,
     flexShrink: 0,
-    backgroundColor: theme.colors.navy,
+    backgroundColor: c.navy,
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.sm,
@@ -90,7 +93,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.display,
     fontWeight: '700',
-    color: theme.colors.white,
+    color: c.white,
   },
   streakLabel: {
     fontFamily: theme.fontFamily.bodyBold,
@@ -101,4 +104,4 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xs,
     letterSpacing: 0.03,
   },
-});
+}));

@@ -2,10 +2,11 @@ import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { WeekView } from './WeekView';
 import { StatBox } from '../ui/StatBox';
 import type { WeekDayStatus } from '../../utils/biblePlan.utils';
-import { sheetStyles } from '../../constants/styles/sharedStyles';
+import { useSheetStyles, sheetStylesFor } from '../../constants/styles/sharedStyles';
 import { PressableScale } from '../ui/motion';
 
 interface WeekDay {
@@ -37,6 +38,9 @@ export const StreakModal = ({
   week,
   todayNumber,
 }: StreakModalProps) => {
+  const sheetStyles = useSheetStyles();
+  const styles = useStyles();
+  const c = useThemeColors();
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -53,12 +57,12 @@ export const StreakModal = ({
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Ionicons name="close" size={22} color={theme.colors.graySecondary} />
+          <Ionicons name="close" size={22} color={c.graySecondary} />
         </PressableScale>
 
         <View style={styles.hero}>
           <View style={styles.flameCircle}>
-            <Ionicons name="flame" size={36} color={theme.colors.pink} />
+            <Ionicons name="flame" size={36} color={c.pink} />
           </View>
           <Text style={styles.streakNumber}>{streak}</Text>
           <Text style={styles.streakLabel}>Day Streak</Text>
@@ -96,7 +100,7 @@ export const StreakModal = ({
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   // Scrim, handle and close button come from sheetStyles now. What stays local
   // is the POSITIONING, and it is load-bearing: the old scrim was a `flex: 1`
   // view whose job — undocumented — was to push this sheet to the bottom of
@@ -105,7 +109,7 @@ const styles = StyleSheet.create({
   // it explicitly says what the layout depends on instead of relying on a
   // sibling's flex to imply it.
   sheet: {
-    ...sheetStyles.sheet,
+    ...sheetStylesFor(c).sheet,
     position: 'absolute',
     left: 0,
     right: 0,
@@ -120,7 +124,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.pinkTint,
+    backgroundColor: c.pinkTint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
@@ -129,25 +133,25 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: 40,
     fontWeight: '700',
-    color: theme.colors.navy,
+    color: c.navy,
     lineHeight: 44,
   },
   streakLabel: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginBottom: theme.spacing.sm,
   },
   subtext: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textAlign: 'center',
   },
   freezeNote: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.frost,
+    color: c.frost,
     textAlign: 'center',
     marginTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
@@ -159,7 +163,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginBottom: theme.spacing.md,
@@ -168,4 +172,4 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing.sm,
   },
-});
+}));

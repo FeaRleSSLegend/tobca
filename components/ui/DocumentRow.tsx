@@ -23,6 +23,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { PressableScale } from './motion';
 
 interface DocumentRowProps {
@@ -32,7 +33,10 @@ interface DocumentRowProps {
   onPress: () => void;
 }
 
-export const DocumentRow = ({ title, sizeLabel, onPress }: DocumentRowProps) => (
+export const DocumentRow = ({ title, sizeLabel, onPress }: DocumentRowProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+  return (
   <PressableScale
     style={styles.row}
     onPress={onPress}
@@ -40,7 +44,7 @@ export const DocumentRow = ({ title, sizeLabel, onPress }: DocumentRowProps) => 
     accessibilityLabel={`${title}, PDF${sizeLabel ? `, ${sizeLabel}` : ''}`}
   >
     <View style={styles.icon}>
-      <Ionicons name="document-text-outline" size={18} color={theme.colors.slate} />
+      <Ionicons name="document-text-outline" size={18} color={c.slate} />
     </View>
 
     <View style={styles.body}>
@@ -50,11 +54,12 @@ export const DocumentRow = ({ title, sizeLabel, onPress }: DocumentRowProps) => 
       <Text style={styles.meta}>{sizeLabel ? `PDF · ${sizeLabel}` : 'PDF'}</Text>
     </View>
 
-    <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+    <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
   </PressableScale>
 );
+}
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   // The same list-row recipe the document/series rows share (white surface,
   // hairline border,
   // 16pt gap) so a document row and an audio row read as members of one
@@ -63,8 +68,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.related,
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.grayBorder,
+    backgroundColor: c.surface,
+    borderColor: c.grayBorder,
     borderWidth: theme.layout.cardBorderWidth,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
@@ -73,7 +78,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -85,11 +90,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.bodyLg,
     lineHeight: 19,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   meta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
-});
+}));

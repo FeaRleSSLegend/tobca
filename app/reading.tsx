@@ -26,7 +26,8 @@ import { useAutoHideOnScroll } from '../hooks/useAutoHideOnScroll';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../constants/theme';
-import { sheetStyles } from '../constants/styles/sharedStyles';
+import { makeThemedStyles, useThemeColors } from '../hooks/useTheme';
+import { useSheetStyles, sheetStylesFor } from '../constants/styles/sharedStyles';
 import { TranslationCode, getSavedTranslation } from '../services/bibleVersions';
 import { getVersesForReference, Verse } from '../services/bibleApi';
 import { HIGHLIGHT_COLORS, colorValue, verseKey, getAllHighlights, setHighlight } from '../utils/highlights';
@@ -53,6 +54,9 @@ const READING_LABELS: Record<string, string> = {
 };
 
 export default function ReadingScreen() {
+  const styles = useStyles();
+  const c = useThemeColors();
+  const sheetStyles = useSheetStyles();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const push = useGuardedPush();
@@ -142,7 +146,14 @@ export default function ReadingScreen() {
     }
     setLoading(true);
     setLoadError(false);
-    getVersesForReference(reference, translation)
+    // bypassCache on a RETRY only. A first load should still be served from
+    // disk instantly when the passage is already there — that is the whole
+    // point of the cache. But a retry exists because the previous attempt
+    // produced nothing usable, and reading the same store again cannot change
+    // that answer: it is what made "Try again" show a spinner and return the
+    // identical failure without a request ever leaving the device. See the
+    // long note on getVersesForReference.
+    getVersesForReference(reference, translation, { bypassCache: retryCount > 0 })
       .then(result => {
         if (cancelled) return;
         lastFetchedReference.current = reference;
@@ -245,7 +256,7 @@ export default function ReadingScreen() {
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={26} color={theme.colors.navy} />
+          <Ionicons name="chevron-back" size={26} color={c.navy} />
         </Pressable>
 
         <Pressable
@@ -256,7 +267,7 @@ export default function ReadingScreen() {
           accessibilityLabel={`Bible version ${translation?.toUpperCase()}, change version`}
         >
           <Text style={styles.translationText}>{translation?.toUpperCase()}</Text>
-          <Ionicons name="chevron-down" size={12} color={theme.colors.graySecondary} />
+          <Ionicons name="chevron-down" size={12} color={c.graySecondary} />
         </Pressable>
 
         <View style={styles.fontControls}>
@@ -308,7 +319,7 @@ export default function ReadingScreen() {
             </View>
           ) : loadError && verses.length === 0 ? (
             <View style={styles.errorBlock}>
-              <Ionicons name="cloud-offline-outline" size={28} color={theme.colors.grayIcon} />
+              <Ionicons name="cloud-offline-outline" size={28} color={c.grayIcon} />
               <Text style={styles.errorTitle}>Couldn't load this passage</Text>
               <Text style={styles.errorSubtitle}>Check your connection and try again.</Text>
               <Pressable
@@ -321,10 +332,32 @@ export default function ReadingScreen() {
               </Pressable>
             </View>
           ) : verses.length === 0 ? (
-            // Loaded successfully but empty — e.g. a one-verse reference
-            // that's itself a textual variant. Vanishingly rare, but a
-            // stray blank screen with only a title is worse than a word.
-            <Text style={styles.loadingText}>No verses to display for this passage.</Text>
+            // Loaded successfully but empty — a one-verse reference that is
+            // itself a textual variant, or a translation whose catalogue does
+            // not carry this book (see the ASV note in bibleVersions.ts).
+            //
+            // This gets a Try again of its own now. It used to be a sentence
+            // and nothing else, which made it a dead end: an empty result is
+            // indistinguishable from a failure to the person looking at it,
+            // and until recently it was also CACHED, so the dead end was
+            // permanent. The retry now bypasses that cache, so tapping it is a
+            // real second attempt rather than a re-read of the same nothing.
+            <View style={styles.errorBlock}>
+              <Ionicons name="book-outline" size={28} color={c.grayIcon} />
+              <Text style={styles.errorTitle}>No verses to display</Text>
+              <Text style={styles.errorSubtitle}>
+                This passage came back empty. It may not be available in{' '}
+                {translation?.toUpperCase()}.
+              </Text>
+              <Pressable
+                onPress={() => setRetryCount((c) => c + 1)}
+                style={styles.retryBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Retry loading passage"
+              >
+                <Text style={styles.retryText}>Try again</Text>
+              </Pressable>
+            </View>
           ) : (
             // The passage SETTLES in rather than cutting. The key restarts it
             // on every reference/translation change, so switching version or
@@ -400,16 +433,16 @@ export default function ReadingScreen() {
             </Text>
             <Text style={styles.sheetSub}>Highlight</Text>
             <View style={styles.swatchRow}>
-              {HIGHLIGHT_COLORS.map((c) => {
+              {HIGHLIGHT_COLORS.map((swatch) => {
                 const selected =
-                  highlights[verseKey(activeVerse.book, activeVerse.chapter, activeVerse.number)] === c.id;
+                  highlights[verseKey(activeVerse.book, activeVerse.chapter, activeVerse.number)] === swatch.id;
                 return (
                   <Pressable
-                    key={c.id}
-                    onPress={() => applyHighlight(c.id)}
-                    style={[styles.swatch, { backgroundColor: c.value }, selected && styles.swatchSelected]}
+                    key={swatch.id}
+                    onPress={() => applyHighlight(swatch.id)}
+                    style={[styles.swatch, { backgroundColor: swatch.value }, selected && styles.swatchSelected]}
                     accessibilityRole="button"
-                    accessibilityLabel={`Highlight ${c.label}`}
+                    accessibilityLabel={`Highlight ${swatch.label}`}
                     accessibilityState={{ selected }}
                   >
                     {/* The tick mounts the instant a colour is applied, so
@@ -417,7 +450,7 @@ export default function ReadingScreen() {
                         rather than the swatch just quietly redrawing. */}
                     {selected && (
                       <PopIn>
-                        <Ionicons name="checkmark" size={18} color={theme.colors.navy} />
+                        <Ionicons name="checkmark" size={18} color={c.navy} />
                       </PopIn>
                     )}
                   </Pressable>
@@ -426,7 +459,7 @@ export default function ReadingScreen() {
             </View>
             {highlights[verseKey(activeVerse.book, activeVerse.chapter, activeVerse.number)] && (
               <Pressable onPress={() => applyHighlight(null)} style={styles.removeBtn} accessibilityRole="button" accessibilityLabel="Remove highlight">
-                <Ionicons name="close-circle-outline" size={18} color={theme.colors.graySecondary} />
+                <Ionicons name="close-circle-outline" size={18} color={c.graySecondary} />
                 <Text style={styles.removeText}>Remove highlight</Text>
               </Pressable>
             )}
@@ -437,10 +470,10 @@ export default function ReadingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
   },
   header: {
     flexDirection: 'row',
@@ -449,7 +482,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.layout.screenPadding,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: theme.layout.cardBorderWidth,
-    borderBottomColor: theme.colors.grayBorder,
+    borderBottomColor: c.grayBorder,
   },
   backBtn: {
     width: 32,
@@ -461,7 +494,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: theme.radius.full,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.space.micro,
@@ -469,7 +502,7 @@ const styles = StyleSheet.create({
   translationText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     letterSpacing: 0.5,
   },
   fontControls: {
@@ -480,14 +513,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 7,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sizeBtnText: {
     fontSize: theme.fontSize.caption,
     fontWeight: '700',
-    color: theme.colors.slate,
+    color: c.slate,
     // Was fontWeight with no fontFamily -> fell back to the system font.
     fontFamily: theme.fontFamily.bodyBold,
 },
@@ -519,7 +552,7 @@ const styles = StyleSheet.create({
     // Brand pink, restored by request. The eyebrow is one small element per
     // screen, not a repeated run, so it brands the reader without the
     // repetition problem the verse numbers had.
-    color: theme.colors.pink,
+    color: c.pink,
     letterSpacing: theme.editorial.trackLabel,
     marginBottom: theme.spacing.md,
   },
@@ -530,12 +563,8 @@ const styles = StyleSheet.create({
     // it look typeset rather than merely big.
     letterSpacing: theme.editorial.trackTight,
     lineHeight: theme.editorial.mastheadTitle * 1.15,
-    color: theme.colors.navy,
+    color: c.navy,
     textAlign: 'center',
-  },
-  loadingText: {
-    fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
   },
   switchingRow: {
     flexDirection: 'row',
@@ -554,7 +583,7 @@ const styles = StyleSheet.create({
   switchingText: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   errorBlock: {
     alignItems: 'center',
@@ -564,13 +593,13 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.navy,
+    color: c.navy,
     marginTop: theme.spacing.xs,
   },
   errorSubtitle: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textAlign: 'center',
   },
   retryBtn: {
@@ -580,17 +609,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.navy,
+    borderColor: c.navy,
   },
   retryText: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   // Scrim and handle come from the shared sheet recipe now; the absolute
   // positioning is what is specific here, since this sheet is not in a Modal.
   sheet: {
-    ...sheetStyles.sheet,
+    ...sheetStylesFor(c).sheet,
     position: 'absolute',
     left: 0,
     right: 0,
@@ -599,13 +628,13 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   sheetSub: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 1,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
     marginTop: theme.space.hairline,
     marginBottom: theme.spacing.md,
   },
@@ -627,7 +656,7 @@ const styles = StyleSheet.create({
   // old 1pt-to-2pt border shift was nearly invisible on the darker swatches.
   swatchSelected: {
     borderWidth: 3,
-    borderColor: theme.colors.navy,
+    borderColor: c.navy,
   },
   removeBtn: {
     flexDirection: 'row',
@@ -639,7 +668,7 @@ const styles = StyleSheet.create({
   removeText: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   // Centered label between two hairlines — the classic book treatment for
   // a chapter break: unmistakable as a boundary, but quiet enough (small
@@ -659,12 +688,12 @@ const styles = StyleSheet.create({
   chapterRule: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
   },
   chapterLabel: {
     fontFamily: theme.fontFamily.serifSemibold,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.slate,
+    color: c.slate,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -672,7 +701,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.serif,
     // Was #2C3E50, an off-palette slate a shade cooler than anything else
     // in the app. Scripture body text is the last place that should drift.
-    color: theme.colors.navy,
+    color: c.navy,
     marginBottom: theme.editorial.verseGap,
   },
   // Pink, restored by request — it is what makes the reader feel like OUR
@@ -682,6 +711,6 @@ const styles = StyleSheet.create({
   // Small + pink brands the page; large + pink fought the text.
   verseNumber: {
     fontFamily: theme.fontFamily.bodySemibold,
-    color: theme.colors.pink,
+    color: c.pink,
   },
-});
+}));

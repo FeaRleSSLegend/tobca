@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MOTION } from './motion';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -46,7 +47,9 @@ interface TabIconProps {
 // box scales the glyph — and puts the value on a host component like the rest
 // of the app.
 export default function TabIcon({ icon, label, focused }: TabIconProps) {
-  const color = focused ? theme.colors.navy : theme.colors.grayIcon;
+  const styles = useStyles();
+  const c = useThemeColors();
+  const color = focused ? c.navy : c.grayIcon;
   const iconName = (focused ? icon : `${icon}-outline`) as IoniconName;
 
   const active = useRef(new Animated.Value(focused ? 1 : 0)).current;
@@ -139,7 +142,7 @@ export default function TabIcon({ icon, label, focused }: TabIconProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrapper: {
     minWidth: theme.layout.tabTapTarget + 16,
     minHeight: theme.layout.tabTapTarget,
@@ -172,4 +175,4 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     marginTop: theme.space.hairline,
   },
-});
+}));

@@ -210,21 +210,80 @@ function cacheKey(translation: TranslationCode, reference: string): string {
   return `yvp:passage:v2:${translation}:${reference}`;
 }
 
+export interface FetchOptions {
+  /**
+   * Skip the cache read and re-request from the network. For an explicit,
+   * human "Try again" ONLY — see the note below on why a retry has to be able
+   * to do this, and why nothing else should.
+   */
+  bypassCache?: boolean;
+}
+
 /**
  * Fetches all verses for a plan reference field, e.g.
  *   getVersesForReference("Genesis 1:1-31, 2:1-25", "kjv")
  * Handles multi-segment references (comma-separated ranges) by
  * concatenating verses across segments in order.
  * Cached to AsyncStorage indefinitely — scripture text doesn't change.
+ *
+ * WHY THIS FUNCTION KNOWS WHAT A RETRY IS
+ *
+ * The reader's "Try again" button was reported as not retrying: a spinner, then
+ * the same failure, with no apparent second attempt. The button and the effect
+ * behind it turned out to be correct — app/reading.tsx keeps a retryCount in
+ * the fetch effect's dependency array, so tapping it genuinely re-runs the
+ * effect and genuinely calls this function again. What it could not do was get
+ * past this function, because every path back out of a failed load ran through
+ * a short-circuit here BEFORE any request was made:
+ *
+ *  1. THE CACHE READ WAS UNCONDITIONAL. A retry got whatever the first attempt
+ *     left behind, from disk, without touching the network — so a retry could
+ *     not be more authoritative than the attempt that failed, which is the one
+ *     thing a retry is for.
+ *
+ *  2. AN EMPTY RESULT WAS CACHED FOREVER. `if (!anyFailed)` was true when every
+ *     segment RESOLVED with zero verses — which is exactly what happens when a
+ *     translation's catalogue is missing the book (see the ASV note in
+ *     bibleVersions.ts: that id's books[] omits Exodus–2 Chronicles, Ezra–
+ *     Esther and Ecclesiastes, so a ranged request 404s and the per-verse
+ *     fallback 404s on every verse). `[]` then went to disk under a key that
+ *     never expires, and every subsequent call — including every retry —
+ *     returned it from (1) in a few milliseconds. Permanent, and immune to the
+ *     network coming back.
+ *
+ *  3. A CORRUPT CACHE ENTRY THREW. JSON.parse ran unguarded on whatever the
+ *     key held, so one bad write produced a rejection on every call for that
+ *     passage forever, with no request and nothing to fix it.
+ *
+ * All three are the same bug wearing different clothes: a failed load left
+ * state that made the next attempt cheap instead of real. The fix is that a
+ * retry bypasses the cache, only non-empty results are written, and a cache
+ * entry that cannot be read is discarded rather than thrown.
  */
 export async function getVersesForReference(
   reference: string,
-  translation: TranslationCode
+  translation: TranslationCode,
+  options: FetchOptions = {}
 ): Promise<Verse[]> {
   const key = cacheKey(translation, reference);
-  const cached = await AsyncStorage.getItem(key);
-  if (cached) {
-    return JSON.parse(cached);
+
+  if (!options.bypassCache) {
+    const cached = await AsyncStorage.getItem(key);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as Verse[];
+        // An empty array can still be sitting under this key from before empty
+        // results stopped being cached. Treat it as a miss and refetch rather
+        // than serving it, or the passages poisoned by the old behaviour would
+        // stay broken on every device that already has one.
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        // Unreadable entry — drop it and fetch. Rethrowing here would report a
+        // storage problem as "this passage couldn't load", which is both wrong
+        // and unfixable from the UI.
+        await AsyncStorage.removeItem(key).catch(() => {});
+      }
+    }
   }
 
   const segments = parseReadingReference(reference);
@@ -260,11 +319,16 @@ export async function getVersesForReference(
       : new Error(String(firstError.reason));
   }
 
-  // Cache ONLY complete results — a partially-loaded passage must not be
-  // frozen into the cache, or the missing segments would never be retried.
-  // (Scripture is permanent, so a fully-loaded passage stays cached
-  // forever; a partial one refetches next time and can fill the gap.)
-  if (!anyFailed) {
+  // Cache ONLY complete, NON-EMPTY results.
+  //
+  // Complete, because a partially-loaded passage frozen into a cache that never
+  // expires would mean the missing segments are never retried. Non-empty,
+  // because "every segment resolved with nothing" is not a passage — it is a
+  // translation that doesn't carry the book, or a parse that found no verses,
+  // and writing that to a permanent key is what made "Try again" a no-op for
+  // good. Scripture is permanent, so a fully-loaded passage stays cached
+  // forever; everything else is refetched.
+  if (!anyFailed && verses.length > 0) {
     await AsyncStorage.setItem(key, JSON.stringify(verses));
   }
   return verses;

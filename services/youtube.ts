@@ -307,3 +307,75 @@ export async function checkChannelLive(
   await AsyncStorage.setItem(liveCacheKey(channelId), JSON.stringify({ result, fetchedAt: Date.now() }));
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// CHANNEL PROFILE — the channel's own name, avatar and description.
+//
+// Added for the "Our Pastors" entry point, which shows Pastor Yinka's REAL
+// YouTube profile photo in a circle. That image is not available from any call
+// the app already made: playlistItems returns VIDEO thumbnails, and there is
+// no relationship between a video's thumbnail and the channel's avatar.
+//
+// COST: channels.list is 1 quota unit — the cheapest call in the API, against
+// the 10,000/day default. Cached for a WEEK rather than the module's usual
+// hour because a profile photo changes roughly never, and the entry point is
+// on a screen people open constantly. A stale-by-a-week avatar is invisible;
+// spending a call per hour on a constant is not.
+//
+// The avatar URL is itself long-lived (googleusercontent, content-addressed by
+// a hash in the path), so expo-image's own disk cache keeps the BYTES around
+// far longer than this JSON cache keeps the URL.
+// ---------------------------------------------------------------------------
+
+export interface YouTubeChannelProfile {
+  channelId: string;
+  title: string;
+  /** The channel's avatar. Highest resolution YouTube offers for it. */
+  avatar: string;
+  description: string;
+}
+
+const PROFILE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // one week — see above
+
+export async function fetchChannelProfile(channelId: string): Promise<YouTubeChannelProfile> {
+  requireRealChannel(channelId);
+  requireApiKey();
+
+  const cacheKey = `yt:profile:${channelId}`;
+  const cached = await AsyncStorage.getItem(cacheKey);
+  if (cached) {
+    const { profile, fetchedAt } = JSON.parse(cached);
+    if (Date.now() - fetchedAt < PROFILE_CACHE_TTL_MS) return profile;
+  }
+
+  const url = new URL(`${BASE_URL}/channels`);
+  url.searchParams.set('part', 'snippet');
+  url.searchParams.set('id', channelId);
+  url.searchParams.set('key', API_KEY!);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`YouTube channels failed: ${res.status}`);
+  const json = await res.json();
+
+  const item = json.items?.[0];
+  if (!item) throw new Error(`No YouTube channel found for id ${channelId}`);
+
+  // NOT pickThumbnail(): that helper is tuned for 16:9 video stills and prefers
+  // the widest available. Avatars are square and come in fixed 88/240/800px
+  // sizes, so the preference order is simply largest-first — the circle is
+  // drawn at up to 72pt, which is 216px on a 3x screen and past what `medium`
+  // can fill.
+  const t = item.snippet.thumbnails ?? {};
+  const avatar: string =
+    t.high?.url ?? t.medium?.url ?? t.default?.url ?? '';
+
+  const profile: YouTubeChannelProfile = {
+    channelId,
+    title: item.snippet.title,
+    avatar,
+    description: item.snippet.description ?? '',
+  };
+
+  await AsyncStorage.setItem(cacheKey, JSON.stringify({ profile, fetchedAt: Date.now() }));
+  return profile;
+}

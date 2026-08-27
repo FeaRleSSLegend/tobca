@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../hooks/useTheme';
 import { useStackBottomClearance } from '../hooks/useBottomClearance';
 import { socialAccounts, SocialAccount, SocialSection, SECTION_TITLES, appUrl, webUrl } from '../data/socials';
 import { PressableScale, FadeInUp, PopIn, staggerDelay } from '../components/ui/motion';
@@ -63,6 +64,8 @@ const SocialCard = ({
   copied: boolean;
   onCopy: (handle: string) => void;
 }) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const handle = account.handle;
   const brand = PLATFORM[account.platform];
 
@@ -96,12 +99,14 @@ const SocialCard = ({
       {/* Outward arrow, not a chevron. A chevron promises another screen in
           this app; this leaves for another one entirely, and the glyph should
           say so before the tap rather than after. */}
-      <Ionicons name="open-outline" size={18} color={theme.colors.grayIcon} />
+      <Ionicons name="open-outline" size={18} color={c.grayIcon} />
     </PressableScale>
   );
 };
 
 export default function SocialsScreen() {
+  const styles = useStyles();
+  const c = useThemeColors();
   const router = useRouter();
   const [copiedHandle, setCopiedHandle] = useState<string | null>(null);
   // Runtime value, so it can't live in the StyleSheet: this screen's
@@ -130,7 +135,7 @@ export default function SocialsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={24} color={theme.colors.navy} />
+          <Ionicons name="chevron-back" size={24} color={c.navy} />
         </PressableScale>
       </View>
 
@@ -155,8 +160,8 @@ export default function SocialsScreen() {
             <Text style={styles.churchMeta}>Kubwa · Wuse 2 · Abuja, Nigeria</Text>
 
             <View style={styles.glyphRow}>
-              <Ionicons name="logo-instagram" size={16} color={theme.colors.grayIcon} />
-              <Ionicons name="logo-youtube" size={16} color={theme.colors.grayIcon} />
+              <Ionicons name="logo-instagram" size={16} color={c.grayIcon} />
+              <Ionicons name="logo-youtube" size={16} color={c.grayIcon} />
             </View>
           </View>
         </FadeInUp>
@@ -194,12 +199,12 @@ export default function SocialsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   screen: {
     flex: 1,
     // A hair off the app background so the white cards below read as raised
     // surfaces rather than as blocks painted on the same sheet.
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
@@ -231,15 +236,15 @@ const styles = StyleSheet.create({
     width: 108,
     height: 108,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     marginBottom: theme.spacing.lg,
     // Two-part shadow: a tight one for crispness, the soft spread for
     // atmosphere. A single large blur reads as fog rather than elevation.
-    shadowColor: theme.colors.navy,
+    shadowColor: c.navy,
     shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
@@ -253,13 +258,13 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: 24,
     letterSpacing: -0.4,
-    color: theme.colors.navy,
+    color: c.navy,
     textAlign: 'center',
   },
   churchMeta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginTop: theme.space.tight,
     textAlign: 'center',
   },
@@ -280,7 +285,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
     letterSpacing: theme.editorial.trackLabel,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textTransform: 'uppercase',
     // The group's `gap` supplies this now — leaving the margin here as well
     // would have made label-to-first-card 24 while card-to-card stayed 12.
@@ -292,7 +297,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: theme.radius.md,
     // Generous vertical padding is what separates a "card" from a "list row";
     // 16 top and bottom puts each card comfortably over the 44pt target too.
@@ -300,8 +305,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     // Inter-card spacing is the group's `gap` — see sectionGroup.
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
-    shadowColor: theme.colors.navy,
+    borderColor: c.grayBorder,
+    shadowColor: c.navy,
     shadowOpacity: 0.05,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
@@ -323,25 +328,25 @@ const styles = StyleSheet.create({
   cardName: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.cardTitle,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   cardHandle: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginTop: theme.space.hairline,
   },
   cardCopied: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.success,
+    color: c.success,
     marginTop: theme.space.hairline,
   },
 
   disclosure: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
     textAlign: 'center',
     // Section step, same as every other block boundary on this screen — it
     // was 20, close enough to 24 to read as an inconsistency rather than a
@@ -350,4 +355,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     lineHeight: 19,
   },
-});
+}));

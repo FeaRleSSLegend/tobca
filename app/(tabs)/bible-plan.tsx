@@ -6,7 +6,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { useTabBottomClearance } from '../../hooks/useBottomClearance';
 import { theme } from '../../constants/theme';
-import { sharedStyles } from '../../constants/styles/sharedStyles';
+import { useSharedStyles } from '../../constants/styles/sharedStyles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
 import { TabTransition } from '../../components/ui/motion';
@@ -29,8 +29,13 @@ import { DayPlan, totalDays } from '../../data/biblePlan';
 import { compactReference } from '../../utils/referenceParser';
 import { TranslationCode, getSavedTranslation } from '../../services/bibleVersions';
 import { getVersesForReference, Verse } from '../../services/bibleApi';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 export default function PlanScreen() {
+  const styles = useStyles();
+  const c = useThemeColors();
+    const sharedStyles = useSharedStyles();
   const router = useRouter();
   const push = useGuardedPush();
   const bottomClearance = useTabBottomClearance();
@@ -195,12 +200,7 @@ export default function PlanScreen() {
           the mini-player's footprint is a runtime value. See the note in
           hooks/useBottomClearance.ts. */}
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}>
-        <View style={sharedStyles.headerRow}>
-          <Text style={sharedStyles.screenTitle}>Reading Plan</Text>
-          <View style={sharedStyles.avatar}>
-            <Text style={styles.avatarText}>JN</Text>
-          </View>
-        </View>
+        <ScreenHeader title="Reading Plan" />
 
         <TodayCard
           day={todayReading.day}
@@ -235,7 +235,7 @@ export default function PlanScreen() {
             One quiet line, not a card: it's a preview, not a task. */}
         {tomorrow && (
           <View style={styles.tomorrowRow}>
-            <Ionicons name="arrow-forward-circle-outline" size={16} color={theme.colors.grayIcon} />
+            <Ionicons name="arrow-forward-circle-outline" size={16} color={c.textMuted} />
             <Text style={styles.tomorrowText} numberOfLines={1}>
               Tomorrow · {compactReference(tomorrow.oldTestament)} · {compactReference(tomorrow.newTestament)}
             </Text>
@@ -260,7 +260,7 @@ export default function PlanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   scrollContent: {
     paddingHorizontal: theme.layout.screenPadding,
     // paddingBottom is applied at the call site — it depends on whether the
@@ -273,12 +273,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
-  },
-  avatarText: {
-    fontSize: theme.fontSize.body,
-    fontFamily: theme.fontFamily.display,
-    color: theme.colors.white,
+    color: c.textSecondary,
   },
   tomorrowRow: {
     flexDirection: 'row',
@@ -291,6 +286,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.textSecondary,
   },
-});
+}));

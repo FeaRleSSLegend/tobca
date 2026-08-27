@@ -3,8 +3,17 @@
 // as live.styles.ts / library.styles.ts / prayer.styles.ts.
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { lightPalette, type Palette } from '../palette';
+import { makeThemedSheet } from '../../hooks/useTheme';
 
-export const searchStyles = StyleSheet.create({
+// THEMED, with a light-only compatibility export — the same two-exposure
+// shape constants/styles/sharedStyles.ts documents, and for the same reason:
+// this sheet is read by screens that have been converted and by screens that
+// have not, and both have to keep working while the migration finishes.
+//
+//   useSearchStyles()   follows the active appearance. Use this.
+//   searchStyles     frozen against the light palette, for unconverted callers.
+const searchStylesFactory = (c: Palette) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -15,7 +24,7 @@ export const searchStyles = StyleSheet.create({
     paddingHorizontal: theme.layout.screenPadding,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: theme.layout.cardBorderWidth,
-    borderBottomColor: theme.colors.grayBorder,
+    borderBottomColor: c.grayBorder,
   },
   backBtn: {
     width: 32,
@@ -28,7 +37,7 @@ export const searchStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     borderRadius: theme.radius.full,
     paddingHorizontal: theme.spacing.md,
     minHeight: 40,
@@ -37,7 +46,7 @@ export const searchStyles = StyleSheet.create({
     flex: 1,
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   clearBtn: {
     padding: theme.space.hairline,
@@ -50,7 +59,7 @@ export const searchStyles = StyleSheet.create({
   sectionLabel: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodySemibold,
-    color: theme.colors.slate,
+    color: c.slate,
     textTransform: 'uppercase',
     marginBottom: theme.spacing.md,
   },
@@ -79,7 +88,7 @@ export const searchStyles = StyleSheet.create({
   clearAll: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.body,
-    color: theme.colors.pink,
+    color: c.pink,
   },
 
   // Recent-search chips. Same recessed grey field as an inactive FilterPill,
@@ -94,7 +103,7 @@ export const searchStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     borderRadius: theme.radius.full,
     paddingLeft: theme.spacing.md,
     // Tighter on the right: the dismiss glyph needs less air than the text
@@ -113,7 +122,7 @@ export const searchStyles = StyleSheet.create({
   chipLabel: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.navy,
+    color: c.navy,
     flexShrink: 1,
   },
   chipDismiss: {
@@ -149,14 +158,19 @@ export const searchStyles = StyleSheet.create({
   emptyStateText: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textAlign: 'center',
   },
   noResults: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textAlign: 'center',
     paddingVertical: theme.spacing.xl,
   },
 });
+
+/** Themed. Follows the active appearance. Prefer this. */
+export const useSearchStyles = makeThemedSheet(searchStylesFactory);
+/** @deprecated Light-only. Kept while screens are still being converted. */
+export const searchStyles = searchStylesFactory(lightPalette);

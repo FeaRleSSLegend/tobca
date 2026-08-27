@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
 import { PressableScale, PopIn } from '../ui/motion';
 import { BrandLoader } from '../ui/BrandLoader';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface TodayCardProps {
   day: number;
@@ -41,6 +42,8 @@ interface TodayCardProps {
 // at the right weight. Removing the ring also lets "Day N" sit alone on the
 // top row, which is a cleaner corner than a chip fighting a dial.
 export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = false }: TodayCardProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <View style={styles.card}>
       <LinearGradient
@@ -61,7 +64,7 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = 
 
       <View style={styles.topRow}>
         <View style={styles.dayChip}>
-          <Ionicons name="calendar-outline" size={13} color={theme.colors.white} />
+          <Ionicons name="calendar-outline" size={13} color={c.white} />
           <Text style={styles.dayChipText}>Day {day}</Text>
         </View>
       </View>
@@ -79,7 +82,7 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = 
         <View style={styles.loadingSlot}>
           {/* White, not brand pink/purple — the swooshes' own colours vanish
               against this card's pink→purple gradient. */}
-          <BrandLoader width={132} tint={theme.colors.white} />
+          <BrandLoader width={132} tint={c.white} />
         </View>
       ) : !isRead ? (
         <>
@@ -93,7 +96,7 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = 
             <Ionicons
               name={canMarkAsRead ? 'checkmark-circle' : 'lock-closed'}
               size={18}
-              color={canMarkAsRead ? theme.colors.pink : 'rgba(255,255,255,0.6)'}
+              color={canMarkAsRead ? c.pink : 'rgba(255,255,255,0.6)'}
             />
             <Text style={[styles.markBtnText, !canMarkAsRead && styles.markBtnTextDisabled]}>
               Mark as Read
@@ -107,7 +110,7 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = 
         // This badge only ever mounts at the moment the day is completed, so
         // a mount pop IS the confirmation of the action — no trigger needed.
         <PopIn style={styles.readBadge}>
-          <Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />
+          <Ionicons name="checkmark-circle" size={20} color={c.white} />
           <Text style={styles.readBadgeText}>Completed for today</Text>
         </PopIn>
       )}
@@ -115,7 +118,7 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = 
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   card: {
     borderRadius: theme.radius.lg,
     padding: theme.spacing.xl,
@@ -150,7 +153,7 @@ const styles = StyleSheet.create({
   dayChipText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.white,
+    color: c.white,
   },
   body: {
     marginTop: theme.spacing.xl,
@@ -167,7 +170,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.serifSemibold,
     fontSize: 24,
     lineHeight: 30,
-    color: theme.colors.white,
+    color: c.white,
   },
   loadingSlot: {
     height: 50,
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: theme.colors.white,
+    backgroundColor: c.white,
     borderRadius: theme.radius.full,
     height: 50,
   },
@@ -189,7 +192,7 @@ const styles = StyleSheet.create({
   markBtnText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   markBtnTextDisabled: {
     color: 'rgba(255,255,255,0.75)',
@@ -213,6 +216,6 @@ const styles = StyleSheet.create({
   readBadgeText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.white,
+    color: c.white,
   },
-});
+}));

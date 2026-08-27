@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../hooks/useTheme';
 import {
   BIBLE_VERSIONS,
   TranslationCode,
@@ -25,6 +26,8 @@ import { prefetchReferences } from '../services/bibleApi';
 import { getTodayReading } from '../utils/biblePlan.utils';
 
 export default function BibleVersionsScreen() {
+  const styles = useStyles();
+  const c = useThemeColors();
   const router = useRouter();
   const [selected, setSelected] = useState<TranslationCode | null>(null);
 
@@ -63,7 +66,7 @@ export default function BibleVersionsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={26} color={theme.colors.navy} />
+          <Ionicons name="chevron-back" size={26} color={c.navy} />
         </Pressable>
         <View>
           <Text style={styles.title}>Bible Version</Text>
@@ -92,7 +95,7 @@ export default function BibleVersionsScreen() {
                   <Text style={styles.meta}>{v.language} · {v.year}</Text>
                 </View>
                 {isSelected && (
-                  <Ionicons name="checkmark-circle" size={22} color={theme.colors.success} />
+                  <Ionicons name="checkmark-circle" size={22} color={c.success} />
                 )}
               </View>
 
@@ -109,10 +112,10 @@ export default function BibleVersionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   header: {
     flexDirection: 'row',
@@ -121,7 +124,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.layout.screenPadding,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: theme.layout.cardBorderWidth,
-    borderBottomColor: theme.colors.grayBorder,
+    borderBottomColor: c.grayBorder,
   },
   backBtn: {
     width: 32,
@@ -132,12 +135,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: theme.fontSize.bodyLg,
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   subtitle: {
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginTop: theme.space.hairline,
   },
   scrollContent: {
@@ -146,16 +149,16 @@ const styles = StyleSheet.create({
     paddingBottom: theme.layout.scrollClearance.stack,
   },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     borderRadius: theme.radius.md,
     padding: theme.spacing.lg,
   },
   // Selection carries a border change AND the checkmark — never color
   // alone, so the state survives color-vision differences.
   cardSelected: {
-    borderColor: theme.colors.navy,
+    borderColor: c.navy,
   },
   cardTop: {
     flexDirection: 'row',
@@ -167,13 +170,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.navy,
+    backgroundColor: c.navy,
     alignItems: 'center',
   },
   abbrText: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.white,
+    color: c.white,
     letterSpacing: 0.5,
   },
   nameWrap: {
@@ -182,12 +185,12 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   meta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginTop: theme.space.hairline,
   },
   approachTag: {
@@ -196,20 +199,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.space.micro,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
   },
   approachText: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.slate,
+    color: c.slate,
   },
   description: {
     marginTop: theme.spacing.md,
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
     lineHeight: 19,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
-});
+}));

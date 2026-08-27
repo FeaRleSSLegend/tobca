@@ -293,6 +293,7 @@ export function staggerDelay(index: number): number {
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
+import { useThemeColors } from '../../hooks/useTheme';
 
 interface ShimmerProps {
   style?: StyleProp<ViewStyle>;
@@ -303,6 +304,7 @@ interface ShimmerProps {
 }
 
 export const Shimmer = ({ style, width = 400 }: ShimmerProps) => {
+  const c = useThemeColors();
   const x = useRef(new Animated.Value(-1)).current;
 
   useEffect(() => {
@@ -322,7 +324,7 @@ export const Shimmer = ({ style, width = 400 }: ShimmerProps) => {
 
   return (
     <View style={[{ overflow: 'hidden' }, style]}>
-      <View style={{ flex: 1, backgroundColor: theme.colors.grayBorder }} />
+      <View style={{ flex: 1, backgroundColor: c.grayBorder }} />
       <Animated.View
         style={{
           ...StyleSheet_absoluteFill,

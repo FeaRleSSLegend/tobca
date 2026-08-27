@@ -26,6 +26,7 @@ import { memo } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { PressableScale } from './motion';
 import { AudioArt } from './AudioArt';
 import { AudioCover } from './AudioCover';
@@ -56,16 +57,18 @@ const AudioPosterCardBase = ({
   isPlaying = false,
   onPress,
 }: AudioPosterCardProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const badge = (
     // A badge rather than PosterCard's centred glyph: the artwork already owns
     // the middle of this box, and a glyph on top of it would read as two marks
     // fighting for the same space.
     <View style={styles.badge}>
       {isActive ? (
-        <PlayingBars animating={isPlaying} color={theme.colors.white} size={11} />
+        <PlayingBars animating={isPlaying} color={c.white} size={11} />
       ) : (
         // Always 'play' — only track cards carry this badge now.
-        <Ionicons name="play" size={12} color={theme.colors.white} />
+        <Ionicons name="play" size={12} color={c.white} />
       )}
     </View>
   );
@@ -120,7 +123,7 @@ const AudioPosterCardBase = ({
 /** Memoised: a shelf card's props are primitives, and its artwork is generated. */
 export const AudioPosterCard = memo(AudioPosterCardBase);
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrapper: {
     width: theme.layout.rowCard.width,
   },
@@ -142,16 +145,16 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.navy,
+    color: c.navy,
     lineHeight: 16,
   },
   titleActive: {
-    color: theme.colors.pink,
+    color: c.pink,
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginTop: theme.space.hairline,
   },
-});
+}));

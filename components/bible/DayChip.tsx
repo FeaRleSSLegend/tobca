@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import type { WeekDayStatus } from '../../utils/biblePlan.utils';
 
 interface DayChipProps {
@@ -10,6 +11,8 @@ interface DayChipProps {
 }
 
 export const DayChip = ({ day, dayNumber, status }: DayChipProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <View style={styles.chip}>
       <View style={[
@@ -19,11 +22,11 @@ export const DayChip = ({ day, dayNumber, status }: DayChipProps) => {
         status === 'today' && styles.circleToday,
       ]}>
         {status === 'completed' && (
-          <Ionicons name="checkmark" size={14} color={theme.colors.white} />
+          <Ionicons name="checkmark" size={14} color={c.white} />
         )}
         {/* A snowflake, never a checkmark: the day was protected, not read. */}
         {status === 'frozen' && (
-          <Ionicons name="snow" size={16} color={theme.colors.frost} />
+          <Ionicons name="snow" size={16} color={c.frost} />
         )}
         {status === 'today' && dayNumber && (
           <Text style={styles.todayText}>{dayNumber}</Text>
@@ -42,7 +45,7 @@ export const DayChip = ({ day, dayNumber, status }: DayChipProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   chip: {
     alignItems: 'center',
     flex: 1,
@@ -51,40 +54,40 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.xs,
   },
   circleCompleted: {
-    backgroundColor: theme.colors.navy,
+    backgroundColor: c.navy,
   },
   circleFrozen: {
-    backgroundColor: theme.colors.frostFill,
+    backgroundColor: c.frostFill,
   },
   circleToday: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 2,
-    borderColor: theme.colors.pink,
+    borderColor: c.pink,
   },
   todayText: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.body,
     fontWeight: '700',
-    color: theme.colors.navy,
+    color: c.navy,
   },
   pendingDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.grayIcon,
+    backgroundColor: c.grayIcon,
   },
   label: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   labelToday: {
-    color: theme.colors.navy,
+    color: c.navy,
   },
-});
+}));

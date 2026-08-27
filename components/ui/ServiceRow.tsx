@@ -4,6 +4,7 @@ import { PressableScale } from './motion';
 import { Ionicons } from '@expo/vector-icons';
 import { SmartImage } from './SmartImage';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { Message } from '../../data/content';
 
 interface ServiceRowProps {
@@ -26,6 +27,8 @@ interface ServiceRowProps {
  * where it reads fine; the month stays on the section header above.
  */
 export const ServiceRow = React.memo(({ message, serviceLabel, onPress }: ServiceRowProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const d = new Date(message.publishedAt);
   const day = d.getDate();
   const monthShort = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
@@ -43,7 +46,7 @@ export const ServiceRow = React.memo(({ message, serviceLabel, onPress }: Servic
           <SmartImage uri={message.thumbnail} style={StyleSheet.absoluteFill} />
         ) : (
           <View style={styles.thumbFallback}>
-            <Ionicons name="calendar" size={20} color={theme.colors.grayIcon} />
+            <Ionicons name="calendar" size={20} color={c.grayIcon} />
           </View>
         )}
         <View style={styles.dateChip}>
@@ -61,18 +64,18 @@ export const ServiceRow = React.memo(({ message, serviceLabel, onPress }: Servic
         </Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+      <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
     </PressableScale>
   );
 });
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
-    backgroundColor: theme.colors.white,
-    borderColor: theme.colors.grayBorder,
+    backgroundColor: c.white,
+    borderColor: c.grayBorder,
     borderWidth: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radius.md,
@@ -82,13 +85,13 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: theme.radius.sm,
     overflow: 'hidden',
-    backgroundColor: theme.colors.slate,
+    backgroundColor: c.slate,
   },
   thumbFallback: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   // Same translucent-scrim overlay recipe as MessageCard's duration badge
   // — a chip must carry its own contrast when it sits on unpredictable
@@ -108,7 +111,7 @@ const styles = StyleSheet.create({
   dateChipDay: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.body,
-    color: theme.colors.white,
+    color: c.white,
   },
   dateChipMonth: {
     fontFamily: theme.fontFamily.bodySemibold,
@@ -122,17 +125,17 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
+    color: c.navy,
     marginBottom: theme.spacing.xs,
     lineHeight: 18,
   },
   meta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   serviceTag: {
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.slate,
+    color: c.slate,
   },
-});
+}));

@@ -1,6 +1,7 @@
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface CollectionSearchInputProps {
   placeholder: string;
@@ -27,12 +28,15 @@ interface CollectionSearchInputProps {
  * pill, 44pt min height for the touch-target floor) so every search
  * field in the app reads as the same control.
  */
-export const CollectionSearchInput = ({ placeholder, value, onChangeText }: CollectionSearchInputProps) => (
+export const CollectionSearchInput = ({ placeholder, value, onChangeText }: CollectionSearchInputProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+  return (
   <View style={styles.wrap}>
-    <Ionicons name="search" size={18} color={theme.colors.grayIcon} />
+    <Ionicons name="search" size={18} color={c.grayIcon} />
     <TextInput
       placeholder={placeholder}
-      placeholderTextColor={theme.colors.grayIcon}
+      placeholderTextColor={c.grayIcon}
       value={value}
       onChangeText={onChangeText}
       style={styles.input}
@@ -47,18 +51,19 @@ export const CollectionSearchInput = ({ placeholder, value, onChangeText }: Coll
         accessibilityRole="button"
         accessibilityLabel="Clear search"
       >
-        <Ionicons name="close-circle" size={18} color={theme.colors.grayIcon} />
+        <Ionicons name="close-circle" size={18} color={c.grayIcon} />
       </Pressable>
     )}
   </View>
 );
+}
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     borderRadius: theme.radius.full,
     paddingHorizontal: theme.spacing.lg,
     minHeight: 44,
@@ -69,7 +74,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.navy,
+    color: c.navy,
     paddingVertical: theme.spacing.sm,
   },
-});
+}));

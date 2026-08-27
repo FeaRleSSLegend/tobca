@@ -1,14 +1,21 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import { colors, layout} from '.././../constants/theme';
+import { layout } from '.././../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import TabIcon from '../../components/ui/TabIcon';
 import { View } from 'react-native';
 
 export default function TabLayout() {
+  // The tab bar is the one piece of chrome visible on every screen, so it has
+  // to follow the appearance even while individual screens are still being
+  // converted — a white bar under a dark screen is the most obvious possible
+  // seam.
+  const Tabstyles = useTabStyles();
+  const c = useThemeColors();
   return (
     <Tabs screenOptions={{ 
         tabBarStyle: Tabstyles.tabBar, 
-        tabBarBackground: () => <View style={{ flex: 1, backgroundColor: colors.surface }} />,
+        tabBarBackground: () => <View style={{ flex: 1, backgroundColor: c.surface }} />,
         headerShown: false, 
         tabBarShowLabel: false,
         tabBarItemStyle: { paddingVertical: 16 },      
@@ -56,13 +63,13 @@ export default function TabLayout() {
   );
 }
 
-const Tabstyles = StyleSheet.create({
+const useTabStyles = makeThemedStyles((c) => ({
     tabBar: {
-        backgroundColor: colors.surface,
+        backgroundColor: c.surface,
         height: layout.tabBarHeight,
         elevation: 0,        // kills the Android shadow
         shadowOpacity: 0,    // kills the iOS shadow (belt and suspenders)
         borderTopWidth: 1,   // replace the shadow with a clean hairline instead
-        borderTopColor: colors.grayBorder,
+        borderTopColor: c.grayBorder,
     },
-});
+}));

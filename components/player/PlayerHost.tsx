@@ -37,6 +37,7 @@ import { useGuardedPush } from '../../hooks/useGuardedPush';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { usePlayback } from '../../providers/PlaybackProvider';
 import { useMessages } from '../../hooks/useMessages';
 import { buildRelatedSections } from '../../utils/relatedContent';
@@ -69,6 +70,8 @@ export function miniPlayerFootprint(screenWidth: number): number {
 }
 
 export function PlayerHost() {
+  const styles = useStyles();
+  const c = useThemeColors();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -327,7 +330,7 @@ export function PlayerHost() {
   const videoElement = (
     <View style={{ width, height: fullVideoHeight }}>
       {isAudioMode ? (
-        <View style={styles.audioStage}><Ionicons name="headset" size={expanded ? 48 : 20} color={theme.colors.white} /></View>
+        <View style={styles.audioStage}><Ionicons name="headset" size={expanded ? 48 : 20} color={c.white} /></View>
       ) : canPlayVideo ? (
         webViewArmed ? (
           <YoutubePlayer
@@ -376,12 +379,12 @@ export function PlayerHost() {
           />
         ) : (
           <View style={styles.loadingStage}>
-            <ActivityIndicator color={theme.colors.white} />
+            <ActivityIndicator color={c.white} />
           </View>
         )
       ) : (
         <View style={styles.unavailableStage}>
-          <Ionicons name="videocam-off-outline" size={expanded ? 36 : 18} color={theme.colors.grayIcon} />
+          <Ionicons name="videocam-off-outline" size={expanded ? 36 : 18} color={c.grayIcon} />
           {expanded && <Text style={styles.unavailableText}>Video not available for this item yet.</Text>}
         </View>
       )}
@@ -391,7 +394,7 @@ export function PlayerHost() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {/* LIGHT STATUS BAR ICONS WHILE THE FULL PLAYER IS UP.
-          Expanded, this covers the screen with theme.colors.black under the
+          Expanded, this covers the screen with c.black under the
           status bar, so the app's default dark icons disappear into it.
 
           Conditional MOUNT, not a conditional style: React Native applies the
@@ -415,7 +418,7 @@ export function PlayerHost() {
         pointerEvents={expanded ? 'auto' : 'none'}
       >
         <Pressable onPress={collapse} hitSlop={12} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Minimize player">
-          <Ionicons name="chevron-down" size={26} color={theme.colors.white} />
+          <Ionicons name="chevron-down" size={26} color={c.white} />
         </Pressable>
         {/* Centre label sits in its own flexed box so it stays optically
             centred regardless of the two icon buttons' widths — the previous
@@ -426,7 +429,7 @@ export function PlayerHost() {
           </Text>
         </View>
         <Pressable onPress={onShare} hitSlop={12} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Share this message">
-          <Ionicons name="share-outline" size={20} color={theme.colors.white} />
+          <Ionicons name="share-outline" size={20} color={c.white} />
         </Pressable>
       </Animated.View>
 
@@ -483,13 +486,13 @@ export function PlayerHost() {
                 accessibilityLabel={`See all of the series ${message.series}`}
               >
                 <View style={styles.seriesIcon}>
-                  <Ionicons name="albums" size={17} color={theme.colors.pink} />
+                  <Ionicons name="albums" size={17} color={c.pink} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.seriesCardLabel}>PART OF A SERIES</Text>
                   <Text style={styles.seriesCardName} numberOfLines={1}>{message.series}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+                <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
               </PressableScale>
             </FadeInUp>
           )}
@@ -565,7 +568,7 @@ export function PlayerHost() {
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={() => expandRef.current()} accessibilityRole="button" accessibilityLabel={`Expand player: ${displayTitle(message.title)}`} />
           <Pressable onPress={close} hitSlop={8} style={styles.miniClose} accessibilityRole="button" accessibilityLabel="Close player">
-            <Ionicons name="close" size={16} color={theme.colors.white} />
+            <Ionicons name="close" size={16} color={c.white} />
           </Pressable>
         </Animated.View>
       </Animated.View>
@@ -574,9 +577,11 @@ export function PlayerHost() {
 }
 
 function MetaChip({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <View style={styles.metaChip}>
-      <Ionicons name={icon} size={13} color={theme.colors.graySecondary} />
+      <Ionicons name={icon} size={13} color={c.graySecondary} />
       <Text style={styles.metaChipText} numberOfLines={1}>{label}</Text>
     </View>
   );
@@ -595,7 +600,9 @@ function ActionButton({ icon, label, onPress, disabled, primary }: {
   disabled?: boolean;
   primary?: boolean;
 }) {
-  const tint = disabled ? theme.colors.grayIcon : primary ? theme.colors.white : theme.colors.navy;
+  const styles = useStyles();
+  const c = useThemeColors();
+  const tint = disabled ? c.grayIcon : primary ? c.white : c.navy;
   return (
     <PressableScale
       onPress={onPress}
@@ -620,15 +627,18 @@ function ActionButton({ icon, label, onPress, disabled, primary }: {
 }
 
 function ModeChip({ label, icon, active, onPress }: { label: string; icon: keyof typeof Ionicons.glyphMap; active: boolean; onPress: () => void }) {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <Pressable onPress={onPress} style={[styles.modeChip, active && styles.modeChipActive]} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={label}>
-      <Ionicons name={icon} size={15} color={active ? theme.colors.white : theme.colors.slate} />
+      <Ionicons name={icon} size={15} color={active ? c.white : c.slate} />
       <Text style={[styles.modeChipText, active && styles.modeChipTextActive]}>{label}</Text>
     </Pressable>
   );
 }
 
 function RelatedRow({ message, onPress }: { message: Message; onPress: () => void }) {
+  const styles = useStyles();
   return (
     <PressableScale style={styles.relatedRow} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Play ${displayTitle(message.title)}, ${message.duration}`}>
       <View style={styles.relatedThumb}>
@@ -654,12 +664,12 @@ function RelatedRow({ message, onPress }: { message: Message; onPress: () => voi
 
 function clamp(v: number, min: number, max: number) { return Math.max(min, Math.min(max, v)); }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: theme.colors.black, zIndex: 90 },
+const useStyles = makeThemedStyles((c) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: c.black, zIndex: 90 },
   header: {
     position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'flex-end',
     justifyContent: 'space-between', paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.black, zIndex: 95,
+    backgroundColor: c.black, zIndex: 95,
   },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.spacing.sm },
@@ -672,65 +682,73 @@ const styles = StyleSheet.create({
   // surface the video sits on top of, rather than the page simply changing
   // colour at the video's bottom edge.
   detailsWrap: {
-    position: 'absolute', left: 0, right: 0, backgroundColor: theme.colors.bg, zIndex: 92,
+    position: 'absolute', left: 0, right: 0, backgroundColor: c.bg, zIndex: 92,
     borderTopLeftRadius: theme.radius.lg, borderTopRightRadius: theme.radius.lg, overflow: 'hidden',
   },
   detailsContent: { paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.xxl },
   eyebrow: {
     fontFamily: theme.fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.2,
-    color: theme.colors.pink, marginBottom: theme.space.tight,
+    color: c.pink, marginBottom: theme.space.tight,
   },
-  title: { fontFamily: theme.fontFamily.display, fontSize: 22, color: theme.colors.navy, marginBottom: theme.spacing.lg, lineHeight: 29 },
+  title: { fontFamily: theme.fontFamily.display, fontSize: 22, color: c.navy, marginBottom: theme.spacing.lg, lineHeight: 29 },
   metaChips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
-  metaChip: { flexDirection: 'row', alignItems: 'center', gap: theme.space.micro, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.grayBorder, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, minHeight: 30, maxWidth: '100%' },
-  metaChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, flexShrink: 1, includeFontPadding: false },
+  metaChip: { flexDirection: 'row', alignItems: 'center', gap: theme.space.micro, backgroundColor: c.surface, borderWidth: 1, borderColor: c.grayBorder, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, minHeight: 30, maxWidth: '100%' },
+  metaChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: c.graySecondary, flexShrink: 1, includeFontPadding: false },
   actionsRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xl },
   // The row's layout unit — one equal share each, on the Pressable itself.
   actionSlot: { flex: 1 },
   actionBtn: {
     width: '100%', alignItems: 'center', justifyContent: 'center', gap: theme.space.tight,
     height: 64, borderRadius: theme.radius.md, paddingHorizontal: theme.spacing.xs,
-    borderWidth: 1, borderColor: theme.colors.grayBorder, backgroundColor: theme.colors.surface,
+    borderWidth: 1, borderColor: c.grayBorder, backgroundColor: c.surface,
   },
-  actionBtnPrimary: { backgroundColor: theme.colors.navy, borderColor: theme.colors.navy },
+  actionBtnPrimary: { backgroundColor: c.navy, borderColor: c.navy },
   // Softer than the live buttons but still a real surface — a flat opacity
   // drop on the whole control is what made these read as broken before.
-  actionBtnDisabled: { backgroundColor: theme.colors.bg, borderColor: theme.colors.grayBorder },
+  actionBtnDisabled: { backgroundColor: c.bg, borderColor: c.grayBorder },
   actionLabel: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 11, letterSpacing: 0.1, includeFontPadding: false },
-  rule: { height: StyleSheet.hairlineWidth, backgroundColor: theme.colors.grayBorder, marginBottom: theme.spacing.lg },
-  audioStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.navy },
-  unavailableStage: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xl, backgroundColor: theme.colors.black },
-  loadingStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.black },
-  unavailableText: { fontFamily: theme.fontFamily.body, color: theme.colors.grayIcon, textAlign: 'center', fontSize: theme.fontSize.body },
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: c.grayBorder, marginBottom: theme.spacing.lg },
+  // LITERAL, not `c.navy`. This is the stage behind a white headset glyph when
+  // an audio-only item is open in the video player — a media surface, dark in
+  // both appearances like the black video stage beside it. `navy` is the
+  // PRIMARY TEXT role in the palette, so in dark mode it resolves to #E8EDF3
+  // and this stage would turn near-white under a white icon.
+  audioStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1A3247' },
+  unavailableStage: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xl, backgroundColor: c.black },
+  loadingStage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.black },
+  unavailableText: { fontFamily: theme.fontFamily.body, color: c.grayIcon, textAlign: 'center', fontSize: theme.fontSize.body },
   modeRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xl },
-  modeChip: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, paddingHorizontal: theme.spacing.lg, minHeight: 40, borderRadius: theme.radius.full, borderWidth: 1, borderColor: theme.colors.grayBorder, backgroundColor: theme.colors.surface },
-  modeChipActive: { backgroundColor: theme.colors.navy, borderColor: theme.colors.navy },
-  modeChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: theme.colors.slate },
-  modeChipTextActive: { color: theme.colors.white },
-  seriesCard: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginTop: theme.spacing.xl, padding: theme.spacing.lg, backgroundColor: theme.colors.pinkWash, borderRadius: theme.radius.md, borderWidth: theme.layout.cardBorderWidth, borderColor: theme.colors.pinkTintEdge },
+  modeChip: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, paddingHorizontal: theme.spacing.lg, minHeight: 40, borderRadius: theme.radius.full, borderWidth: 1, borderColor: c.grayBorder, backgroundColor: c.surface },
+  modeChipActive: { backgroundColor: c.navy, borderColor: c.navy },
+  modeChipText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.caption, color: c.slate },
+  modeChipTextActive: { color: c.white },
+  seriesCard: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginTop: theme.spacing.xl, padding: theme.spacing.lg, backgroundColor: c.pinkWash, borderRadius: theme.radius.md, borderWidth: theme.layout.cardBorderWidth, borderColor: c.pinkTintEdge },
   seriesIcon: {
     width: 36, height: 36, borderRadius: theme.radius.full,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.white,
+    // The disc sits on the accent-washed series card, which is a PALE card in
+    // light mode and a DARK one in dark mode, so a hardcoded white disc would
+    // be a bright hole in it. Follows the surface instead.
+    alignItems: 'center', justifyContent: 'center', backgroundColor: c.surface,
   },
-  seriesCardLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, letterSpacing: 0.9, color: theme.colors.pink },
-  seriesCardName: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.bodyLg, color: theme.colors.navy, marginTop: theme.space.micro },
-  upNext: { marginTop: theme.spacing.xxl, padding: theme.spacing.lg, backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.grayBorder },
-  upNextLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, color: theme.colors.pink, letterSpacing: 1.2, marginBottom: theme.spacing.md },
+  seriesCardLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, letterSpacing: 0.9, color: c.pink },
+  seriesCardName: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.bodyLg, color: c.navy, marginTop: theme.space.micro },
+  upNext: { marginTop: theme.spacing.xxl, padding: theme.spacing.lg, backgroundColor: c.surface, borderRadius: theme.radius.md, borderWidth: 1, borderColor: c.grayBorder },
+  upNextLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10, color: c.pink, letterSpacing: 1.2, marginBottom: theme.spacing.md },
   relatedSection: { marginTop: theme.spacing.xxl, gap: theme.spacing.lg },
-  relatedTitle: { fontFamily: theme.fontFamily.display, fontSize: theme.fontSize.sectionHeading, color: theme.colors.navy, marginBottom: theme.spacing.xs },
+  relatedTitle: { fontFamily: theme.fontFamily.display, fontSize: theme.fontSize.sectionHeading, color: c.navy, marginBottom: theme.spacing.xs },
   relatedRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
-  relatedThumb: { width: 132, height: 74, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
+  relatedThumb: { width: 132, height: 74, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: c.grayBorder },
   relatedDuration: {
     position: 'absolute', right: 5, bottom: 5,
     paddingHorizontal: theme.space.tight, paddingVertical: theme.space.hairline, borderRadius: 4,
     backgroundColor: 'rgba(10,22,33,0.82)',
   },
-  relatedDurationText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 10, color: theme.colors.white, includeFontPadding: false },
-  relatedRowTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.bodyLg, color: theme.colors.navy, lineHeight: 19 },
-  relatedRowMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, marginTop: theme.space.micro },
-  videoWindow: { position: 'absolute', backgroundColor: theme.colors.black, overflow: 'hidden', zIndex: 100 },
+  relatedDurationText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 10, color: c.white, includeFontPadding: false },
+  relatedRowTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.bodyLg, color: c.navy, lineHeight: 19 },
+  relatedRowMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: c.graySecondary, marginTop: theme.space.micro },
+  videoWindow: { position: 'absolute', backgroundColor: c.black, overflow: 'hidden', zIndex: 100 },
   videoWindowFloating: {
     shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 12,
   },
   miniClose: { position: 'absolute', top: 5, right: 5, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(10,22,33,0.6)', alignItems: 'center', justifyContent: 'center' },
-});
+}));

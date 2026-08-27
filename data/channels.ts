@@ -23,6 +23,8 @@ export interface FeaturedChannel {
   tagline: string;
   /** How to credit an episode's speaker in the player. */
   speaker: string;
+  /** Their role at the church, shown on their own page under the name. */
+  role: string;
   channelId: string;
 }
 
@@ -46,6 +48,7 @@ export const featuredChannels: FeaturedChannel[] = [
     name: 'Pastor Yinka Jibril',
     tagline: 'Teaching, conversation and encouragement',
     speaker: 'Pst. Yinka Jibril',
+    role: 'The OliveBrook Church',
     channelId: YINKA_CHANNEL_ID,
   },
 ];

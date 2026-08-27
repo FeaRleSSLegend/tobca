@@ -31,23 +31,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../hooks/useTheme';
 import { PressableScale } from '../components/ui/motion';
 import { useStackBottomClearance } from '../hooks/useBottomClearance';
 
 /** One "what we don't do" line, with its own tick. */
-const Point = ({ children }: { children: React.ReactNode }) => (
+const Point = ({ children }: { children: React.ReactNode }) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+  return (
   <View style={styles.point}>
     <Ionicons
       name="checkmark-circle"
       size={18}
-      color={theme.colors.success}
+      color={c.success}
       style={styles.pointIcon}
     />
     <Text style={styles.pointText}>{children}</Text>
   </View>
 );
+}
 
 export default function PrivacyScreen() {
+  const styles = useStyles();
+  const c = useThemeColors();
   const router = useRouter();
   const bottomClearance = useStackBottomClearance();
 
@@ -60,7 +67,7 @@ export default function PrivacyScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={26} color={theme.colors.navy} />
+          <Ionicons name="chevron-back" size={26} color={c.navy} />
         </PressableScale>
         <Text style={styles.title}>Privacy</Text>
       </View>
@@ -113,10 +120,10 @@ export default function PrivacyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   header: {
     flexDirection: 'row',
@@ -125,7 +132,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.layout.screenPadding,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: theme.layout.cardBorderWidth,
-    borderBottomColor: theme.colors.grayBorder,
+    borderBottomColor: c.grayBorder,
   },
   backBtn: {
     width: 32,
@@ -136,7 +143,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: theme.fontSize.bodyLg,
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   content: {
     padding: theme.layout.screenPadding,
@@ -148,7 +155,7 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.display,
     lineHeight: theme.fontSize.display * 1.3,
     letterSpacing: -0.4,
-    color: theme.colors.navy,
+    color: c.navy,
     marginTop: theme.space.tight,
     marginBottom: theme.space.related,
   },
@@ -156,20 +163,20 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.bodyLg,
     lineHeight: theme.fontSize.bodyLg * 1.6,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   sectionLabel: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
     letterSpacing: theme.editorial.trackLabel,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
     marginTop: theme.space.section,
     marginBottom: theme.space.tight,
   },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     borderRadius: theme.radius.md,
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
@@ -188,13 +195,13 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.bodyLg,
     lineHeight: theme.fontSize.bodyLg * 1.45,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   footnote: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
     lineHeight: theme.fontSize.caption * 1.6,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
     marginTop: theme.space.major,
   },
-});
+}));

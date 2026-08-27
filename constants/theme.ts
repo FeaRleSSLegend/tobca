@@ -14,7 +14,12 @@ export const colors = {
   slate: '#284868',      // secondary dark, icons, nav bar accents
   slateLight: '#3E617F', // used in gradients (feature card backgrounds)
   graySecondary: '#5C6F80', // body/meta text — passes 4.5:1 contrast on white
-  grayIcon: '#8C9BA8',      // inactive icons, placeholders — passes 3:1 minimum
+  // MEASURED: 2.85:1 on white, 2.78:1 on `bg`. This comment used to claim it
+  // "passes 3:1 minimum"; it does not, in either place. Left at this value
+  // because changing it shifts every inactive icon and placeholder in the
+  // light app, which is a design call — but nothing new should treat it as
+  // meeting a contrast floor. constants/palette.ts carries the full audit.
+  grayIcon: '#8C9BA8',      // inactive icons, placeholders
   grayBorder: '#E9EDF0',    // card borders, dividers
   bg: '#F7F8F9',            // screen background
   surface: '#FFFFFF',       // card background

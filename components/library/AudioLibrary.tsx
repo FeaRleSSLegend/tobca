@@ -61,6 +61,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 import { EmptyState } from '../ui/EmptyState';
 import { AudioListRow } from '../ui/AudioListRow';
 import { AudioPosterCard } from '../ui/AudioPosterCard';
@@ -127,6 +128,7 @@ function useContinueListening(tracks: AudioTrack[], activeId: string | null): Au
 }
 
 export const AudioLibrary = ({ onScroll, bottomClearance }: AudioLibraryProps) => {
+  const styles = useStyles();
   const push = useGuardedPush();
   // SCOPED. Teachings, plus the service-embedded prayer segments that are
   // dual-listed here and on the Prayer tab. See hooks/useAudioManifest.
@@ -324,7 +326,7 @@ export const AudioLibrary = ({ onScroll, bottomClearance }: AudioLibraryProps) =
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   content: {
     // No horizontal padding: the pager's parent already carries the screen
     // gutter, and adding it again here would inset this page relative to the
@@ -353,14 +355,14 @@ const styles = StyleSheet.create({
   // preview read as one list rather than six separate objects.
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     marginLeft: 58, // clears the artwork, aligns with the title
   },
   moreHint: {
     marginTop: theme.space.header,
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
     textAlign: 'center',
   },
-});
+}));

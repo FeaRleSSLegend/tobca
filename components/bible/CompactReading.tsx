@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 interface CompactReadingProps {
   title: string;
@@ -7,6 +8,7 @@ interface CompactReadingProps {
 }
 
 export const CompactReading = ({ title, reference }: CompactReadingProps) => {
+  const styles = useStyles();
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
@@ -15,11 +17,11 @@ export const CompactReading = ({ title, reference }: CompactReadingProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   container: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     borderRadius: theme.radius.sm,
     padding: theme.spacing.md,
     marginTop: theme.spacing.sm,
@@ -27,7 +29,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.05,
     marginBottom: theme.spacing.xs,
@@ -35,7 +37,7 @@ const styles = StyleSheet.create({
   reference: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.navy,
+    color: c.navy,
     fontWeight: '500',
   },
-});
+}));

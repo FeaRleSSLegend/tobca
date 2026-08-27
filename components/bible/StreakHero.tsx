@@ -17,6 +17,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { PressableScale, PopIn } from '../ui/motion';
 
 export interface WeekDay {
@@ -36,6 +37,8 @@ interface StreakHeroProps {
 }
 
 const DayCircle = ({ day, status }: WeekDay) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const done = status === 'completed';
   const frozen = status === 'frozen';
   const today = status === 'today';
@@ -60,10 +63,10 @@ const DayCircle = ({ day, status }: WeekDay) => {
       >
         {done ? (
           <PopIn>
-            <Ionicons name="checkmark" size={15} color={theme.colors.white} />
+            <Ionicons name="checkmark" size={15} color={c.white} />
           </PopIn>
         ) : frozen ? (
-          <Ionicons name="snow" size={14} color={theme.colors.frost} />
+          <Ionicons name="snow" size={14} color={c.frost} />
         ) : (
           <Text style={[styles.dayDot, today && styles.dayDotToday]}>·</Text>
         )}
@@ -74,6 +77,8 @@ const DayCircle = ({ day, status }: WeekDay) => {
 };
 
 export const StreakHero = ({ streak, week, completedCount, totalDays, freezes, maxFreezes, onPress }: StreakHeroProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <PressableScale
       style={styles.card}
@@ -88,7 +93,7 @@ export const StreakHero = ({ streak, week, completedCount, totalDays, freezes, m
     >
       <View style={styles.headRow}>
         <View style={styles.flame}>
-          <Ionicons name="flame" size={22} color={theme.colors.pink} />
+          <Ionicons name="flame" size={22} color={c.pink} />
         </View>
 
         <View style={styles.numberBlock}>
@@ -120,11 +125,11 @@ export const StreakHero = ({ streak, week, completedCount, totalDays, freezes, m
             against the pink flame so it reads as support, never as a rival
             headline — the app keeps a single accent. */}
         <View style={styles.freezeChip}>
-          <Ionicons name="snow" size={14} color={theme.colors.frost} />
+          <Ionicons name="snow" size={14} color={c.frost} />
           <Text style={styles.freezeCount}>{freezes}</Text>
         </View>
 
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+        <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
       </View>
 
       <View style={styles.week}>
@@ -144,12 +149,12 @@ export const StreakHero = ({ streak, week, completedCount, totalDays, freezes, m
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     paddingVertical: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
     // On the shared scale, and NOT larger than it: the SectionLabel below
@@ -184,17 +189,17 @@ const styles = StyleSheet.create({
     fontSize: 40,
     lineHeight: 44,
     letterSpacing: -1,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   restartLabel: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.cardTitle,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   numberLabel: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
 
   freezeChip: {
@@ -204,12 +209,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     height: 26,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.frostFill,
+    backgroundColor: c.frostFill,
   },
   freezeCount: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.frost,
+    color: c.frost,
   },
 
   week: {
@@ -227,44 +232,44 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
   },
   circleDone: {
-    backgroundColor: theme.colors.success,
-    borderColor: theme.colors.success,
+    backgroundColor: c.success,
+    borderColor: c.success,
   },
   circleFrozen: {
-    backgroundColor: theme.colors.frostFill,
-    borderColor: theme.colors.frostBorder,
+    backgroundColor: c.frostFill,
+    borderColor: c.frostBorder,
   },
   circleToday: {
     borderWidth: 2,
-    borderColor: theme.colors.pink,
-    backgroundColor: theme.colors.surface,
+    borderColor: c.pink,
+    backgroundColor: c.surface,
   },
   dayDot: {
     fontSize: 18,
     lineHeight: 20,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
   dayDotToday: {
-    color: theme.colors.pink,
+    color: c.pink,
   },
   dayLabel: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 11,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
   dayLabelToday: {
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.pink,
+    color: c.pink,
   },
   context: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
     marginTop: theme.spacing.lg,
   },
-});
+}));

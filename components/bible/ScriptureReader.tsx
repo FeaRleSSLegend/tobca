@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { TranslationCode } from '../../services/bibleVersions';
 
 interface Verse {
@@ -26,6 +27,8 @@ export const ScriptureReader = ({
   onReadMore,
   style
 }: ScriptureReaderProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const [fontSize, setFontSize] = useState(14);
   
   if (verses.length === 0) {
@@ -79,19 +82,19 @@ export const ScriptureReader = ({
       {onReadMore && (
         <Pressable onPress={onReadMore} style={styles.readMoreBtn}>
           <Text style={styles.readMoreText}>Read Full Chapter</Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.slate} />
+          <Ionicons name="chevron-forward" size={16} color={c.slate} />
         </Pressable>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   container: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: theme.radius.md,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     padding: theme.spacing.md,
     marginTop: theme.spacing.sm,
   },
@@ -100,7 +103,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.grayBorder,
+    borderBottomColor: c.grayBorder,
     paddingBottom: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
@@ -108,16 +111,16 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.bodyLg,
     fontWeight: '700',
-    color: theme.colors.navy,
+    color: c.navy,
   },
   controls: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
   },
   controlBtn: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     width: 28,
     height: 28,
     borderRadius: 7,
@@ -131,7 +134,7 @@ const styles = StyleSheet.create({
   controlText: {
     fontSize: theme.fontSize.caption,
     fontWeight: '700',
-    color: theme.colors.slate,
+    color: c.slate,
     // Was fontWeight with no fontFamily -> fell back to the system font.
     fontFamily: theme.fontFamily.bodyBold,
 },
@@ -143,13 +146,13 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     // Was #2C3E50, an off-palette slate that existed nowhere else in the
     // app and sat a shade cooler than everything around it.
-    color: theme.colors.navy,
+    color: c.navy,
     marginBottom: theme.spacing.sm,
   },
   verseNumber: {
     fontWeight: '700',
     fontSize: 11,
-    color: theme.colors.pink,
+    color: c.pink,
     marginRight: theme.spacing.xs,
     // Was fontWeight with no fontFamily -> fell back to the system font.
     fontFamily: theme.fontFamily.bodyBold,
@@ -162,29 +165,29 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.grayBorder,
+    borderTopColor: c.grayBorder,
   },
   readMoreText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.slate,
+    color: c.slate,
   },
   emptyContainer: {
     padding: theme.spacing.xl,
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: theme.radius.md,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
   },
   emptyText: {
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginBottom: theme.spacing.xs,
   },
   emptySubtext: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.body,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
-});
+}));

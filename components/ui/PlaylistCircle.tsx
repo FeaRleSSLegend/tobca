@@ -4,6 +4,7 @@ import { PressableScale } from './motion';
 import { SmartImage } from './SmartImage';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface PlaylistCircleProps {
   title: string;
@@ -25,7 +26,10 @@ interface PlaylistCircleProps {
 const TILE_WIDTH = theme.layout.rowCard.width;
 const TILE_HEIGHT = theme.layout.rowCard.height;
 
-export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: PlaylistCircleProps) => (
+export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: PlaylistCircleProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+  return (
   <PressableScale
     onPress={onPress}
     style={styles.wrap}
@@ -36,7 +40,7 @@ export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: 
       {thumbnail ? (
         <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
       ) : (
-        <Ionicons name="albums" size={28} color={theme.colors.white} />
+        <Ionicons name="albums" size={28} color={c.white} />
       )}
     </View>
     <Text style={styles.title} numberOfLines={2}>
@@ -44,9 +48,10 @@ export const PlaylistCircle = React.memo(({ title, count, thumbnail, onPress }: 
     </Text>
     <Text style={styles.count}>{count} videos</Text>
   </PressableScale>
-));
+);
+});
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrap: {
     width: TILE_WIDTH,
   },
@@ -54,7 +59,7 @@ const styles = StyleSheet.create({
     width: TILE_WIDTH,
     height: TILE_HEIGHT,
     borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.navy,
+    backgroundColor: c.navy,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -65,12 +70,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.navy,
+    color: c.navy,
     lineHeight: 16,
   },
   count: {
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginTop: theme.space.hairline,
   },
-});
+}));

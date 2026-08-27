@@ -33,6 +33,7 @@
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { BrandMark } from './BrandMark';
 import { hashSeed } from '../../utils/audioArtwork';
 
@@ -82,6 +83,8 @@ export const AudioCover = ({
   style,
   children,
 }: AudioCoverProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const palette = coverPalette(title);
 
   // One scale factor off the shelf-card width, so the hero is the same design
@@ -107,13 +110,13 @@ export const AudioCover = ({
           sits on rather than a second logo competing with the real one. */}
       <BrandMark
         width={width * 1.35}
-        tint={theme.colors.white}
+        tint={c.white}
         opacity={0.07}
         style={{ position: 'absolute', right: -width * 0.3, top: height * 0.18 }}
       />
 
       <View style={[styles.inner, { padding: pad }]}>
-        <BrandMark width={markWidth} tint={theme.colors.white} opacity={0.9} />
+        <BrandMark width={markWidth} tint={c.white} opacity={0.9} />
         <Text
           style={[
             styles.title,
@@ -133,11 +136,11 @@ export const AudioCover = ({
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   box: {
     // Clips the gradient and the bleeding watermark to the rounded corners.
     overflow: 'hidden',
-    backgroundColor: theme.colors.navy,
+    backgroundColor: c.navy,
   },
   inner: {
     position: 'absolute',
@@ -152,9 +155,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: theme.fontFamily.display,
-    color: theme.colors.white,
+    color: c.white,
     // Large type set tight, per the editorial scale. The title IS the cover,
     // so it is allowed to be the loudest thing on it.
     letterSpacing: theme.editorial.trackTight,
   },
-});
+}));

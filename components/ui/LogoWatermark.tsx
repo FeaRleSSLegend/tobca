@@ -1,8 +1,11 @@
 import { View, Image, StyleSheet, ViewStyle } from 'react-native';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 // Real logo (assets/brand-logo.png), rendered faint as a fixed background
 // watermark behind every screen's scrollable content.
-export const LogoWatermark = () => (
+export const LogoWatermark = () => {
+  const styles = useStyles();
+  return (
   <View style={styles.wrap} pointerEvents="none">
     <Image
       source={require('../../assets/brand-logo.png')}
@@ -11,8 +14,9 @@ export const LogoWatermark = () => (
     />
   </View>
 );
+}
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrap: {
     // Written as literal keys (not a spread of StyleSheet.absoluteFillObject)
     // so TS can't widen `position` to `string` and flag it.
@@ -46,11 +50,11 @@ const styles = StyleSheet.create({
     // failure, not a subtle-branding choice. Dropped to 300pt / 0.035: still
     // present as a texture, no longer competing for the same glance.
     // Previously: 420 / 0.1. Was 0.06 — measured against the actual page background
-    // (theme.colors.bg, ~#F7F8F9) blended with the logo's own pink/navy/
+    // (c.bg, ~#F7F8F9) blended with the logo's own pink/navy/
     // purple, that landed within ~5-15 RGB units of the plain background
     // color across the board, i.e. genuinely at the edge of perceptible.
     // 0.1 keeps it clearly subordinate to foreground text while actually
     // registering as a mark rather than page-color noise.
     opacity: 0.035,
   } satisfies ViewStyle,
-});
+}));

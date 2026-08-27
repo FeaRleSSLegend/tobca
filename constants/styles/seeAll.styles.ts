@@ -6,8 +6,17 @@
 // keeps their chrome pixel-identical across variants.
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { lightPalette, type Palette } from '../palette';
+import { makeThemedSheet } from '../../hooks/useTheme';
 
-export const seeAllStyles = StyleSheet.create({
+// THEMED, with a light-only compatibility export — the same two-exposure
+// shape constants/styles/sharedStyles.ts documents, and for the same reason:
+// this sheet is read by screens that have been converted and by screens that
+// have not, and both have to keep working while the migration finishes.
+//
+//   useSeeAllStyles()   follows the active appearance. Use this.
+//   seeAllStyles     frozen against the light palette, for unconverted callers.
+const seeAllStylesFactory = (c: Palette) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -18,7 +27,7 @@ export const seeAllStyles = StyleSheet.create({
     paddingHorizontal: theme.layout.screenPadding,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: theme.layout.cardBorderWidth,
-    borderBottomColor: theme.colors.grayBorder,
+    borderBottomColor: c.grayBorder,
   },
   backBtn: {
     width: 32,
@@ -32,14 +41,14 @@ export const seeAllStyles = StyleSheet.create({
   title: {
     fontSize: theme.fontSize.bodyLg,
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   // Small live count under the title ("24 messages") — orientation the
   // old screen only surfaced for filtered views, now on every collection.
   subtitle: {
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginTop: theme.space.hairline,
   },
   // One-line context under the header — only rendered when a collection
@@ -47,7 +56,7 @@ export const seeAllStyles = StyleSheet.create({
   description: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     paddingHorizontal: theme.layout.screenPadding,
     paddingTop: theme.spacing.md,
   },
@@ -84,13 +93,13 @@ export const seeAllStyles = StyleSheet.create({
   groupHeader: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodySemibold,
-    color: theme.colors.slate,
+    color: c.slate,
     textTransform: 'uppercase',
   },
   groupHeaderCount: {
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
   listRowWrap: {
     marginBottom: theme.spacing.sm,
@@ -120,7 +129,12 @@ export const seeAllStyles = StyleSheet.create({
   emptyText: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textAlign: 'center',
   },
 });
+
+/** Themed. Follows the active appearance. Prefer this. */
+export const useSeeAllStyles = makeThemedSheet(seeAllStylesFactory);
+/** @deprecated Light-only. Kept while screens are still being converted. */
+export const seeAllStyles = seeAllStylesFactory(lightPalette);

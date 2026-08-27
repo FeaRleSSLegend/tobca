@@ -1,8 +1,9 @@
 import { Text, View, Pressable } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { PressableScale } from './motion';
+import { useThemeColors } from '../../hooks/useTheme';
 import { theme } from '../../constants/theme'
-import { sharedStyles } from "../../constants/styles/sharedStyles"
+import { useSharedStyles } from "../../constants/styles/sharedStyles"
 
 interface SectionLabelProps {
   label: string;
@@ -20,6 +21,8 @@ interface SectionLabelProps {
 }
 
 export const SectionLabel = ({ label, onPress, actionText, onActionPress }: SectionLabelProps) => {
+  const sharedStyles = useSharedStyles();
+  const c = useThemeColors();
   if (onPress) {
     // NOTE: the row layout goes on `style`, NOT `containerStyle`.
     // PressableScale renders its children inside an inner Animated.View, so a
@@ -39,7 +42,7 @@ export const SectionLabel = ({ label, onPress, actionText, onActionPress }: Sect
         accessibilityLabel={`${label}, view all`}
       >
         <Text style={sharedStyles.sectionTitle}>{label}</Text>
-        <Ionicons name="chevron-forward" size={16} color={theme.colors.grayIcon} />
+        <Ionicons name="chevron-forward" size={16} color={c.grayIcon} />
       </PressableScale>
     );
   }

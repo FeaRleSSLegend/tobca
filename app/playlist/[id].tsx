@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { SmartImage } from '../../components/ui/SmartImage';
 import { PressableScale, FadeInUp, staggerDelay } from '../../components/ui/motion';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -27,6 +28,8 @@ import { fetchPlaylistItems } from '../../services/youtube';
 import { useStackBottomClearance } from '../../hooks/useBottomClearance';
 
 export default function PlaylistScreen() {
+  const styles = useStyles();
+  const c = useThemeColors();
   const { id, title } = useLocalSearchParams<{ id: string; title?: string }>();
   const router = useRouter();
   const { play } = usePlayback();
@@ -98,7 +101,7 @@ export default function PlaylistScreen() {
           is right. Here it depends on scroll position: at rest the artwork
           masthead — capped by a dark scrim so the back button reads — is under
           the status bar and needs LIGHT icons; scroll the masthead away and
-          theme.colors.bg is under it, which needs DARK ones. A single fixed
+          c.bg is under it, which needs DARK ones. A single fixed
           choice is wrong half the time either way.
 
           The threshold is the masthead's own height less roughly a status
@@ -147,7 +150,7 @@ export default function PlaylistScreen() {
 
           <SafeAreaView edges={['top']} style={styles.mastheadSafe}>
             <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="chevron-back" size={24} color={theme.colors.white} />
+              <Ionicons name="chevron-back" size={24} color={c.white} />
             </Pressable>
 
             <FadeInUp style={styles.mastheadText}>
@@ -180,12 +183,12 @@ export default function PlaylistScreen() {
                 {/* The play glyph's bounding box carries empty space on its
                     left, so it reads as off-centre next to the label unless
                     nudged back a point. */}
-                <Ionicons name="play" size={20} color={theme.colors.white} style={styles.playBtnIcon} />
+                <Ionicons name="play" size={20} color={c.white} style={styles.playBtnIcon} />
                 <Text style={styles.playBtnText}>Play all</Text>
               </PressableScale>
             </View>
             <PressableScale style={styles.shuffleBtn} onPress={shuffle} accessibilityRole="button" accessibilityLabel="Shuffle playlist">
-              <Ionicons name="shuffle" size={20} color={theme.colors.navy} />
+              <Ionicons name="shuffle" size={20} color={c.navy} />
             </PressableScale>
           </View>
         )}
@@ -230,7 +233,7 @@ export default function PlaylistScreen() {
                       {displaySubtitle(m.title) ?? m.speaker}
                     </Text>
                   </View>
-                  <Ionicons name="play-circle" size={26} color={theme.colors.grayIcon} />
+                  <Ionicons name="play-circle" size={26} color={c.grayIcon} />
                 </PressableScale>
               </FadeInUp>
             ))
@@ -246,9 +249,9 @@ export default function PlaylistScreen() {
 // own literal.
 const ACTION_HEIGHT = 54;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
-  masthead: { backgroundColor: theme.colors.navy, justifyContent: 'flex-end' },
+const useStyles = makeThemedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
+  masthead: { backgroundColor: c.navy, justifyContent: 'flex-end' },
   mastheadSafe: { flex: 1, justifyContent: 'space-between' },
   topScrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
   backBtn: {
@@ -259,7 +262,7 @@ const styles = StyleSheet.create({
   kicker: { fontFamily: theme.fontFamily.bodyBold, fontSize: 11, letterSpacing: 1.8, color: 'rgba(255,255,255,0.9)', marginBottom: 8 },
   // Bigger and tighter than before: a cinematic title wants a line height
   // close to its cap height so a three-line name still reads as one block.
-  title: { fontFamily: theme.fontFamily.display, fontSize: 36, lineHeight: 39, color: theme.colors.white, letterSpacing: -0.5 },
+  title: { fontFamily: theme.fontFamily.display, fontSize: 36, lineHeight: 39, color: c.white, letterSpacing: -0.5 },
   subMeta: { fontFamily: theme.fontFamily.bodyMedium, fontSize: theme.fontSize.bodyLg, color: 'rgba(255,255,255,0.75)', marginTop: 10 },
   // One control group: both buttons share ACTION_HEIGHT and the same full
   // radius, separated by a single spacing step, so they read as a matched
@@ -277,11 +280,11 @@ const styles = StyleSheet.create({
     // grows (a longer word, a larger accessibility text size).
     paddingHorizontal: theme.spacing.xl,
     height: ACTION_HEIGHT,
-    backgroundColor: theme.colors.navy,
+    backgroundColor: c.navy,
     borderRadius: theme.radius.full,
     // A soft lift in the button's own color — enough to seat it above the
     // page as the primary action without reading as a drop shadow.
-    shadowColor: theme.colors.navy,
+    shadowColor: c.navy,
     shadowOpacity: 0.22,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -291,7 +294,7 @@ const styles = StyleSheet.create({
   playBtnText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.cardTitle,
-    color: theme.colors.white,
+    color: c.white,
     letterSpacing: 0.2,
     // Android pads text vertically inside its own line box, which pushed the
     // label a couple of points below the icon's centre line. Off, plus an
@@ -301,23 +304,23 @@ const styles = StyleSheet.create({
   },
   shuffleBtn: {
     width: ACTION_HEIGHT, height: ACTION_HEIGHT, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.grayBorder,
+    backgroundColor: c.surface, borderWidth: 1, borderColor: c.grayBorder,
     borderRadius: theme.radius.full,
   },
   list: { paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.xl, gap: theme.spacing.xs },
   trackRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingVertical: theme.spacing.sm },
-  trackNum: { width: 22, textAlign: 'center', fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.grayIcon },
+  trackNum: { width: 22, textAlign: 'center', fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: c.grayIcon },
   trackNumSkeleton: { width: 22, height: 14, borderRadius: 4 },
   // Exactly 16:9 (80/45), matching the source aspect. The old 76x44 was 1.727
   // against the asset's 1.778 — close enough to look intentional, far enough
   // to shave a couple of pixels off the top and bottom of every thumbnail.
-  trackThumb: { width: 80, height: 45, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: theme.colors.grayBorder },
+  trackThumb: { width: 80, height: 45, borderRadius: theme.radius.sm, overflow: 'hidden', backgroundColor: c.grayBorder },
   trackDuration: {
     position: 'absolute', right: 3, bottom: 3,
     paddingHorizontal: theme.space.micro, paddingVertical: theme.space.hairline, borderRadius: 4,
     backgroundColor: 'rgba(10,22,33,0.82)',
   },
-  trackDurationText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 9, color: theme.colors.white, includeFontPadding: false },
-  trackTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: theme.colors.navy, lineHeight: 18 },
-  trackMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: theme.colors.graySecondary, marginTop: theme.space.hairline },
-});
+  trackDurationText: { fontFamily: theme.fontFamily.bodySemibold, fontSize: 9, color: c.white, includeFontPadding: false },
+  trackTitle: { fontFamily: theme.fontFamily.bodySemibold, fontSize: theme.fontSize.body, color: c.navy, lineHeight: 18 },
+  trackMeta: { fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.caption, color: c.graySecondary, marginTop: theme.space.hairline },
+}));

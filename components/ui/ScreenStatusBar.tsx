@@ -23,7 +23,7 @@
 //
 // WHAT "style" MEANS — it is the colour of the ICONS, not of the bar:
 //   'dark'  dark icons. For a LIGHT background. This app's default, because
-//           every route is theme.colors.bg or white.
+//           every route is c.bg or white.
 //   'light' light icons. For a DARK background — the players' black/gradient
 //           stages, and this screen's scrimmed artwork masthead.
 
@@ -34,6 +34,7 @@
 import { useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { StatusBarStyle } from 'expo-status-bar';
+import { useThemeColors } from '../../hooks/useTheme';
 
 interface ScreenStatusBarProps {
   /** Icon colour. 'dark' for light backgrounds, 'light' for dark ones. */

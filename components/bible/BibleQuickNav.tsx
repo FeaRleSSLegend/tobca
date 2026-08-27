@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, Pressable, Text, StyleSheet, View } from 'react-native';
 import { MOTION } from '../ui/motion';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 export interface QuickNavItem {
   key: string;
@@ -29,6 +30,7 @@ interface BibleQuickNavProps {
  * instant and layout never shifts under the text.
  */
 export const BibleQuickNav = ({ items, activeKey, visible, onSelect }: BibleQuickNavProps) => {
+  const styles = useStyles();
   const slide = useRef(new Animated.Value(0)).current; // 0 shown → 1 hidden
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export const BibleQuickNav = ({ items, activeKey, visible, onSelect }: BibleQuic
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrap: {
     position: 'absolute',
     left: theme.layout.screenPadding,
@@ -85,14 +87,14 @@ const styles = StyleSheet.create({
   // 44pt targets.
   bar: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     padding: theme.spacing.xs,
     gap: theme.spacing.xs,
     // Soft lift so it reads as floating above the page, not printed on it.
-    shadowColor: theme.colors.black,
+    shadowColor: c.black,
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -107,14 +109,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
   },
   tabActive: {
-    backgroundColor: theme.colors.navy,
+    backgroundColor: c.navy,
   },
   tabText: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   tabTextActive: {
-    color: theme.colors.white,
+    color: c.white,
   },
-});
+}));

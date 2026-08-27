@@ -3,6 +3,7 @@ import { PressableScale } from '../ui/motion';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface StreakSummaryProps {
   streak: number;
@@ -31,10 +32,12 @@ interface StreakSummaryProps {
 // fortnight. The gradient bar still encodes the true proportion, so the honest
 // smallness of early progress is not hidden — just not the headline.
 export const StreakSummary = ({ streak, percentage, completedCount, totalDays, onPress }: StreakSummaryProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <PressableScale onPress={onPress} style={styles.card}>
       <View style={styles.flameWrap}>
-        <Ionicons name="flame" size={20} color={theme.colors.pink} />
+        <Ionicons name="flame" size={20} color={c.pink} />
       </View>
 
       <View style={styles.streakText}>
@@ -56,12 +59,12 @@ export const StreakSummary = ({ streak, percentage, completedCount, totalDays, o
         <Text style={styles.progressLabel}>{completedCount} of {totalDays} days</Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+      <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
     </PressableScale>
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   // No card chrome here on purpose — TodayCard above is the bordered,
   // contained element on this screen; this is secondary status info and
   // reads more calmly sitting directly on the page than boxed up to match.
@@ -77,7 +80,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.pinkTint,
+    backgroundColor: c.pinkTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -88,18 +91,18 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.sectionHeading,
     fontWeight: '700',
-    color: theme.colors.navy,
+    color: c.navy,
     lineHeight: 22,
   },
   streakLabel: {
     fontFamily: theme.fontFamily.body,
     fontSize: 11,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   divider: {
     width: 1,
     height: 32,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
   },
   progressSection: {
     flex: 1,
@@ -107,7 +110,7 @@ const styles = StyleSheet.create({
   },
   track: {
     height: 6,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     borderRadius: theme.radius.full,
     overflow: 'hidden',
   },
@@ -118,6 +121,6 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 11,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
-});
+}));

@@ -4,6 +4,7 @@ import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { Message } from '../../data/content';
 import { displayTitle } from '../../utils/contentGrouping';
 
@@ -22,6 +23,8 @@ interface CurrentMessageProps {
 // zero added elements — the scan order is unchanged: eyebrow → title →
 // meta, play button in the corner.
 export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <PressableScale
       style={styles.card}
@@ -54,7 +57,7 @@ export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
       {/* Visual affordance only — the whole card is the tap target now, so
           a nested Pressable here would just swallow the press. */}
       <View style={styles.playButton}>
-        <Ionicons name="play" size={18} color={theme.colors.pink} style={{ marginLeft: theme.space.hairline }} />
+        <Ionicons name="play" size={18} color={c.pink} style={{ marginLeft: theme.space.hairline }} />
       </View>
 
       <View>
@@ -70,7 +73,7 @@ export const CurrentMessage = ({ message, onPress }: CurrentMessageProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   card: {
     height: 160,
     borderRadius: theme.radius.md,
@@ -79,7 +82,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     // The one owner of the gap between the branch filter and the hero card.
     marginTop: theme.space.section,
-    backgroundColor: theme.colors.navy, // paints the frame while the image loads
+    backgroundColor: c.navy, // paints the frame while the image loads
   },
   playButton: {
     position: 'absolute',
@@ -88,7 +91,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: c.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -103,7 +106,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.sectionHeading,
-    color: theme.colors.white,
+    color: c.white,
     marginBottom: 4,
   },
   meta: {
@@ -111,4 +114,4 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.body,
     color: 'rgba(255,255,255,0.8)',
   },
-});
+}));

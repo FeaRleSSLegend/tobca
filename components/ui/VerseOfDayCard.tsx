@@ -3,6 +3,7 @@ import { PressableScale } from './motion';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface VerseOfDayCardProps {
   reference: string;
@@ -16,6 +17,8 @@ interface VerseOfDayCardProps {
 // everything below it (services, reading, messages) should read as quieter
 // by comparison, not compete with it card-for-card.
 export const VerseOfDayCard = ({ reference, text, onPress, onShare }: VerseOfDayCardProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     // Home renders this card without an onPress, so the whole card was a
     // tappable that dipped under your finger and then did nothing. `disabled`
@@ -38,7 +41,7 @@ export const VerseOfDayCard = ({ reference, text, onPress, onShare }: VerseOfDay
           <Text style={styles.eyebrow}>Verse of the Day</Text>
           {onShare && (
             <Pressable onPress={onShare} hitSlop={8} style={styles.shareBtn}>
-              <Ionicons name="share-outline" size={16} color={theme.colors.white} />
+              <Ionicons name="share-outline" size={16} color={c.white} />
             </Pressable>
           )}
         </View>
@@ -54,7 +57,7 @@ export const VerseOfDayCard = ({ reference, text, onPress, onShare }: VerseOfDay
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrapper: {
     borderRadius: theme.radius.lg,
     overflow: 'hidden',
@@ -108,11 +111,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.displayMedium,
     fontSize: theme.fontSize.display,
     lineHeight: theme.fontSize.display * 1.3,
-    color: theme.colors.white,
+    color: c.white,
   },
   reference: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.bodyLg,
     color: 'rgba(255,255,255,0.85)',
   },
-});
+}));

@@ -27,6 +27,7 @@
 // keeps the same shape and reads as the same control.
 import { Text, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 import { PressableScale } from './motion';
 
 interface FilterPillProps {
@@ -36,6 +37,7 @@ interface FilterPillProps {
 }
 
 export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
+  const style = useStyle();
     return (
         <PressableScale
             activeScale={0.94}
@@ -61,7 +63,7 @@ export const FilterPill = ({ isActive, label, onPress }: FilterPillProps) => {
     );
 };
 
-const style = StyleSheet.create({
+const useStyle = makeThemedStyles((c) => ({
     pillStyle: {
         borderRadius: theme.radius.full,
         paddingHorizontal: theme.spacing.md,
@@ -82,10 +84,10 @@ const style = StyleSheet.create({
     // it is selected, which makes a row of pills twitch as the selection
     // moves along it.
     pillActive: {
-        backgroundColor: theme.colors.pink,
+        backgroundColor: c.pink,
     },
     pillInactive: {
-        backgroundColor: theme.colors.grayBorder,
+        backgroundColor: c.grayBorder,
     },
     label: {
         fontSize: theme.fontSize.bodyLg,
@@ -94,13 +96,13 @@ const style = StyleSheet.create({
         // Bolder as well as lighter: weight is a second, non-colour signal
         // that this is the chosen one.
         fontFamily: theme.fontFamily.bodySemibold,
-        color: theme.colors.white,
+        color: c.white,
     },
     labelInactive: {
         fontFamily: theme.fontFamily.bodyMedium,
-        color: theme.colors.graySecondary,
+        color: c.graySecondary,
     },
-});
+}));
 
 export const filterLabels = {
     all: "All",

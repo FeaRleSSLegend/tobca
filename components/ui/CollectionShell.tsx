@@ -2,7 +2,8 @@ import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
-import { seeAllStyles } from '../../constants/styles/seeAll.styles';
+import { useThemeColors } from '../../hooks/useTheme';
+import { useSeeAllStyles } from '../../constants/styles/seeAll.styles';
 import { FilterPill } from './FilterPill';
 import { CollectionSearchInput } from './CollectionSearchInput';
 import { ScreenWithWatermark } from './ScreenWithWatermark';
@@ -45,6 +46,8 @@ export function CollectionShell({
   onPillPress,
   children,
 }: CollectionShellProps) {
+  const seeAllStyles = useSeeAllStyles();
+  const c = useThemeColors();
   const router = useRouter();
   return (
     <ScreenWithWatermark style={seeAllStyles.container}>
@@ -56,7 +59,7 @@ export function CollectionShell({
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={26} color={theme.colors.navy} />
+          <Ionicons name="chevron-back" size={26} color={c.navy} />
         </Pressable>
         <View style={seeAllStyles.titleWrap}>
           <Text style={seeAllStyles.title} numberOfLines={1}>{title}</Text>

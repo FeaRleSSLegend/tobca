@@ -14,6 +14,7 @@
 //   /audio-collection?section=all        every standalone recording
 //   /audio-collection?section=recent     everything, newest first
 //   /audio-collection?section=saved      what has been saved for offline
+//   /audio-collection?section=prayer     every prayer recording (Prayer tab)
 //
 // It replaces app/audio-series.tsx, whose name stopped being true the moment
 // it had to hold "All Recordings" as well.
@@ -31,13 +32,14 @@ import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
-import { seeAllStyles } from '../constants/styles/seeAll.styles';
+import { makeThemedStyles, useThemeColors } from '../hooks/useTheme';
+import { useSeeAllStyles } from '../constants/styles/seeAll.styles';
 import { CollectionShell } from '../components/ui/CollectionShell';
 import { EmptyState } from '../components/ui/EmptyState';
 import { AudioListRow, AUDIO_ROW_ART } from '../components/ui/AudioListRow';
 import { AudioCover } from '../components/ui/AudioCover';
 import { PressableScale } from '../components/ui/motion';
-import { useAudioManifest } from '../hooks/useAudioManifest';
+import { useAudioManifest, type AudioScope } from '../hooks/useAudioManifest';
 import { useAudioFiles, useAudioProgress, type AudioTrack } from '../providers/AudioFileProvider';
 import { groupAudio, formatAudioDate, formatClock, type AudioSeries } from '../utils/audioGrouping';
 import { buildTrackIndex, toQueue } from '../utils/audioTracks';
@@ -51,7 +53,10 @@ import { useStackBottomClearance } from '../hooks/useBottomClearance';
  * has neither. It carries the same designed cover the Series shelf does, at
  * row scale, so a series is recognisable in both places.
  */
-const SeriesRow = ({ series, onPress }: { series: AudioSeries; onPress: () => void }) => (
+const SeriesRow = ({ series, onPress }: { series: AudioSeries; onPress: () => void }) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+  return (
   <PressableScale
     style={styles.seriesRow}
     onPress={onPress}
@@ -67,11 +72,14 @@ const SeriesRow = ({ series, onPress }: { series: AudioSeries; onPress: () => vo
         {series.items.length} recording{series.items.length === 1 ? '' : 's'}
       </Text>
     </View>
-    <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+    <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
   </PressableScale>
 );
+}
 
 export default function AudioCollectionScreen() {
+  const seeAllStyles = useSeeAllStyles();
+  const styles = useStyles();
   const { series: seriesLabel, section } = useLocalSearchParams<{
     series?: string;
     section?: string;
@@ -85,12 +93,17 @@ export default function AudioCollectionScreen() {
   const bottomClearance = useStackBottomClearance();
   const [query, setQuery] = useState('');
 
-  // The manifest is already cached by the time anyone can reach this screen
-  // (whatever you tapped rendered from it), so this is an AsyncStorage read
-  // rather than a network call.
-  // Same scope as the Audio tab that links here — a collection screen must
-  // not show a recording the tab it was opened from has excluded.
-  const { items, status } = useAudioManifest('library');
+  // SCOPE FOLLOWS THE SECTION. The Prayer tab and the Library's Audio tab read
+  // two different slices of the same 546-file manifest (see
+  // hooks/useAudioManifest), and a collection screen must never show a
+  // recording the tab it was opened from has excluded — that is what would
+  // make "See all" mean something different from the list it sits under.
+  //
+  // The manifest itself is already cached by the time anyone can reach this
+  // screen (whatever you tapped rendered from it), so this is an AsyncStorage
+  // read rather than a network call, whichever scope is asked for.
+  const scope: AudioScope = section === 'prayer' ? 'prayer' : 'library';
+  const { items, status } = useAudioManifest(scope);
   const grouped = useMemo(() => groupAudio(items), [items]);
   const index = useMemo(
     () => buildTrackIndex(items, grouped.seriesByUrl),
@@ -192,12 +205,24 @@ export default function AudioCollectionScreen() {
   }
 
   // ---- A FLAT SECTION ----
-  if (section === 'all' || section === 'recent' || section === 'saved') {
+  if (
+    section === 'all' ||
+    section === 'recent' ||
+    section === 'saved' ||
+    section === 'prayer'
+  ) {
     const source =
       section === 'all'
         ? toQueue(grouped.standalone, index)
         : section === 'recent'
         ? toQueue(grouped.recent, index)
+        : section === 'prayer'
+        ? // EVERY prayer recording, not the standalone remainder. `grouped`
+          // has already been narrowed to the prayer scope above, and the few
+          // prayer recordings that do fall into a detected series belong in
+          // this list too — a person who tapped "See all" under Prayer Audio
+          // is asking for all of it.
+          index.all
         : index.all.filter((t) => t.sourceUrl && audio.isSaved(t.sourceUrl));
 
     const meta =
@@ -211,6 +236,12 @@ export default function AudioCollectionScreen() {
         ? {
             title: 'Recent Audio',
             description: "The church's whole audio archive, newest first.",
+          }
+        : section === 'prayer'
+        ? {
+            title: 'Prayer Audio',
+            description:
+              'Recordings of prayer gatherings, including the prayer segments of full services.',
           }
         : {
             title: 'Saved for Offline',
@@ -312,7 +343,7 @@ export default function AudioCollectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   separator: {
     height: theme.space.tight,
   },
@@ -320,15 +351,15 @@ const styles = StyleSheet.create({
   // between cards — see components/ui/AudioListRow for why the card went.
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
     marginLeft: AUDIO_ROW_ART + theme.space.tight + 4,
   },
   seriesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.related,
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.grayBorder,
+    backgroundColor: c.surface,
+    borderColor: c.grayBorder,
     borderWidth: theme.layout.cardBorderWidth,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
@@ -341,11 +372,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.cardTitle,
     lineHeight: 21,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   seriesMeta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
-});
+}));

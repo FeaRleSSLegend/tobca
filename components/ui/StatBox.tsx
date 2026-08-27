@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 interface StatBoxProps {
   value: string | number;
@@ -11,6 +12,7 @@ interface StatBoxProps {
 // StreakModal, each with slightly different sizes. Consolidating it means
 // one visual decision instead of several near-identical ones.
 export const StatBox = ({ value, label }: StatBoxProps) => {
+  const styles = useStyles();
   return (
     <View style={styles.box}>
       <Text style={styles.value}>{value}</Text>
@@ -19,10 +21,10 @@ export const StatBox = ({ value, label }: StatBoxProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   box: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: theme.radius.sm,
     paddingVertical: theme.spacing.md,
     alignItems: 'center',
@@ -31,14 +33,14 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.sectionHeading,
     fontWeight: '700',
-    color: theme.colors.navy,
+    color: c.navy,
   },
   label: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
     marginTop: theme.spacing.xs,
   },
-});
+}));

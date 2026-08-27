@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { compactReference, estimateReadingMinutes } from '../../utils/referenceParser';
 import { PressableScale } from './motion';
 
@@ -32,6 +33,8 @@ interface TodayReadingRowProps {
 //   - COMPLETION STATE: the card settles to a calm done treatment so
 //     finishing feels acknowledged and warm rather than merely toggled.
 export const TodayReadingRow = ({ day, references, isDone, planProgress = 0, onPress }: TodayReadingRowProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const passages = references.map(compactReference).join('  ·  ');
   const minutes = estimateReadingMinutes(references);
 
@@ -61,11 +64,11 @@ export const TodayReadingRow = ({ day, references, isDone, planProgress = 0, onP
             <Text style={styles.doneNote}>Well done. See you tomorrow.</Text>
           ) : (
             <>
-              <Ionicons name="time-outline" size={13} color={theme.colors.graySecondary} />
+              <Ionicons name="time-outline" size={13} color={c.graySecondary} />
               <Text style={styles.timeText}>about {minutes} min</Text>
               <View style={styles.dot} />
               <Text style={styles.readCta}>Read now</Text>
-              <Ionicons name="arrow-forward" size={13} color={theme.colors.pink} />
+              <Ionicons name="arrow-forward" size={13} color={c.pink} />
             </>
           )}
         </View>
@@ -77,6 +80,8 @@ export const TodayReadingRow = ({ day, references, isDone, planProgress = 0, onP
 // Day number inside a progress ring (two stacked SVG circles: faint track +
 // foreground arc sized to plan progress). Done state becomes a filled check.
 function DayDial({ day, progress, isDone }: { day: number; progress: number; isDone: boolean }) {
+  const styles = useStyles();
+  const c = useThemeColors();
   const size = 52;
   const stroke = 3;
   const r = (size - stroke) / 2;
@@ -87,7 +92,7 @@ function DayDial({ day, progress, isDone }: { day: number; progress: number; isD
   if (isDone) {
     return (
       <View style={[styles.dial, styles.dialDone]}>
-        <Ionicons name="checkmark" size={24} color={theme.colors.white} />
+        <Ionicons name="checkmark" size={24} color={c.white} />
       </View>
     );
   }
@@ -95,12 +100,12 @@ function DayDial({ day, progress, isDone }: { day: number; progress: number; isD
   return (
     <View style={styles.dial}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={theme.colors.grayBorder} strokeWidth={stroke} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={c.grayBorder} strokeWidth={stroke} fill="none" />
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={theme.colors.pink}
+          stroke={c.pink}
           strokeWidth={stroke}
           fill="none"
           strokeLinecap="round"
@@ -116,7 +121,7 @@ function DayDial({ day, progress, isDone }: { day: number; progress: number; isD
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,7 +146,7 @@ const styles = StyleSheet.create({
   },
   dialDone: {
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.success,
+    backgroundColor: c.success,
   },
   dialInner: {
     alignItems: 'center',
@@ -151,13 +156,13 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 8,
     letterSpacing: 1,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
     marginBottom: -2,
   },
   dayNum: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.navy,
+    color: c.navy,
     lineHeight: 22,
   },
   body: {
@@ -167,17 +172,17 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 1,
-    color: theme.colors.pink,
+    color: c.pink,
     marginBottom: theme.space.micro,
   },
   passages: {
     fontFamily: theme.fontFamily.serifSemibold,
     fontSize: 18,
     lineHeight: 24,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   passagesDone: {
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   bottomLine: {
     flexDirection: 'row',
@@ -188,23 +193,23 @@ const styles = StyleSheet.create({
   timeText: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   dot: {
     width: 3,
     height: 3,
     borderRadius: 2,
-    backgroundColor: theme.colors.grayIcon,
+    backgroundColor: c.grayIcon,
     marginHorizontal: theme.space.micro,
   },
   readCta: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.pink,
+    color: c.pink,
   },
   doneNote: {
     fontFamily: theme.fontFamily.serifItalic,
     fontSize: theme.fontSize.body,
-    color: theme.colors.success,
+    color: c.success,
   },
-});
+}));

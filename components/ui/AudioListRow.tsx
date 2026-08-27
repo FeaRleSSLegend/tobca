@@ -33,6 +33,7 @@ import { memo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { PressableScale } from './motion';
 import { AudioArt } from './AudioArt';
 import { PlayingBars } from './PlayingBars';
@@ -74,6 +75,8 @@ const AudioListRowBase = ({
   isSaved = false,
   onPress,
 }: AudioListRowProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   // The meta line only renders what is true. Joined with '·' rather than laid
   // out as slots, so a missing speaker closes up instead of leaving a gap that
   // reads as data failing to load.
@@ -125,20 +128,20 @@ const AudioListRowBase = ({
 
       <View style={styles.trailing}>
         {isLoading ? (
-          <ActivityIndicator size="small" color={theme.colors.pink} />
+          <ActivityIndicator size="small" color={c.pink} />
         ) : isActive ? (
           // The active row swaps its size/duration for the moving marker. Both
           // in the same slot would make this the one row wider than the rest,
           // which is exactly the wobble a scannable list cannot have.
           <PlayingBars animating={isPlaying} />
         ) : (
-          <Ionicons name="play" size={13} color={theme.colors.grayIcon} />
+          <Ionicons name="play" size={13} color={c.grayIcon} />
         )}
         {trailing ? (
           <Text style={[styles.trailingLabel, isActive && styles.trailingActive]}>{trailing}</Text>
         ) : null}
         {isSaved ? (
-          <Ionicons name="arrow-down-circle" size={11} color={theme.colors.success} />
+          <Ionicons name="arrow-down-circle" size={11} color={c.success} />
         ) : null}
       </View>
     </PressableScale>
@@ -154,7 +157,7 @@ const AudioListRowBase = ({
  */
 export const AudioListRow = memo(AudioListRowBase);
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -173,21 +176,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: theme.editorial.trackLabel,
     textTransform: 'uppercase',
-    color: theme.colors.pink,
+    color: c.pink,
   },
   title: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.bodyLg,
     lineHeight: 19,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   titleActive: {
-    color: theme.colors.pink,
+    color: c.pink,
   },
   meta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   trailing: {
     alignItems: 'flex-end',
@@ -199,9 +202,9 @@ const styles = StyleSheet.create({
   trailingLabel: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 11,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
   trailingActive: {
-    color: theme.colors.pink,
+    color: c.pink,
   },
-});
+}));

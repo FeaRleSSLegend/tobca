@@ -16,6 +16,7 @@ import { View, StyleSheet, StyleProp, ImageStyle, ViewStyle } from 'react-native
 import { Image, ImageContentFit } from 'expo-image';
 import { Shimmer } from './motion';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 interface SmartImageProps {
   uri?: string;
@@ -38,6 +39,7 @@ export const SmartImage = ({
   radius,
   accessibilityLabel,
 }: SmartImageProps) => {
+  const styles = useStyles();
   const [loaded, setLoaded] = useState(false);
 
   const roundStyle: ViewStyle | undefined = radius !== undefined ? { borderRadius: radius } : undefined;
@@ -71,12 +73,12 @@ export const SmartImage = ({
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrap: {
     overflow: 'hidden',
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
   },
   empty: {
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
   },
-});
+}));

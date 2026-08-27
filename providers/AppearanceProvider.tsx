@@ -2,40 +2,33 @@
 // The user's APPEARANCE PREFERENCE — Light / Dark / System — stored and read.
 //
 // ---------------------------------------------------------------------------
-// READ THIS BEFORE ASSUMING THE APP HAS DARK MODE. IT DOES NOT.
+// THIS NOW DRIVES REAL THEMING. It used to store a choice and nothing else.
 //
-// This provider stores a CHOICE. It does not restyle anything, and nothing in
-// the app reads `resolved` yet. That is deliberate and it is not an oversight,
-// because of what constants/theme.ts actually is:
+// What changed: constants/palette.ts added a SEMANTIC colour layer (roles, not
+// pigments) with a light and a dark implementation, and hooks/useTheme.ts gave
+// components a way to read colour during render instead of capturing it at
+// module-import time inside StyleSheet.create(). This provider is where the
+// two meet: it owns the preference, collapses 'system' against the live OS
+// setting, and hands the resulting Palette down.
 //
-//   `theme` is a frozen `const` object of literal light-mode hex values,
-//   imported directly — `theme.colors.navy`, `theme.colors.bg` — at module
-//   scope by essentially every component and every StyleSheet.create() call in
-//   the project. StyleSheet.create() runs ONCE, at import time, long before
-//   any React context could exist. There is no ThemeProvider, no useTheme(),
-//   no `colors.text`/`colors.background` semantic layer — only concrete names
-//   like `navy`, `pinkWash` and `grayBorder` that describe a pigment rather
-//   than a role, so there is nothing to swap even if a swap mechanism existed.
-//   app.json additionally pins `userInterfaceStyle: "light"`.
+// 'system' IS LIVE. useColorScheme() subscribes to RN's Appearance change
+// event, so flipping the OS setting while the app is open re-renders every
+// consumer without a relaunch. That only works because app.json now declares
+// `userInterfaceStyle: "automatic"` — while it was pinned to "light" the OS
+// never reported anything else and the hook was permanently stuck.
 //
-// Real dark mode therefore needs, in order: a semantic colour layer over the
-// literal one (surface/onSurface/border/... rather than navy/white/grayBorder),
-// a second palette behind it, a hook to read the active one, and then every
-// StyleSheet in the app converted from module-scope constants to values
-// resolved during render. That is a project, not a checkbox, and doing a third
-// of it would leave the app half-dark — which is strictly worse than honestly
-// light. So the switch is built, the choice is persisted, and the Settings
-// screen says plainly that it is not applied yet.
-//
-// WHAT THE FOLLOW-UP INHERITS FROM THIS FILE: the preference already survives
-// restarts, `resolved` already collapses 'system' against the OS setting, and
-// the whole app is already wrapped. The dark-mode work starts at the palette,
-// not at the plumbing.
+// THE MIGRATION IS NOT FINISHED. Screens that have been converted to
+// makeThemedStyles follow this provider; screens still importing
+// `theme.colors` at module scope stay light-only until they are converted.
+// See the report in the pull request for exactly which are which. A converted
+// screen renders byte-identically in light mode, which is what makes it safe
+// to convert them a few at a time rather than in one 76-file commit.
 // ---------------------------------------------------------------------------
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { palettes, type Palette } from '../constants/palette';
 
 /** What the user picked. 'system' means "follow the OS", and is the default. */
 export type AppearancePreference = 'light' | 'dark' | 'system';
@@ -52,12 +45,17 @@ interface AppearanceContextValue {
   /** The raw stored choice — this is what the Settings selector shows. */
   preference: AppearancePreference;
   /**
-   * The choice with 'system' collapsed against the OS colour scheme. NOTHING
-   * READS THIS YET — see the note at the top of this file. It exists so the
-   * dark-mode follow-up has one obvious place to start rather than having to
-   * re-derive it.
+   * The choice with 'system' collapsed against the OS colour scheme. This is
+   * what the app actually draws, and it updates live when the OS setting
+   * changes while the app is open.
    */
   resolved: ResolvedAppearance;
+  /**
+   * The palette for `resolved`. Components read this through
+   * hooks/useTheme.ts rather than importing it directly — see that file for
+   * why colour has to be resolved during render.
+   */
+  colors: Palette;
   setPreference: (next: AppearancePreference) => void;
   /**
    * False until the stored value has been read back. The Settings screen uses
@@ -104,16 +102,23 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
     AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
   }, []);
 
-  const value = useMemo<AppearanceContextValue>(
-    () => ({
+  const value = useMemo<AppearanceContextValue>(() => {
+    // `systemScheme` is null on platforms that cannot report one; that is not
+    // "dark", so anything other than an explicit 'dark' resolves to light.
+    const resolved: ResolvedAppearance =
+      preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
+    return {
       preference,
-      resolved:
-        preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference,
+      resolved,
+      // The SAME object identity every time for a given appearance — the two
+      // palettes are module constants. makeThemedStyles caches on that
+      // identity, so a re-render for an unrelated reason cannot invalidate
+      // every stylesheet in the app.
+      colors: palettes[resolved],
       setPreference,
       hydrated,
-    }),
-    [preference, systemScheme, setPreference, hydrated]
-  );
+    };
+  }, [preference, systemScheme, setPreference, hydrated]);
 
   return <AppearanceContext.Provider value={value}>{children}</AppearanceContext.Provider>;
 }

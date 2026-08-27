@@ -33,6 +33,7 @@ import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { BrandMark } from './BrandMark';
 import { paletteFor, waveBands } from '../../utils/audioArtwork';
 
@@ -59,6 +60,8 @@ const AudioArtBase = ({
   style,
   children,
 }: AudioArtProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const palette = paletteFor(seed);
 
   return (
@@ -94,7 +97,7 @@ const AudioArtBase = ({
           // Just over half the box. At 300pt a larger fraction would be a
           // billboard, and the hero's job is to be calm, not loud.
           width={Math.round(width * 0.52)}
-          tint={theme.colors.white}
+          tint={c.white}
           opacity={0.85}
         />
       )}
@@ -111,13 +114,13 @@ const AudioArtBase = ({
  */
 export const AudioArt = memo(AudioArtBase);
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   box: {
     alignItems: 'center',
     justifyContent: 'center',
     // Clips the gradient and the wave to the rounded corners. Without it the
     // wave's square SVG canvas paints over them on Android.
     overflow: 'hidden',
-    backgroundColor: theme.colors.navy,
+    backgroundColor: c.navy,
   },
-});
+}));

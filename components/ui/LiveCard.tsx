@@ -3,8 +3,9 @@ import { useEffect, useRef } from 'react'
 import { PressableScale } from './motion'
 import { SmartImage } from './SmartImage'
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { liveStyles } from '../../constants/styles/live.styles';
+import { useLiveStyles } from '../../constants/styles/live.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { getNextService } from '../../data/services';
 
@@ -32,6 +33,7 @@ interface LiveCardProps {
  * thread is doing.
  */
 const PulseDot = () => {
+  const heroStyles = useHeroStyles();
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -70,6 +72,9 @@ const PulseDot = () => {
 // over a bare icon circle for the card's single primary action — the icon
 // alone made "what happens if I tap this?" a guess.
 export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail }: LiveCardProps) => {
+  const liveStyles = useLiveStyles();
+  const heroStyles = useHeroStyles();
+  const c = useThemeColors();
   // Recomputed per render, NOT at module load — as a module-level const
   // this was evaluated once when the JS bundle first ran, so the countdown
   // ("in 2 days 3 hrs") silently froze at whatever was true at app launch
@@ -147,7 +152,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail
           accessibilityRole="button"
           accessibilityLabel="Watch the live stream"
         >
-          <Ionicons name="play" size={16} color={theme.colors.pink} style={{ marginLeft: theme.space.hairline }} />
+          <Ionicons name="play" size={16} color={c.pink} style={{ marginLeft: theme.space.hairline }} />
           <Text style={liveStyles.primaryBtnText}>Watch now</Text>
         </PressableScale>
       </View>
@@ -181,8 +186,8 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail
         accessibilityLabel={`Add ${nextService.name} to calendar`}
       >
         <View style={liveStyles.primaryBtn}>
-          <Ionicons name="calendar-outline" size={15} color={theme.colors.navy} />
-          <Text style={[liveStyles.primaryBtnText, { color: theme.colors.navy }]}>
+          <Ionicons name="calendar-outline" size={15} color={c.navy} />
+          <Text style={[liveStyles.primaryBtnText, { color: c.navy }]}>
             Add to Calendar
           </Text>
         </View>
@@ -191,7 +196,7 @@ export const LiveCard = ({ isLive, title, source = 'youtube', onWatch, thumbnail
   );
 };
 
-const heroStyles = StyleSheet.create({
+const useHeroStyles = makeThemedStyles((c) => ({
   // A real minimum height: the old card was only as tall as its text, which
   // is fine for a gradient but makes a photo hero look like a cropped strip.
   hero: {
@@ -221,7 +226,7 @@ const heroStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: c.white,
   },
   ctaSlot: {
     alignSelf: 'flex-start',
@@ -235,6 +240,6 @@ const heroStyles = StyleSheet.create({
     height: 46,
     paddingHorizontal: theme.spacing.xxl,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: c.white,
   },
-});
+}));

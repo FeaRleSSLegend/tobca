@@ -34,6 +34,7 @@ import { View, Text, StyleSheet, LayoutChangeEvent, Animated } from 'react-nativ
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { PressableScale, MOTION } from './motion';
 
 export interface MediaMode<T extends string> {
@@ -69,6 +70,8 @@ export function MediaModeSwitch<T extends string>({
   onChange,
   accessibilityLabel,
 }: MediaModeSwitchProps<T>) {
+  const styles = useStyles();
+  const c = useThemeColors();
   const index = Math.max(0, modes.findIndex((m) => m.value === value));
 
   // Per-tab geometry, measured rather than assumed. The marker has to centre
@@ -130,7 +133,7 @@ export function MediaModeSwitch<T extends string>({
             <Ionicons
               name={m.icon}
               size={13}
-              color={active ? theme.colors.navy : theme.colors.grayIcon}
+              color={active ? c.navy : c.grayIcon}
             />
             <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
               {m.label.toUpperCase()}
@@ -164,7 +167,7 @@ export function MediaModeSwitch<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -203,11 +206,11 @@ const styles = StyleSheet.create({
     // Positive tracking, per the editorial scale's rule for small caps: set
     // small, caps look cramped at 0.
     letterSpacing: theme.editorial.trackLabel,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
   labelActive: {
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.navy,
+    color: c.navy,
   },
   marker: {
     position: 'absolute',
@@ -215,6 +218,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 2,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.pink,
+    backgroundColor: c.pink,
   },
-});
+}));

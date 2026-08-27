@@ -6,6 +6,7 @@ import { SmartImage } from './SmartImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { MessageType } from '../../data/content';
 
 interface GridCardProps {
@@ -42,6 +43,8 @@ export const GridCard = React.memo(({
   thumbnail,
   onPress,
 }: GridCardProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   return (
     <PressableScale
       onPress={onPress}
@@ -58,7 +61,7 @@ export const GridCard = React.memo(({
           <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
         ) : (
           <LinearGradient
-            colors={[theme.colors.navy, theme.colors.slateLight]}
+            colors={[c.navy, c.slateLight]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -67,7 +70,7 @@ export const GridCard = React.memo(({
         {/* Icon still shows over a real thumbnail — same play/type signal,
             now as an overlay badge instead of the only thing in the tile. */}
         <View style={thumbnail ? styles.iconBadge : undefined}>
-          <Ionicons name={typeIcon[type]} size={thumbnail ? 14 : 20} color={theme.colors.white} style={{ zIndex: 1 }} />
+          <Ionicons name={typeIcon[type]} size={thumbnail ? 14 : 20} color={c.white} style={{ zIndex: 1 }} />
         </View>
       </View>
       <View style={styles.body}>
@@ -85,21 +88,21 @@ export const GridCard = React.memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   cardSlot: {
     flex: 1,
   },
   card: {
     width: '100%',
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     borderRadius: theme.radius.sm,
     overflow: 'hidden',
   },
   thumbnail: {
     height: 72,
-    backgroundColor: theme.colors.slate,
+    backgroundColor: c.slate,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -117,19 +120,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.navy,
+    color: c.navy,
     lineHeight: 16,
     marginBottom: 4,
   },
   speaker: {
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
     marginBottom: theme.space.hairline,
   },
   duration: {
     fontSize: theme.fontSize.caption,
     fontFamily: theme.fontFamily.body,
-    color: theme.colors.grayIcon,
+    color: c.grayIcon,
   },
-});
+}));

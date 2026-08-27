@@ -7,9 +7,10 @@ import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { useTabBottomClearance } from '../../hooks/useBottomClearance';
 import { useAutoHideOnScroll } from '../../hooks/useAutoHideOnScroll';
 import { theme } from '../../constants/theme';
-import { sharedStyles } from '../../constants/styles/sharedStyles';
+import { useThemeColors } from '../../hooks/useTheme';
+import { useSharedStyles } from '../../constants/styles/sharedStyles';
 import { SearchBar } from '../../components/ui/SearchBar';
-import { LibraryStyles } from '../../constants/styles/library.styles';
+import { useLibraryStyles } from '../../constants/styles/library.styles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
 import { CurrentMessage } from '../../components/ui/CurrentMessageCard';
 import { HScroll } from '../../components/ui/HScroll';
@@ -25,9 +26,9 @@ import { BranchFilter } from '../../components/ui/BranchFilter';
 import { MediaModeSwitch } from '../../components/ui/MediaModeSwitch';
 import { AudioLibrary } from '../../components/library/AudioLibrary';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { getBranch, isPlaceholderChannel } from '../../data/branches';
-import { featuredChannels } from '../../data/channels';
-import { useFeaturedChannel } from '../../hooks/useFeaturedChannel';
+import { PastorsRow } from '../../components/ui/PastorsRow';
 
 import { usePlaylists } from '../../hooks/usePlaylists';
 import { usePlayback } from '../../providers/PlaybackProvider';
@@ -72,6 +73,9 @@ const MODES: LibraryMode[] = ['video', 'audio'];
  * job (search everything) than a collection's scoped search.
  */
 export default function LibraryScreen() {
+    const sharedStyles = useSharedStyles();
+    const LibraryStyles = useLibraryStyles();
+  const c = useThemeColors();
     const router = useRouter();
   const push = useGuardedPush();
     const { messages: allMessages, isBranchReady, statusByBranch } = useMessages();
@@ -155,11 +159,6 @@ export default function LibraryScreen() {
         [messages, clipIds]
     );
 
-    // Pastor Yinka's channel — fetched separately from useMessages on purpose,
-    // so her episodes never enter sermon classification or the branch filter.
-    const yinka = featuredChannels[0];
-    const yinkaFeed = useFeaturedChannel('yinka');
-
     const openCollection = (section: string, title: string) =>
         push({ pathname: '/see-all', params: { section, title } });
     // Tapping a poster skips the collection screen and goes straight into
@@ -171,24 +170,10 @@ export default function LibraryScreen() {
     return (
         <TabTransition>
         <ScreenWithWatermark style={sharedStyles.container}>
-            <View style={sharedStyles.headerRow}>
-                <Text style={sharedStyles.screenTitle}>Library</Text>
-                {/* SETTINGS, replacing the "JN" initials disc that used to sit
-                    here. The disc was an avatar for an account that does not
-                    exist — the app has no sign-in, so it named a person who was
-                    never asked who they are and did nothing when tapped. A gear
-                    in the top-right is the one control people already look for
-                    there, and it now goes somewhere. */}
-                <PressableScale
-                    style={LibraryStyles.settingsBtn}
-                    onPress={() => push('/settings')}
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel="Settings"
-                >
-                    <Ionicons name="settings-outline" size={20} color={theme.colors.navy} />
-                </PressableScale>
-            </View>
+            {/* Title + settings gear. The gear used to be declared here and
+                only here, which made it a Library feature rather than an app
+                one — see components/ui/ScreenHeader. */}
+            <ScreenHeader title="Library" />
 
             <SearchBar />
 
@@ -386,35 +371,27 @@ export default function LibraryScreen() {
                         </>
                     )}
 
-                    {/* PASTOR YINKA'S VIDEOS — kept in-app, restyled.
-                        The framed "channel card" that used to live here became the
-                        Socials link-out, but her VIDEOS are church-app content and
-                        must not leave with it. They now use the same
-                        SectionLabel + poster-row language as Series and Services,
-                        which is a better fit than the bespoke card was: it is one
-                        more shelf of things to watch, and giving it a unique frame
-                        made it read as an advert rather than a section. The
-                        chevron goes to her full list, same as every other shelf. */}
-                    {yinkaFeed.episodes.length > 0 && (
-                        <>
-                            <SectionLabel
-                                label="Pastor Yinka's Teachings"
-                                onPress={() => push({ pathname: '/see-all', params: { channel: 'yinka', title: 'Pastor Yinka Jibril' } })}
-                            />
-                            <HScroll>
-                                {yinkaFeed.episodes.slice(0, PREVIEW_COUNT).map((m, i) => (
-                                    <FadeInUp key={m.id} delay={staggerDelay(i)}>
-                                        <PosterCard
-                                            title={m.title}
-                                            subtitle={m.duration}
-                                            thumbnail={m.thumbnail}
-                                            onPress={() => play(m)}
-                                        />
-                                    </FadeInUp>
-                                ))}
-                            </HScroll>
-                        </>
-                    )}
+                    {/* OUR PASTORS — the circular entry point.
+
+                        WHAT WAS HERE: a shelf headed "Pastor Yinka's
+                        Teachings", rendered with the same SectionLabel +
+                        16:9 PosterCard language as Series, Services and
+                        Recently Added, whose chevron pushed
+                        /see-all?channel=yinka. Two things were wrong with it.
+
+                        One, see-all does not read a `channel` param — it
+                        handles section/filter/title only — so that push fell
+                        through to the recently-added branch and showed the
+                        CHURCH's uploads under her name. Her shelf's "see all"
+                        led to general OliveBrook content.
+
+                        Two, rendering a person as a fourth identical shelf
+                        makes her a content category. She is now a face you
+                        tap, and her messages live on her own page
+                        (app/pastor/[id].tsx) over her own feed. See
+                        components/ui/PastorsRow for why the circle is the
+                        whole argument. */}
+                    <PastorsRow />
 
                     {ready && recentlyAdded.length > 0 && (
                         <>
@@ -463,13 +440,13 @@ export default function LibraryScreen() {
                             end={theme.gradient.end}
                             style={LibraryStyles.socialsBadge}
                         >
-                            <Ionicons name="logo-instagram" size={20} color={theme.colors.white} />
+                            <Ionicons name="logo-instagram" size={20} color={c.white} />
                         </LinearGradient>
                         <View style={{ flex: 1 }}>
                             <Text style={LibraryStyles.socialsTitle}>Church Socials</Text>
                             <Text style={LibraryStyles.socialsMeta}>Instagram and YouTube</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+                        <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
                     </PressableScale>
 
                             </ScrollView>

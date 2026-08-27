@@ -2,7 +2,8 @@ import {View, Text, Pressable, StyleSheet} from 'react-native'
 import { displayTitle, displaySubtitle } from '../../utils/contentGrouping';
 import { SmartImage } from './SmartImage';
 import { PressableScale } from './motion';
-import { liveStyles } from '../../constants/styles/live.styles'
+import { useThemeColors } from '../../hooks/useTheme';
+import { useLiveStyles } from '../../constants/styles/live.styles'
 import { theme } from '../../constants/theme'
 import { Ionicons } from '@expo/vector-icons'
 
@@ -32,6 +33,8 @@ const typeIcon: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export const MessageCard = ({title, speaker, duration, series, type, publishedAt, thumbnail, onPress}: MessageCardProps) => {
+  const liveStyles = useLiveStyles();
+  const c = useThemeColors();
     const icon = (type && typeIcon[type]) || 'play';
     // Prefer the SERVICE over the speaker on the meta line. On a church channel
     // every upload has the same speaker, so that line was identical on every
@@ -67,7 +70,7 @@ export const MessageCard = ({title, speaker, duration, series, type, publishedAt
                 </Text>
               </View>
 
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.grayIcon} />
+              <Ionicons name="chevron-forward" size={18} color={c.grayIcon} />
             </PressableScale>
     )
 }

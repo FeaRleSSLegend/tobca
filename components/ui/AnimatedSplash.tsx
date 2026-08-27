@@ -20,6 +20,7 @@ import Svg, { Defs, G, LinearGradient, Mask, Path, Rect, Stop } from 'react-nati
 import { PINK_SWOOSH, PURPLE_SWOOSH, SwooshLayer } from './brandSwooshPaths';
 import { LOGO_VIEWBOX, WORDMARK } from './brandWordmarkPaths';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles } from '../../hooks/useTheme';
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
@@ -58,6 +59,7 @@ function Layers({ layers }: { layers: SwooshLayer[] }) {
 }
 
 export const AnimatedSplash = ({ onDone, width = 220 }: AnimatedSplashProps) => {
+  const styles = useStyles();
   const height = Math.round(width * (VB.height / VB.width));
 
   const wordmark = useRef(new Animated.Value(0)).current;
@@ -160,7 +162,7 @@ export const AnimatedSplash = ({ onDone, width = 220 }: AnimatedSplashProps) => 
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   screen: {
     // Written out rather than spreading absoluteFillObject, which this RN
     // version's types don't expose.
@@ -169,10 +171,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.white,
+    backgroundColor: c.white,
     alignItems: 'center',
     justifyContent: 'center',
     // Above everything, including the player host overlay.
     zIndex: 1000,
   },
-});
+}));

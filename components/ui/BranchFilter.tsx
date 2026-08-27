@@ -50,7 +50,7 @@
 // `onMeasure` instead. Constant is the whole point: reserved space that never
 // changes cannot fight the scroll position.
 //
-// It is OPAQUE (theme.colors.bg) because content now scrolls underneath it
+// It is OPAQUE (c.bg) because content now scrolls underneath it
 // rather than below it. The screen watermark it covers is a centred mark at
 // 3.5% opacity; a top strip of that is not a loss worth a transparency bug.
 //
@@ -63,6 +63,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, ScrollView, Animated, StyleSheet } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { branches } from '../../data/branches';
 import { FilterPill } from './FilterPill';
 import { MOTION } from './motion';
@@ -100,6 +101,7 @@ export const BranchFilter = ({
   style,
   onMeasure,
 }: BranchFilterProps) => {
+  const styles = useStyles();
   // Measured, not assumed: this row's height is pill height plus padding, and
   // hardcoding it would break both the host's reserved space and the distance
   // this thing has to travel to get itself off screen.
@@ -188,12 +190,12 @@ export const BranchFilter = ({
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   // The travelling wrapper. overflow:'hidden' stops the row being visible
   // above its own box as it slides out from under the header.
   wrap: {
     overflow: 'hidden',
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   row: {
     // PADDING, not margin: onLayout reports a view's height excluding its own
@@ -211,4 +213,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-});
+}));

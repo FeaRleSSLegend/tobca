@@ -16,6 +16,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, View, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 
 interface PlayingBarsProps {
   /** Animating (true) vs held at rest (false, i.e. paused). */
@@ -31,9 +32,18 @@ const REST = [0.4, 0.75, 0.5];
 
 export const PlayingBars = ({
   animating = true,
-  color = theme.colors.pink,
+  // NOT a default parameter any more. A default is evaluated in the
+  // parameter list, which is outside the function body and therefore has no
+  // access to a hook — the palette has to be read during render. `undefined`
+  // here, resolved to the accent below.
+  color,
   size = 14,
 }: PlayingBarsProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
+  // The accent, unless the caller named a colour. Resolved here rather than in
+  // the parameter list for the reason stated on the prop.
+  const barColor = color ?? c.accent;
   // One value per bar, animating between a floor and 1 as a SCALE — scaleY on
   // the native driver, rather than height, which cannot use it and would put a
   // layout pass on the JS thread twice a second per visible row.
@@ -86,7 +96,7 @@ export const PlayingBars = ({
           style={[
             styles.bar,
             {
-              backgroundColor: color,
+              backgroundColor: barColor,
               height: size,
               // Anchored to the BOTTOM: a bar that scales about its centre
               // grows in both directions and reads as a pulsing dot rather
@@ -100,7 +110,7 @@ export const PlayingBars = ({
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   wrap: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -114,4 +124,4 @@ const styles = StyleSheet.create({
     // each bar is given its full height to shrink within.
     transformOrigin: 'bottom',
   },
-});
+}));

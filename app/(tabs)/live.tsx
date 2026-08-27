@@ -1,15 +1,16 @@
 import { useCallback, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { theme } from "../../constants/theme";
-import { sharedStyles } from "../../constants/styles/sharedStyles";
+import { useSharedStyles } from "../../constants/styles/sharedStyles";
 import { getLatestMessages } from "../../data/content";
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { services } from "../../data/services";
-import { verseOfDay } from "../../data/verseOfDay";
 import { SectionLabel } from "../../components/ui/SectionLabel";
 import { LiveCard } from "../../components/ui/LiveCard";
 import { ServicePill } from "../../components/ui/ServicePill";
 import { MessageCard } from "../../components/ui/MessageCard";
 import { VerseOfDayCard } from "../../components/ui/VerseOfDayCard";
+import { useVerseOfDay } from "../../hooks/useVerseOfDay";
 import { TodayReadingRow } from "../../components/ui/TodayReadingRow";
 import { FadeInUp, staggerDelay, TabTransition } from "../../components/ui/motion";
 import { ScreenWithWatermark } from "../../components/ui/ScreenWithWatermark";
@@ -23,6 +24,7 @@ import { PRIMARY_BRANCH_ID } from "../../data/branches";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useGuardedPush } from '../../hooks/useGuardedPush';
 import { useTabBottomClearance } from '../../hooks/useBottomClearance';
+import { useThemeColors } from '../../hooks/useTheme';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -48,6 +50,11 @@ function greetingForNow(): string {
  * earned a slot.
  */
 export default function LiveScreen() {
+  const sharedStyles = useSharedStyles();
+  const c = useThemeColors();
+  // Today's verse. See hooks/useVerseOfDay for the no-repeat-within-30-days
+  // rule and why the choice is written down rather than re-picked per render.
+  const { verse } = useVerseOfDay();
   const todayName = DAY_NAMES[new Date().getDay()];
   const router = useRouter();
   const push = useGuardedPush();
@@ -89,21 +96,10 @@ export default function LiveScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomClearance }}
       >
-        {/* Header row: greeting + avatar */}
-        <View style={sharedStyles.headerRow}>
-          <View>
-            <Text style={{ fontSize: theme.fontSize.caption, color: theme.colors.graySecondary }}>
-              {greetingForNow()}
-            </Text>
-            <Text style={sharedStyles.screenTitle}>OliveBrook</Text>
-          </View>
-
-          <View style={sharedStyles.avatar}>
-            <Text style={{ fontSize: theme.fontSize.body, fontFamily: theme.fontFamily.display, color: theme.colors.white }}>
-              JN
-            </Text>
-          </View>
-        </View>
+        {/* Greeting + title, with the settings gear all four tabs now carry.
+            The "JN" disc that used to sit on the right was an avatar for an
+            account that does not exist. */}
+        <ScreenHeader title="OliveBrook" eyebrow={greetingForNow()} />
 
         {/* Live vs Next-Service card — leads the screen since this is the
             one thing on it that's actually time-sensitive; a "next service"
@@ -141,8 +137,15 @@ export default function LiveScreen() {
         {/* Verse of the Day — the second loud moment on this screen, but a
             different register (photographic, devotional) from LiveCard's
             gradient card just above it, so the two don't compete as
-            "identical hero cards stacked twice." */}
-        <VerseOfDayCard reference={verseOfDay.reference} text={verseOfDay.text} />
+            "identical hero cards stacked twice."
+
+            NOW ACTUALLY ROTATES. This used to render a single hardcoded
+            constant, which is why the same verse appears in every screenshot
+            the app has ever produced. hooks/useVerseOfDay picks one per
+            calendar day from a 61-verse pool, excludes everything shown in the
+            trailing 30 days, and records the choice so it is stable for the
+            rest of the day rather than re-rolling on every tab switch. */}
+        <VerseOfDayCard reference={verse.reference} text={verse.text} />
 
         {/* Today's Reading — the slim bridge to the Plan tab. Quiet white
             row on purpose: the two cards above own the screen's color
@@ -210,7 +213,7 @@ export default function LiveScreen() {
           {!messagesReady ? (
             <SkeletonList rows={2} />
           ) : latestMessages.length === 0 ? (
-            <Text style={{ fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.body, color: theme.colors.graySecondary }}>
+            <Text style={{ fontFamily: theme.fontFamily.body, fontSize: theme.fontSize.body, color: c.graySecondary }}>
               No messages yet.
             </Text>
           ) : (

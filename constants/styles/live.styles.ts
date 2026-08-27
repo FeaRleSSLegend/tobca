@@ -4,8 +4,17 @@
 // sharedStyles.ts — don't import from here into another screen.
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { lightPalette, type Palette } from '../palette';
+import { makeThemedSheet } from '../../hooks/useTheme';
 
-export const liveStyles = StyleSheet.create({
+// THEMED, with a light-only compatibility export — the same two-exposure
+// shape constants/styles/sharedStyles.ts documents, and for the same reason:
+// this sheet is read by screens that have been converted and by screens that
+// have not, and both have to keep working while the migration finishes.
+//
+//   useLiveStyles()   follows the active appearance. Use this.
+//   liveStyles     frozen against the light palette, for unconverted callers.
+const liveStylesFactory = (c: Palette) => StyleSheet.create({
   liveCard: {
     // NO top margin. This is the first card under the greeting header, and
     // sharedStyles.headerRow already ends in 16pt of padding — the 20 here
@@ -31,14 +40,14 @@ export const liveStyles = StyleSheet.create({
   },
   badgeText: {
     fontSize: theme.fontSize.caption,
-    color: theme.colors.white,
+    color: c.white,
     fontFamily: theme.fontFamily.bodyBold,
     letterSpacing: 1,
   },
   pulseDot: {
     width: 8,
     height: 8,
-    backgroundColor: theme.colors.pink,
+    backgroundColor: c.pink,
     borderRadius: theme.radius.full,
     marginRight: theme.spacing.sm,
   },
@@ -52,7 +61,7 @@ export const liveStyles = StyleSheet.create({
   heroTitle: {
     fontSize: theme.fontSize.display,
     fontFamily: theme.fontFamily.display,
-    color: theme.colors.white,
+    color: c.white,
   },
   heroCaption: {
     fontSize: theme.fontSize.body,
@@ -75,21 +84,21 @@ export const liveStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
-    backgroundColor: theme.colors.white,
+    backgroundColor: c.white,
     borderRadius: theme.radius.full,
     paddingHorizontal: theme.spacing.xl,
   },
   primaryBtnText: {
     fontSize: theme.fontSize.body,
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.pink,
+    color: c.pink,
   },
   // Local override for the one spot sharedStyles.overlineText's pink
   // doesn't work — everywhere else it's pink-on-white, here it's sitting on
   // a card that starts pink itself.
   overlineOnGradient: {
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.white,
+    color: c.white,
     fontWeight: theme.fontWeight.semibold,
     textTransform: 'uppercase',
     // Was fontWeight with no fontFamily -> fell back to the system font.
@@ -99,26 +108,26 @@ export const liveStyles = StyleSheet.create({
   // This Week's Services strip
   servicePill: {
     borderWidth: 1,
-    borderColor: theme.colors.grayBorder, // was 0.05 with no color set — effectively invisible before
+    borderColor: c.grayBorder, // was 0.05 with no color set — effectively invisible before
     padding: theme.spacing.md,
     borderRadius: theme.radius.md,
     height: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.white,
+    backgroundColor: c.white,
   },
   servicePillToday: {
     // merge with servicePill: [servicePill, isToday && servicePillToday]
-    backgroundColor: theme.colors.navy,
-    borderColor: theme.colors.navy,
+    backgroundColor: c.navy,
+    borderColor: c.navy,
   },
   serviceTime: {
     fontFamily: theme.fontFamily.display,
     fontSize: theme.fontSize.cardTitle,
-    color: theme.colors.slate,
+    color: c.slate,
   },
   serviceTimeToday: {
-    color: theme.colors.white,
+    color: c.white,
   },
   serviceNameToday: {
     color: 'rgba(255,255,255,0.7)',
@@ -129,8 +138,8 @@ export const liveStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
-    backgroundColor: theme.colors.white,
-    borderColor: theme.colors.grayBorder,
+    backgroundColor: c.white,
+    borderColor: c.grayBorder,
     borderWidth: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radius.md,
@@ -139,7 +148,7 @@ export const liveStyles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.slateLight,
+    backgroundColor: c.slateLight,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -148,7 +157,7 @@ export const liveStyles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.pink,
+    backgroundColor: c.pink,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -167,21 +176,26 @@ export const liveStyles = StyleSheet.create({
   latestMessageDurationText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 10,
-    color: theme.colors.white,
+    color: c.white,
   },
   latestMessageTitle: {
     fontFamily: theme.fontFamily.bodySemibold,
     fontSize: theme.fontSize.bodyLg,
-    color: theme.colors.navy,
+    color: c.navy,
     marginBottom: theme.spacing.xs,
   },
   latestMessageMeta: {
     fontFamily: theme.fontFamily.body,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   latestMessageSeriesTag: {
     fontFamily: theme.fontFamily.bodyBold,
-    color: theme.colors.slate,
+    color: c.slate,
   },
 });
+
+/** Themed. Follows the active appearance. Prefer this. */
+export const useLiveStyles = makeThemedSheet(liveStylesFactory);
+/** @deprecated Light-only. Kept while screens are still being converted. */
+export const liveStyles = liveStylesFactory(lightPalette);

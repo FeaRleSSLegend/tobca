@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { makeThemedStyles, useThemeColors } from '../../hooks/useTheme';
 import { Verse } from '../../services/bibleApi';
 import { PressableScale } from '../ui/motion';
 import { BrandLoader } from '../ui/BrandLoader';
@@ -57,6 +58,8 @@ function previewText(item: ReadingCarouselItem): string {
 }
 
 export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps) => {
+  const styles = useStyles();
+  const c = useThemeColors();
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef<FlatList<ReadingCarouselItem>>(null);
 
@@ -92,7 +95,7 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
           >
             <View style={styles.cardHead}>
               <View style={styles.iconBadge}>
-                <Ionicons name={iconFor(item.key)} size={15} color={theme.colors.pink} />
+                <Ionicons name={iconFor(item.key)} size={15} color={c.pink} />
               </View>
               <Text style={styles.label}>{item.label.toUpperCase()}</Text>
             </View>
@@ -114,7 +117,7 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
             )}
             <View style={styles.footer}>
               <Text style={styles.readMore}>Read passage</Text>
-              <Ionicons name="arrow-forward" size={15} color={theme.colors.pink} />
+              <Ionicons name="arrow-forward" size={15} color={c.pink} />
             </View>
           </PressableScale>
         )}
@@ -127,7 +130,7 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
           style={styles.arrowBtn}
           hitSlop={8}
         >
-          <Ionicons name="chevron-back" size={18} color={activeIndex === 0 ? theme.colors.grayBorder : theme.colors.graySecondary} />
+          <Ionicons name="chevron-back" size={18} color={activeIndex === 0 ? c.grayBorder : c.graySecondary} />
         </Pressable>
 
         <View style={styles.dots}>
@@ -145,18 +148,18 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
           style={styles.arrowBtn}
           hitSlop={8}
         >
-          <Ionicons name="chevron-forward" size={18} color={activeIndex === readings.length - 1 ? theme.colors.grayBorder : theme.colors.graySecondary} />
+          <Ionicons name="chevron-forward" size={18} color={activeIndex === readings.length - 1 ? c.grayBorder : c.graySecondary} />
         </Pressable>
       </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((c) => ({
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: theme.layout.cardBorderWidth,
-    borderColor: theme.colors.grayBorder,
+    borderColor: c.grayBorder,
     borderRadius: theme.radius.lg,
     padding: theme.spacing.xl,
     minHeight: 210,
@@ -171,20 +174,20 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.pinkWash,
+    backgroundColor: c.pinkWash,
     alignItems: 'center',
     justifyContent: 'center',
   },
   label: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.caption,
-    color: theme.colors.pink,
+    color: c.pink,
     letterSpacing: 0.8,
   },
   reference: {
     fontFamily: theme.fontFamily.display,
     fontSize: 20,
-    color: theme.colors.navy,
+    color: c.navy,
     marginBottom: theme.spacing.sm,
   },
   previewLoading: {
@@ -200,7 +203,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.serif,
     fontSize: 15,
     lineHeight: 23,
-    color: theme.colors.graySecondary,
+    color: c.graySecondary,
   },
   footer: {
     flexDirection: 'row',
@@ -211,7 +214,7 @@ const styles = StyleSheet.create({
   readMore: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: theme.fontSize.body,
-    color: theme.colors.pink,
+    color: c.pink,
   },
   controlsRow: {
     flexDirection: 'row',
@@ -234,10 +237,10 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: theme.colors.grayBorder,
+    backgroundColor: c.grayBorder,
   },
   dotActive: {
-    backgroundColor: theme.colors.pink,
+    backgroundColor: c.pink,
     width: 16,
   },
-});
+}));
