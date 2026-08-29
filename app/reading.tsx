@@ -32,9 +32,16 @@ import { TranslationCode, getSavedTranslation } from '../services/bibleVersions'
 import { getVersesForReference, Verse } from '../services/bibleApi';
 import { HIGHLIGHT_COLORS, colorValue, verseKey, getAllHighlights, setHighlight } from '../utils/highlights';
 import { compactReference } from '../utils/referenceParser';
-import { markReadingUnlocked, markDayAsRead, getDayByDate } from '../utils/biblePlan.utils';
+import {
+  confirmPassageRead,
+  unconfirmPassageRead,
+  getConfirmedPassages,
+  getDayByDate,
+  PASSAGE_KEYS,
+  type PassageKey,
+} from '../utils/biblePlan.utils';
 import { BibleQuickNav, QuickNavItem } from '../components/bible/BibleQuickNav';
-import { PopIn, FadeInUp } from '../components/ui/motion';
+import { PopIn, FadeInUp, PressableScale } from '../components/ui/motion';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
 const scrollKey = (date: string, readingKey: string) => `@bible_scroll_${date}_${readingKey}`;
@@ -73,6 +80,10 @@ export default function ReadingScreen() {
   // off them — the quick nav switches readings in place, and params can't
   // change under a mounted screen.
   const [readingKey, setReadingKey] = useState(params.readingKey);
+  // Which of the day's four passages have been explicitly confirmed. Read on
+  // mount and kept in sync as the quick-nav switches between them, so the
+  // button below always reflects the passage currently on screen.
+  const [confirmed, setConfirmed] = useState<PassageKey[]>([]);
   const [reference, setReference] = useState(params.reference);
   const [label, setLabel] = useState(params.label);
   const [translation, setTranslation] = useState<TranslationCode>(params.translation ?? 'niv');
@@ -114,8 +125,6 @@ export default function ReadingScreen() {
   const [retryCount, setRetryCount] = useState(0);
 
   const scrollRef = useRef<ScrollView>(null);
-  const hasFiredUnlock = useRef(false);
-  const hasAutoCompleted = useRef(false);
   const saveOffsetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restoredRef = useRef(false);
   const lastFetchedReference = useRef<string | null>(null);
@@ -175,21 +184,49 @@ export default function ReadingScreen() {
     };
   }, [reference, translation, retryCount]);
 
-  // Opening a reading IS reading it. Marking the day complete used to cost a
-  // second, separate tap on the Plan tab's "Mark as Read" button, which asked
-  // someone to report back on something the app already knew: they were here,
-  // and the passage was in front of them. Once verses actually render, the
-  // day is marked — once per visit, and only on a real passage (a load error
-  // or an empty result leaves verses empty and nothing fires).
+  // THE AUTO-COMPLETE THAT USED TO LIVE HERE IS GONE.
   //
-  // The manual button stays: it's the fallback for a day read elsewhere, and
-  // by the time someone reaches it after reading, it already shows completed.
+  // It ran `markReadingUnlocked(date); markDayAsRead(date);` as soon as verses
+  // rendered, on the argument that "opening a reading IS reading it". That
+  // argument does not survive the plan's actual shape: a day has FOUR
+  // passages, and this fired on the first one. Opening a single Psalm
+  // completed the whole day and advanced the streak, so the streak counted
+  // app-opens rather than reading — which is exactly the integrity bug this
+  // change exists to fix.
+  //
+  // Confirmation is now an explicit, per-passage action (the button at the end
+  // of the passage below), and the day completes only when all four are
+  // confirmed. See the note in utils/biblePlan.utils.ts.
+
+  // The day's confirmations, re-read whenever the day changes. Cheap (one
+  // AsyncStorage read) and it has to be re-read on focus-return too, because
+  // the Plan tab can reset a day.
   useEffect(() => {
-    if (hasAutoCompleted.current || !date || verses.length === 0) return;
-    hasAutoCompleted.current = true;
-    markReadingUnlocked(date);
-    markDayAsRead(date);
-  }, [verses, date]);
+    if (!date) return;
+    let cancelled = false;
+    getConfirmedPassages(date).then((keys) => {
+      if (!cancelled) setConfirmed(keys);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [date]);
+
+  const isConfirmed = !!readingKey && confirmed.includes(readingKey as PassageKey);
+
+  // A TOGGLE, not a one-way latch. Someone who taps it by accident, or who
+  // wants to re-read a passage properly, must be able to take it back —
+  // otherwise the honest thing (undo) is impossible and the dishonest thing
+  // (an inflated streak) is permanent, which is the failure this whole change
+  // is about.
+  const togglePassageRead = async () => {
+    if (!date || !readingKey) return;
+    const key = readingKey as PassageKey;
+    const next = isConfirmed
+      ? await unconfirmPassageRead(date, key)
+      : await confirmPassageRead(date, key);
+    setConfirmed(next);
+  };
 
   // Restore scroll position once per reading — re-armed when the quick
   // nav switches to a different reading, so each of the four keeps its
@@ -235,11 +272,9 @@ export default function ReadingScreen() {
       }, 400);
     }
 
-    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
-    if (distanceFromBottom < 24 && !hasFiredUnlock.current && date) {
-      hasFiredUnlock.current = true;
-      markReadingUnlocked(date);
-    }
+    // Reaching the bottom no longer confirms anything either. Scrolling past
+    // the last verse is not the same as having read it, and it was the second
+    // way a day could be completed without the reader saying so.
   };
 
   // Chapter dividers only earn their ink when the passage actually spans
@@ -404,6 +439,43 @@ export default function ReadingScreen() {
                 </View>
               );
             })}
+
+            {/* THE CONFIRMATION. Placed at the END of the passage, after the
+                last verse, because that is where someone who has actually read
+                it arrives — and it is the one position that cannot be tapped
+                without at least scrolling past the text. It is not a gate
+                (nothing stops you tapping it early); it is an explicit
+                statement, which is all the streak ever needed and never had. */}
+            {!!date && !!readingKey && (
+              <PressableScale
+                style={[styles.confirmBtn, isConfirmed && styles.confirmBtnDone]}
+                onPress={togglePassageRead}
+                accessibilityRole="button"
+                accessibilityState={{ checked: isConfirmed }}
+                accessibilityLabel={
+                  isConfirmed
+                    ? `${label} marked as read. Tap to undo.`
+                    : `Mark ${label} as read`
+                }
+              >
+                <Ionicons
+                  name={isConfirmed ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={isConfirmed ? c.success : c.textSecondary}
+                />
+                <Text style={[styles.confirmText, isConfirmed && styles.confirmTextDone]}>
+                  {isConfirmed ? 'Read' : "I've read this"}
+                </Text>
+              </PressableScale>
+            )}
+
+            {/* How much of the DAY is left, so the button above has a visible
+                consequence instead of just changing its own colour. */}
+            {!!date && (
+              <Text style={styles.confirmProgress}>
+                {confirmed.length} of {PASSAGE_KEYS.length} readings confirmed today
+              </Text>
+            )}
             </FadeInUp>
           )}
         </Pressable>
@@ -610,6 +682,41 @@ const useStyles = makeThemedStyles((c) => ({
     borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: c.textPrimary,
+  },
+  // The per-passage confirmation. Sized on the shared control scale, and
+  // deliberately quiet: it is a statement of fact, not the screen's hero.
+  confirmBtn: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.control.gap.md,
+    height: theme.control.height.md,
+    paddingHorizontal: theme.control.padX.lg,
+    marginTop: theme.space.major,
+    borderRadius: theme.radius.full,
+    borderWidth: theme.layout.cardBorderWidth,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+  },
+  confirmBtnDone: {
+    borderColor: c.success,
+    backgroundColor: c.successWash,
+  },
+  confirmText: {
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: theme.fontSize.bodyLg,
+    color: c.textPrimary,
+  },
+  confirmTextDone: {
+    color: c.success,
+  },
+  confirmProgress: {
+    marginTop: theme.space.header,
+    textAlign: 'center',
+    fontFamily: theme.fontFamily.body,
+    fontSize: theme.fontSize.caption,
+    color: c.textMuted,
   },
   retryText: {
     fontFamily: theme.fontFamily.bodySemibold,

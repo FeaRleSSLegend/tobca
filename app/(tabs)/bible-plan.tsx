@@ -9,7 +9,7 @@ import { theme } from '../../constants/theme';
 import { useSharedStyles } from '../../constants/styles/sharedStyles';
 import { SectionLabel } from '../../components/ui/SectionLabel';
 import { ScreenWithWatermark } from '../../components/ui/ScreenWithWatermark';
-import { TabTransition } from '../../components/ui/motion';
+import { TabTransition, PressableScale } from '../../components/ui/motion';
 import { TodayCard } from '../../components/bible/TodayCard';
 import { StreakHero } from '../../components/bible/StreakHero';
 import { StreakModal } from '../../components/bible/StreakModal';
@@ -22,7 +22,14 @@ import {
   MAX_FREEZES,
   getWeekProgress,
   getEffectiveStreak,
-  isReadingUnlocked,
+  getConfirmedPassages,
+  isDayFullyRead,
+  PASSAGE_KEYS,
+  PASSAGES_PER_DAY,
+  getLegacyProgressNotice,
+  acknowledgeLegacyProgressNotice,
+  type PassageKey,
+  type LegacyProgressNotice,
   ReadingProgress 
 } from '../../utils/biblePlan.utils';
 import { DayPlan, totalDays } from '../../data/biblePlan';
@@ -44,11 +51,15 @@ export default function PlanScreen() {
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
   const [isRead, setIsRead] = useState(false);
   const [streakModalVisible, setStreakModalVisible] = useState(false);
-  // Driven by isReadingUnlocked, re-checked on focus (see below) rather than
-  // by a scroll event on this screen — the actual reading now happens on a
-  // separate pushed screen (app/reading.tsx), so this can't be local state
-  // that a scroll handler flips directly anymore.
-  const [hasReadSomething, setHasReadSomething] = useState(false);
+  // WHICH of today's four passages are confirmed, not merely whether one was
+  // opened. This replaced `hasReadSomething`, whose name was the bug in
+  // miniature: "something" was enough to complete the day.
+  const [confirmedToday, setConfirmedToday] = useState<PassageKey[]>([]);
+  const canComplete = confirmedToday.length === PASSAGES_PER_DAY;
+
+  // A one-time, honest note about streak data earned under the old rule.
+  // Null when there is nothing to disclose. See utils/biblePlan.utils.
+  const [legacyNotice, setLegacyNotice] = useState<LegacyProgressNotice | null>(null);
 
   const [otVerses, setOtVerses] = useState<Verse[]>([]);
   const [ntVerses, setNtVerses] = useState<Verse[]>([]);
@@ -126,13 +137,22 @@ export default function PlanScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!todayReading) return;
-      isReadingUnlocked(todayReading.date).then(setHasReadSomething);
+      getConfirmedPassages(todayReading.date).then(setConfirmedToday);
       getProgress().then((prog) => {
         setProgress(prog);
         setIsRead(prog.completedDays.includes(todayReading.date));
       });
     }, [todayReading])
   );
+
+  useEffect(() => {
+    getLegacyProgressNotice().then(setLegacyNotice);
+  }, []);
+
+  const dismissLegacyNotice = async () => {
+    setLegacyNotice(null);
+    await acknowledgeLegacyProgressNotice();
+  };
 
   const loadData = async () => {
     const reading = getTodayReading();
@@ -147,8 +167,13 @@ export default function PlanScreen() {
   };
 
   const handleMarkAsRead = async () => {
-    if (todayReading) {
-      await markDayAsRead(todayReading.date);
+    if (!todayReading) return;
+    // markDayAsRead now REFUSES a day whose passages are not all confirmed,
+    // and returns whether it actually completed. Trusting the return rather
+    // than optimistically setting isRead is what stops the card claiming a
+    // completion the store rejected.
+    const completed = await markDayAsRead(todayReading.date);
+    if (completed) {
       setIsRead(true);
       await loadData();
     }
@@ -187,10 +212,10 @@ export default function PlanScreen() {
   const tomorrow = getTomorrowReading();
 
   const readings: ReadingCarouselItem[] = [
-    { key: 'oldTestament', label: 'Old Testament', reference: todayReading.oldTestament, verses: otVerses, failed: previewFailed.oldTestament },
-    { key: 'newTestament', label: 'New Testament', reference: todayReading.newTestament, verses: ntVerses, failed: previewFailed.newTestament },
-    { key: 'psalm', label: 'Psalm', reference: todayReading.psalm, verses: psalmVerses, failed: previewFailed.psalm },
-    { key: 'proverb', label: 'Proverb', reference: todayReading.proverb, verses: proverbVerses, failed: previewFailed.proverb },
+    { key: 'oldTestament', label: 'Old Testament', reference: todayReading.oldTestament, verses: otVerses, failed: previewFailed.oldTestament, confirmed: confirmedToday.includes('oldTestament') },
+    { key: 'newTestament', label: 'New Testament', reference: todayReading.newTestament, verses: ntVerses, failed: previewFailed.newTestament, confirmed: confirmedToday.includes('newTestament') },
+    { key: 'psalm', label: 'Psalm', reference: todayReading.psalm, verses: psalmVerses, failed: previewFailed.psalm, confirmed: confirmedToday.includes('psalm') },
+    { key: 'proverb', label: 'Proverb', reference: todayReading.proverb, verses: proverbVerses, failed: previewFailed.proverb, confirmed: confirmedToday.includes('proverb') },
   ];
 
   return (
@@ -202,10 +227,42 @@ export default function PlanScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}>
         <ScreenHeader title="Reading Plan" />
 
+        {/* A ONE-TIME, DISMISSIBLE DISCLOSURE. Shown only to installs that
+            already had completed days when the stricter rule shipped. It says
+            what changed and what that means for the number on screen, and it
+            does NOT offer to "fix" the history — see the note in
+            utils/biblePlan.utils on why that correction cannot be made
+            honestly. */}
+        {legacyNotice && (
+          <View style={styles.noticeCard}>
+            <View style={styles.noticeHead}>
+              <Ionicons name="information-circle-outline" size={18} color={c.accent} />
+              <Text style={styles.noticeTitle}>About your past streak</Text>
+            </View>
+            <Text style={styles.noticeBody}>
+              Until this update, a day counted as read once you opened any one of its four
+              readings. Each reading is now confirmed on its own, and a day is only complete
+              when all four are. Your {legacyNotice.legacyCompletedCount} previously completed
+              {legacyNotice.legacyCompletedCount === 1 ? ' day has' : ' days have'} been left
+              exactly as recorded, so some may reflect the old rule.
+            </Text>
+            <PressableScale
+              style={styles.noticeBtn}
+              onPress={dismissLegacyNotice}
+              accessibilityRole="button"
+              accessibilityLabel="Got it, hide this note"
+            >
+              <Text style={styles.noticeBtnText}>Got it</Text>
+            </PressableScale>
+          </View>
+        )}
+
         <TodayCard
           day={todayReading.day}
           isRead={isRead}
-          canMarkAsRead={hasReadSomething}
+          canMarkAsRead={canComplete}
+          confirmedCount={confirmedToday.length}
+          totalPassages={PASSAGES_PER_DAY}
           onMarkAsRead={handleMarkAsRead}
           // progress === null means stored data is still in flight, so
           // isRead/canMarkAsRead are defaults rather than facts.
@@ -274,6 +331,50 @@ const useStyles = makeThemedStyles((c) => ({
   errorText: {
     fontFamily: theme.fontFamily.body,
     color: c.textSecondary,
+  },
+  // The one-time legacy-streak disclosure. An accent-washed card rather than
+  // a banner: it is information about the reader's own record, so it sits in
+  // the content flow where they will actually read it, not pinned as chrome.
+  noticeCard: {
+    backgroundColor: c.accentWash,
+    borderWidth: theme.layout.cardBorderWidth,
+    borderColor: c.accentTintEdge,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.lg,
+    marginTop: theme.space.related,
+    gap: theme.space.tight,
+  },
+  noticeHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.tight,
+  },
+  noticeTitle: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: theme.fontSize.bodyLg,
+    color: c.textPrimary,
+  },
+  noticeBody: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: theme.fontSize.body,
+    lineHeight: theme.fontSize.body * 1.55,
+    color: c.textSecondary,
+  },
+  noticeBtn: {
+    alignSelf: 'flex-start',
+    height: theme.control.height.sm,
+    paddingHorizontal: theme.control.padX.md,
+    borderRadius: theme.radius.full,
+    justifyContent: 'center',
+    backgroundColor: c.surface,
+    borderWidth: theme.layout.cardBorderWidth,
+    borderColor: c.border,
+    marginTop: theme.space.micro,
+  },
+  noticeBtnText: {
+    fontFamily: theme.fontFamily.bodySemibold,
+    fontSize: theme.fontSize.body,
+    color: c.textPrimary,
   },
   tomorrowRow: {
     flexDirection: 'row',

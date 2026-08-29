@@ -25,7 +25,7 @@
 // when that changes, onEndReached + the pageToken support already in
 // services/youtube.ts is the path.
 import { useMemo, useState } from 'react';
-import { View, Text, FlatList, SectionList } from 'react-native';
+import { View, Text, FlatList, SectionList, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGuardedPush } from '../hooks/useGuardedPush';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,11 +40,13 @@ import { SeriesListRow } from '../components/ui/SeriesListRow';
 import { PlaylistListRow } from '../components/ui/PlaylistListRow';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SkeletonGrid, SkeletonList } from '../components/ui/Skeletons';
+import { SeriesTrackRow, SERIES_ROW_ART } from '../components/ui/SeriesTrackRow';
+import { makeThemedStyles } from '../hooks/useTheme';
 import { Message, getRecentlyAdded } from '../data/content';
 import { useMessages } from '../hooks/useMessages';
 import { usePlaylists } from '../hooks/usePlaylists';
 import { useStackBottomClearance } from '../hooks/useBottomClearance';
-import { classifyMessages, ContentGroup } from '../utils/contentGrouping';
+import { classifyMessages, displayTitle, ContentGroup } from '../utils/contentGrouping';
 import {
   groupByMonth,
   groupByRecency,
@@ -394,13 +396,37 @@ function PlaylistsCollection() {
 // same header treatment as its parents.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// ONE SERIES, AS A TRACKLIST.
+//
+// This was a 2-column CardGrid. A grid presents its items as alternatives —
+// correct for Recently Added, wrong for a series, where the items are ordered
+// parts of one thing and the reader's actual question is "where do I start".
+// A numbered vertical list answers that before anything is read.
+//
+// SORT DEFAULTS TO OLDEST FIRST, and it is a real toggle rather than a fixed
+// order. Reasoning, and the concerns that go with it, are on SERIES_SORT below.
+// ---------------------------------------------------------------------------
+
+const SORT_OLDEST = 'Oldest first';
+const SERIES_SORT = [SORT_OLDEST, 'Newest first'];
+
 function FilteredGroupCollection({ label, messages, loading }: {
   label: string;
   messages: Message[];
   loading: boolean;
 }) {
   const seeAllStyles = useSeeAllStyles();
+  const styles = useSeriesStyles();
+  const { play } = usePlayback();
+  const bottomClearance = useStackBottomClearance();
   const [query, setQuery] = useState('');
+  // OLDEST FIRST by default: a series is meant to be followed in order, and
+  // the default view should therefore open on Part 1 rather than on the
+  // ending. "Clips" is the one label routed here that is NOT a series, so it
+  // keeps the newest-first order a feed wants.
+  const isSeries = label !== 'Clips';
+  const [sort, setSort] = useState(isSeries ? SORT_OLDEST : 'Newest first');
 
   const items = useMemo(() => {
     const { recurringServices, series, clips } = classifyMessages(messages);
@@ -408,24 +434,60 @@ function FilteredGroupCollection({ label, messages, loading }: {
       label === 'Clips'
         ? clips
         : [...recurringServices, ...series].find((g) => g.label === label)?.items ?? [];
+
+    // classifyMessages hands these back newest-first.
+    const ordered =
+      sort === SORT_OLDEST
+        ? [...base].sort(
+            (a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
+          )
+        : [...base].sort(
+            (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+          );
+
     const q = query.trim().toLowerCase();
-    return q ? base.filter((m) => m.title.toLowerCase().includes(q)) : base;
-  }, [messages, label, query]);
+    return q ? ordered.filter((m) => m.title.toLowerCase().includes(q)) : ordered;
+  }, [messages, label, query, sort]);
 
   return (
     <CollectionShell
       title={label}
-      subtitle={`${items.length} video${items.length === 1 ? '' : 's'}`}
+      subtitle={`${items.length} part${items.length === 1 ? '' : 's'}`}
       searchPlaceholder={`Search ${label}`}
       query={query}
       onQueryChange={setQuery}
+      // The sort control reuses the shell's existing pill row rather than
+      // introducing a second kind of control to the collection chrome. Every
+      // other collection screen filters with these; this one orders with them.
+      pills={SERIES_SORT}
+      activePill={sort}
+      onPillPress={setSort}
     >
       {items.length > 0 ? (
-        <View style={seeAllStyles.gridWrap}>
-          <CardGrid data={items} />
-        </View>
+        <FlatList
+          data={items}
+          keyExtractor={(m) => m.id}
+          style={{ flex: 1 }}
+          contentContainerStyle={[seeAllStyles.listContent, { paddingBottom: bottomClearance }]}
+          ItemSeparatorComponent={() => <View style={styles.divider} />}
+          {...listPerfProps}
+          renderItem={({ item, index }) => (
+            <SeriesTrackRow
+              // Position in the CURRENT order, so the numbers stay 1..n
+              // whichever way the list is sorted. See the note in
+              // SeriesTrackRow on why this is not a parsed part number.
+              index={index + 1}
+              title={displayTitle(item.title)}
+              thumbnail={item.thumbnail}
+              duration={item.duration}
+              speaker={item.speaker}
+              date={shortDate(item.publishedAt)}
+              onPress={() => play(item)}
+            />
+          )}
+        />
       ) : loading ? (
-        <SkeletonGrid tiles={6} />
+        <SkeletonList rows={6} />
       ) : query ? (
         <EmptyState
           icon="search"
@@ -439,6 +501,17 @@ function FilteredGroupCollection({ label, messages, loading }: {
     </CollectionShell>
   );
 }
+
+const useSeriesStyles = makeThemedStyles((c) => ({
+  // A hairline between rows instead of a gap between cards — what makes the
+  // list read as one ordered thing rather than n separate objects. Inset to
+  // clear the index and artwork so it aligns under the title.
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: c.border,
+    marginLeft: 22 + SERIES_ROW_ART + (theme.space.tight + 4) * 2,
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Route component — reads params and mounts the right collection. The

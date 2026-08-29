@@ -2,28 +2,88 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { biblePlan, totalDays, DayPlan } from '../data/biblePlan';
 
 const STORAGE_KEY = '@bible_progress';
-const unlockKey = (date: string) => `@bible_reading_unlocked_${date}`;
 
-// The full reading view lives on a separate pushed screen now (app/reading.tsx),
-// not inline on the Plan tab — so "they finished a reading" can't just be a
-// piece of component state anymore, it has to survive a navigation away and
-// back. Persisting a simple flag per day is the same pattern already used for
-// scroll-position restore, just one key instead of a value.
-export async function markReadingUnlocked(date: string): Promise<void> {
+// ---------------------------------------------------------------------------
+// PER-PASSAGE CONFIRMATION — the fix for a day being completed by opening one
+// of its four readings.
+//
+// WHAT WAS WRONG. A plan day lists FOUR passages (Old Testament, New
+// Testament, Psalm, Proverb). Completion was tracked as a single per-day
+// boolean, `@bible_reading_unlocked_<date>`, set the moment any one passage
+// was opened — and app/reading.tsx additionally called markDayAsRead() by
+// itself as soon as verses rendered. So opening one Psalm marked the whole
+// day read AND advanced the streak. The streak counted app-opens, not reading.
+//
+// WHAT REPLACES IT. A per-day SET of confirmed passage keys, written only by
+// an explicit user action ("Mark as read" on that passage). A day is complete
+// only when every one of its passages is in that set. The guard lives in
+// markDayAsRead itself rather than only in the UI, so no call site — present
+// or future — can complete a day the reader has not confirmed.
+//
+// WHY A SET AND NOT A COUNT. Confirming the same passage twice must not
+// advance anything, and the reader needs to show a tick per passage. A count
+// cannot answer "which ones".
+// ---------------------------------------------------------------------------
+
+/** The four readings that make up one plan day, in the order they are shown. */
+export const PASSAGE_KEYS = ['oldTestament', 'newTestament', 'psalm', 'proverb'] as const;
+export type PassageKey = (typeof PASSAGE_KEYS)[number];
+export const PASSAGES_PER_DAY = PASSAGE_KEYS.length;
+
+const passagesKey = (date: string) => `@bible_passages_read_${date}`;
+
+const isPassageKey = (v: unknown): v is PassageKey =>
+  typeof v === 'string' && (PASSAGE_KEYS as readonly string[]).includes(v);
+
+/** Which of the day's passages the reader has explicitly confirmed. */
+export async function getConfirmedPassages(date: string): Promise<PassageKey[]> {
   try {
-    await AsyncStorage.setItem(unlockKey(date), 'true');
-  } catch (error) {
-    console.error('Error saving reading-unlocked flag:', error);
+    const raw = await AsyncStorage.getItem(passagesKey(date));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    // Validated element-by-element: this survives app upgrades, and one bad
+    // row must not take the day's progress down with it.
+    return Array.isArray(parsed) ? Array.from(new Set(parsed.filter(isPassageKey))) : [];
+  } catch {
+    return [];
   }
 }
 
-export async function isReadingUnlocked(date: string): Promise<boolean> {
+/** Record an explicit "I have read this passage". Idempotent. */
+export async function confirmPassageRead(
+  date: string,
+  key: PassageKey
+): Promise<PassageKey[]> {
+  const current = await getConfirmedPassages(date);
+  if (current.includes(key)) return current;
+  const next = [...current, key];
   try {
-    const value = await AsyncStorage.getItem(unlockKey(date));
-    return value === 'true';
-  } catch {
-    return false;
+    await AsyncStorage.setItem(passagesKey(date), JSON.stringify(next));
+  } catch (error) {
+    console.error('Error saving passage confirmation:', error);
   }
+  return next;
+}
+
+/** Undo a confirmation. The button is a toggle, so this is reachable. */
+export async function unconfirmPassageRead(
+  date: string,
+  key: PassageKey
+): Promise<PassageKey[]> {
+  const current = await getConfirmedPassages(date);
+  const next = current.filter((k) => k !== key);
+  try {
+    await AsyncStorage.setItem(passagesKey(date), JSON.stringify(next));
+  } catch (error) {
+    console.error('Error clearing passage confirmation:', error);
+  }
+  return next;
+}
+
+/** True only when EVERY passage for the day has been confirmed. */
+export async function isDayFullyRead(date: string): Promise<boolean> {
+  const confirmed = await getConfirmedPassages(date);
+  return PASSAGE_KEYS.every((k) => confirmed.includes(k));
 }
 
 export interface ReadingProgress {
@@ -253,8 +313,25 @@ export async function getProgress(): Promise<ReadingProgress> {
   }
 }
 
-export async function markDayAsRead(dateString: string): Promise<void> {
+/**
+ * Complete a day. REFUSES unless every passage for that day has been
+ * individually confirmed.
+ *
+ * The guard is here, not only in the UI, and that is deliberate: the previous
+ * bug was app/reading.tsx calling this directly on render, bypassing any
+ * intention on the reader's part. A rule that only exists in a button can be
+ * routed around by the next call site; a rule in the writer cannot.
+ *
+ * Returns whether the day was (or already is) complete, so callers can tell
+ * "done" from "refused" instead of guessing.
+ */
+export async function markDayAsRead(dateString: string): Promise<boolean> {
   try {
+    // THE CHECK. Days not in the plan (defensive) and days missing any
+    // confirmation are both refused.
+    const fullyRead = await isDayFullyRead(dateString);
+    if (!fullyRead) return false;
+
     const progress = await getProgress();
     if (!progress.completedDays.includes(dateString)) {
       progress.completedDays.push(dateString);
@@ -293,8 +370,87 @@ export async function markDayAsRead(dateString: string): Promise<void> {
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     }
+    return true;
   } catch (error) {
     console.error('Error saving progress:', error);
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// HISTORICAL DATA INTEGRITY
+//
+// Streaks recorded before this change were earned under the old rule: a day
+// was completed by OPENING one of its four passages (and app/reading.tsx
+// marked it automatically on render). So some historical `completedDays` —
+// possibly many — represent one passage read, not four.
+//
+// NOTHING IS REWRITTEN, and that is a decision rather than laziness. The old
+// storage recorded only a per-day boolean "something was opened"; it never
+// recorded WHICH passages were read. The information needed to separate a
+// legitimately-complete day from an over-credited one was never written down,
+// so any "correction" would be a guess applied to someone's personal record —
+// either deleting days they genuinely did read, or keeping days they did not,
+// with no way to tell which. Silently halving a 200-day streak on the basis of
+// a guess is worse than an honest note.
+//
+// So: the record stands, and the app says so once. This stores a snapshot of
+// what was on the books at upgrade time, which is what makes the disclosure
+// specific ("the 43 days completed before this update") rather than vague.
+// ---------------------------------------------------------------------------
+
+const INTEGRITY_KEY = '@bible_progress_integrity_v2';
+
+export interface LegacyProgressNotice {
+  /** completedDays already on the books when the stricter rule shipped. */
+  legacyCompletedCount: number;
+  /** ISO date the upgrade was first seen. */
+  noticedAt: string;
+  /** Set once the reader dismisses the note. */
+  acknowledged: boolean;
+}
+
+/**
+ * Run once per install. Returns the notice to show, or null when there is
+ * nothing to say — a fresh install has no legacy days, and an acknowledged
+ * notice never returns again.
+ */
+export async function getLegacyProgressNotice(): Promise<LegacyProgressNotice | null> {
+  try {
+    const existing = await AsyncStorage.getItem(INTEGRITY_KEY);
+    if (existing) {
+      const parsed = JSON.parse(existing) as LegacyProgressNotice;
+      return parsed.acknowledged ? null : parsed;
+    }
+
+    // First run under the new rule. Snapshot what is already recorded.
+    const progress = await getProgress();
+    const legacyCompletedCount = progress.completedDays.length;
+
+    const notice: LegacyProgressNotice = {
+      legacyCompletedCount,
+      noticedAt: new Date().toISOString(),
+      // A fresh install has nothing to disclose, so it is pre-acknowledged and
+      // the reader never sees a note about data that does not exist.
+      acknowledged: legacyCompletedCount === 0,
+    };
+    await AsyncStorage.setItem(INTEGRITY_KEY, JSON.stringify(notice));
+    return notice.acknowledged ? null : notice;
+  } catch {
+    return null;
+  }
+}
+
+export async function acknowledgeLegacyProgressNotice(): Promise<void> {
+  try {
+    const existing = await AsyncStorage.getItem(INTEGRITY_KEY);
+    const parsed: LegacyProgressNotice = existing
+      ? JSON.parse(existing)
+      : { legacyCompletedCount: 0, noticedAt: new Date().toISOString(), acknowledged: true };
+    parsed.acknowledged = true;
+    await AsyncStorage.setItem(INTEGRITY_KEY, JSON.stringify(parsed));
+  } catch {
+    // A failed acknowledgement just means the note appears once more.
   }
 }
 

@@ -1,14 +1,29 @@
-// Dedicated Bible Version selection screen, pushed from the translation
-// pill in the reader's header. One card per translation, and the content
-// of each card is chosen around the actual decision someone is making:
-// the translation APPROACH (word-for-word vs thought-for-thought vs
-// amplified) is the axis that separates these versions in practice, so it
-// gets a labeled tag; name/year/language orient; one plain-language
-// sentence says who each suits. Selection persists (AsyncStorage) and the
-// Plan tab + reader both read it, so the choice is app-wide, not
-// per-screen. The list is a plain map, not a FlatList — three entries
-// don't need virtualization, and the layout scales to a dozen before
-// that changes.
+// Dedicated Bible Version selection screen, pushed from the translation pill
+// in the reader's header. Selection persists (AsyncStorage) and the Plan tab
+// and reader both read it, so the choice is app-wide, not per-screen.
+//
+// WHAT WAS REMOVED IN THE CLEANUP, and why each was redundant rather than
+// merely wordy:
+//
+//   "English" on every card. The whole catalog this app key exposes is
+//   English (see services/bibleVersions.ts), so the word appeared six times
+//   and distinguished nothing. Removed from the data model, not just hidden.
+//
+//   The standalone approach PILL. "Word-for-word" sat on its own row below
+//   the name, which cost every card a third line to carry two words. It is
+//   now part of the single meta line beside the year, where it is read in the
+//   same glance as everything else that orients you.
+//
+//   Second sentences. Each description was one or two sentences; at three
+//   versions that was a paragraph per card, at six it is a wall. Every entry
+//   is now exactly one sentence answering one question: who is this for.
+//
+// The APPROACH itself was kept, and deliberately: word-for-word vs
+// thought-for-thought is the axis that actually separates these translations
+// in practice, far more than the publication year does.
+//
+// The list is a plain map, not a FlatList — six entries don't need
+// virtualization.
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -92,15 +107,14 @@ export default function BibleVersionsScreen() {
                 </View>
                 <View style={styles.nameWrap}>
                   <Text style={styles.name}>{v.name}</Text>
-                  <Text style={styles.meta}>{v.language} · {v.year}</Text>
+                  {/* One meta line: what kind of translation it is, then when
+                      it dates from. The approach used to be a separate pill on
+                      its own row. */}
+                  <Text style={styles.meta}>{v.approach} · {v.year}</Text>
                 </View>
                 {isSelected && (
                   <Ionicons name="checkmark-circle" size={22} color={c.success} />
                 )}
-              </View>
-
-              <View style={styles.approachTag}>
-                <Text style={styles.approachText}>{v.approach}</Text>
               </View>
 
               <Text style={styles.description}>{v.description}</Text>
@@ -192,21 +206,6 @@ const useStyles = makeThemedStyles((c) => ({
     fontSize: theme.fontSize.caption,
     color: c.graySecondary,
     marginTop: theme.space.hairline,
-  },
-  approachTag: {
-    alignSelf: 'flex-start',
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.space.micro,
-    borderRadius: theme.radius.full,
-    backgroundColor: c.bg,
-    borderWidth: 1,
-    borderColor: c.grayBorder,
-  },
-  approachText: {
-    fontFamily: theme.fontFamily.bodySemibold,
-    fontSize: theme.fontSize.caption,
-    color: c.slate,
   },
   description: {
     marginTop: theme.spacing.md,

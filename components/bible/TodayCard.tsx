@@ -16,6 +16,10 @@ interface TodayCardProps {
   // means the card briefly claims "not read" for a day that IS read, then
   // flips. The loader holds that space until the truth arrives.
   loading?: boolean;
+  /** How many of the day's passages the reader has confirmed. */
+  confirmedCount?: number;
+  /** How many there are in total. */
+  totalPassages?: number;
 }
 
 // NOTE: planProgress / completedCount used to live here, feeding a progress
@@ -41,7 +45,15 @@ interface TodayCardProps {
 // below already carries "N of 365 days read" as quiet context, in one place,
 // at the right weight. Removing the ring also lets "Day N" sit alone on the
 // top row, which is a cleaner corner than a chip fighting a dial.
-export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = false }: TodayCardProps) => {
+export const TodayCard = ({
+  day,
+  isRead,
+  canMarkAsRead,
+  onMarkAsRead,
+  loading = false,
+  confirmedCount = 0,
+  totalPassages = 4,
+}: TodayCardProps) => {
   const styles = useStyles();
   const c = useThemeColors();
   return (
@@ -106,8 +118,15 @@ export const TodayCard = ({ day, isRead, canMarkAsRead, onMarkAsRead, loading = 
               Mark as Read
             </Text>
           </PressableScale>
+          {/* Names the actual requirement. The old copy said "Open a reading
+              below to unlock this", which was true of the old rule and is now
+              both wrong and the thing that made the streak untrustworthy:
+              opening was never the same as reading. */}
           {!canMarkAsRead && (
-            <Text style={styles.hint}>Open a reading below to unlock this</Text>
+            <Text style={styles.hint}>
+              {confirmedCount} of {totalPassages} readings confirmed. Mark each one as read to
+              complete today.
+            </Text>
           )}
         </>
       ) : (

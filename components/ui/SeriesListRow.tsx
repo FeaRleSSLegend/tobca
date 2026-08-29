@@ -14,13 +14,23 @@ interface SeriesListRowProps {
   onPress: () => void;
 }
 
-// A premium, editorial series row. This is NOT the old grid tile reflowed —
-// it's built around how someone actually decides what teaching to commit
-// to: a large landscape artwork that anchors the row, a big readable title
-// with real breathing room, and a clear metadata line. A left accent rail
-// (pink for ongoing, quiet grey for completed) gives the list visual rhythm
-// and lets the eye scan status without reading a word. The whole row reads
-// like a chapter in a library, not a thumbnail to click.
+// A series row: large landscape artwork that anchors it, a readable title
+// with real breathing room, and a metadata line.
+//
+// THE ACCENT RAIL IS GONE. A 4pt coloured stripe down the left edge of every
+// card is a decoration standing in for information — it encoded exactly one
+// bit (ongoing or not) using the app's loudest colour, repeated down the whole
+// list, which is why it read as generic. It also duplicated the status dot and
+// the word "Ongoing" sitting two lines away, so the same bit was being said
+// three times.
+//
+// Status is now said ONCE, as a small text badge, and only when it is
+// actually true. "Ongoing" is the exceptional state and earns a mark;
+// "Complete" is the default state of almost every series in the archive and
+// does not need one — a badge on every row is a badge on no row. That follows
+// the same rule the rest of the app's chrome uses (see the note on `gradient`
+// in constants/theme.ts): the accent marks the exception, it is not
+// wallpaper.
 export const SeriesListRow = ({ title, count, thumbnail, isOngoing, index, onPress }: SeriesListRowProps) => {
   const styles = useStyles();
   const c = useThemeColors();
@@ -32,10 +42,6 @@ export const SeriesListRow = ({ title, count, thumbnail, isOngoing, index, onPre
       accessibilityRole="button"
       accessibilityLabel={`${title}, ${count} message${count === 1 ? '' : 's'}, ${isOngoing ? 'ongoing' : 'completed'}`}
     >
-      {/* Accent rail — instant status read, and the thing that gives the
-          vertical list rhythm instead of a wall of identical cards. */}
-      <View style={[styles.rail, { backgroundColor: isOngoing ? c.pink : c.grayBorder }]} />
-
       <View style={styles.artwork}>
         <SmartImage uri={thumbnail} style={StyleSheet.absoluteFill} />
         <View style={styles.countPill}>
@@ -48,9 +54,13 @@ export const SeriesListRow = ({ title, count, thumbnail, isOngoing, index, onPre
         {index != null && <Text style={styles.ordinal}>SERIES {String(index).padStart(2, '0')}</Text>}
         <Text style={styles.title} numberOfLines={2}>{title}</Text>
         <View style={styles.metaRow}>
-          <View style={[styles.statusDot, { backgroundColor: isOngoing ? c.success : c.grayIcon }]} />
-          <Text style={styles.statusText}>{isOngoing ? 'Ongoing' : 'Complete'}</Text>
-          <Text style={styles.metaDivider}>·</Text>
+          {/* Only the exception is marked. A series that has concluded simply
+              shows its message count, which is the useful fact about it. */}
+          {isOngoing && (
+            <View style={styles.ongoingBadge}>
+              <Text style={styles.ongoingBadgeText}>ONGOING</Text>
+            </View>
+          )}
           <Text style={styles.countText}>{count} message{count === 1 ? '' : 's'}</Text>
         </View>
       </View>
@@ -63,15 +73,15 @@ export const SeriesListRow = ({ title, count, thumbnail, isOngoing, index, onPre
 const useStyles = makeThemedStyles((c) => ({
   row: {
     flexDirection: 'row',
-    alignItems: 'stretch',
+    // 'center', not 'stretch': stretch existed so the rail could run the full
+    // height of the card. With the rail gone it only made the chevron and
+    // artwork fight over vertical alignment.
+    alignItems: 'center',
     backgroundColor: c.surface,
     borderColor: c.grayBorder,
     borderWidth: 1,
     borderRadius: theme.radius.lg,
     overflow: 'hidden',
-  },
-  rail: {
-    width: 4,
   },
   artwork: {
     width: 116,
@@ -102,7 +112,7 @@ const useStyles = makeThemedStyles((c) => ({
     flex: 1,
     justifyContent: 'center',
     paddingVertical: theme.spacing.md,
-    paddingLeft: theme.spacing.xs,
+    paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
     gap: 4,
   },
@@ -124,19 +134,19 @@ const useStyles = makeThemedStyles((c) => ({
     gap: theme.space.tight,
     marginTop: theme.space.hairline,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  // A small tinted badge, not a filled pill: it labels a state, it is not a
+  // control, and a solid accent block here would out-shout the title above it.
+  ongoingBadge: {
+    paddingHorizontal: theme.space.tight,
+    paddingVertical: 2,
+    borderRadius: theme.radius.sm,
+    backgroundColor: c.accentTint,
   },
-  statusText: {
-    fontFamily: theme.fontFamily.bodySemibold,
-    fontSize: theme.fontSize.caption,
-    color: c.slate,
-  },
-  metaDivider: {
-    color: c.grayIcon,
-    fontSize: theme.fontSize.caption,
+  ongoingBadgeText: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    color: c.accent,
   },
   countText: {
     fontFamily: theme.fontFamily.body,

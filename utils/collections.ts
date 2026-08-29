@@ -12,24 +12,61 @@ export function daysSince(iso: string): number {
   return (Date.now() - new Date(iso).getTime()) / DAY_MS;
 }
 
-// A series counts as "Ongoing" only while the silence since its last
-// episode is still NORMAL for that series. Series here are intensive
-// runs — episodes land days apart (often two the same Sunday) — so a
-// series that's been quiet for 3× its typical gap has, in practice,
-// concluded. That multiple runs off the MEDIAN of the non-zero gaps
-// (median, not mean: same-day 1st/2nd-service pairs put 0-day gaps in
-// the data, and a mean would let those drag a weekly cadence down to
-// "daily"). Clamped to a 10-day floor (nothing flaps out of Ongoing over
-// one quiet week mid-run) and a 45-day ceiling (nothing claims to be
-// ongoing after a month and a half of nothing). The previous 21-day
-// floor was precisely the bug that kept concluded burst-series like
-// Managing Conflicts in Marriage sitting in Ongoing for three weeks.
+// ---------------------------------------------------------------------------
+// "ONGOING" — is this series still running?
+//
+// THE CAUSE OF THE MISCLASSIFICATION, stated before the fix.
+//
+// This has always been a pure RECENCY test with a window sized from the
+// series' own cadence: "has it been quiet for longer than 3x its typical
+// gap". That part is sound. The bug is what happens when there IS NO
+// observed cadence — the code invented one:
+//
+//     const medianGap = gaps.length > 0 ? gaps[...] : 7;   // <- fabricated
+//
+// A 7-day default produces a 21-day window, and two very common groups reach
+// that line with an empty `gaps` array:
+//
+//   1. A SINGLE-ITEM GROUP. One upload has no gaps at all, so every one-off
+//      message published in the last three weeks was flagged "Ongoing". This
+//      is the "series that only happened once" case: a series of one has no
+//      next part by definition, and nothing about one upload is evidence that
+//      a second is coming.
+//
+//   2. AN ALL-SAME-DAY GROUP. The `g >= 1` filter deliberately drops same-day
+//      gaps (the 1st/2nd-service pairs), which is right for computing a
+//      median — but a series recorded entirely in one sitting has EVERY gap
+//      dropped, lands on the same empty array, and inherits the same invented
+//      weekly cadence it never had.
+//
+// So the rule is now: no evidence of continuation means not ongoing, rather
+// than assuming a weekly rhythm nobody observed.
+//
+// WHAT THIS STILL CANNOT DO, honestly. There is no "part 3 of 6" anywhere in
+// the data to read — utils/contentGrouping strips installment markers ("Part
+// 2", "Day 3") while grouping and never retains a total, and YouTube gives no
+// series-completion field. So a genuinely finished 6-part series whose last
+// part landed inside its own cadence window is still shown as Ongoing for a
+// few more days. That is a bounded, self-correcting error rather than the
+// permanent-misclassification the two cases above caused.
+//
+// The cadence multiple runs off the MEDIAN of the non-zero gaps (median, not
+// mean: same-day pairs put 0-day gaps in the data, and a mean would drag a
+// weekly cadence down toward "daily"). Clamped to a 10-day floor (nothing
+// flaps out of Ongoing over one quiet week mid-run) and a 45-day ceiling.
+// ---------------------------------------------------------------------------
 const ONGOING_FLOOR_DAYS = 10;
 const ONGOING_CEILING_DAYS = 45;
 
 export function isOngoing(group: ContentGroup): boolean {
+  // A series of one is not a series in progress. This is the single-upload
+  // case above, and it is a structural fact rather than a timing question, so
+  // it is answered before any date arithmetic.
+  if (group.items.length < 2) return false;
+
   const newest = group.items[0]; // items are kept newest-first by classifyMessages
   if (!newest) return false;
+
   const dates = group.items
     .map((i) => new Date(i.publishedAt).getTime())
     .sort((a, b) => a - b);
@@ -39,8 +76,19 @@ export function isOngoing(group: ContentGroup): boolean {
     if (g >= 1) gaps.push(g);
   }
   gaps.sort((a, b) => a - b);
-  const medianGap = gaps.length > 0 ? gaps[Math.floor(gaps.length / 2)] : 7;
-  const windowDays = Math.min(ONGOING_CEILING_DAYS, Math.max(ONGOING_FLOOR_DAYS, medianGap * 3));
+
+  // NO OBSERVED CADENCE. Every part landed on the same day, so this is a
+  // BURST: a series delivered in one sitting. There is no rhythm to project
+  // forward, so it gets the bare floor rather than a fabricated weekly window
+  // — recent enough to still look live for a few days, then Complete.
+  const windowDays =
+    gaps.length === 0
+      ? ONGOING_FLOOR_DAYS
+      : Math.min(
+          ONGOING_CEILING_DAYS,
+          Math.max(ONGOING_FLOOR_DAYS, gaps[Math.floor(gaps.length / 2)] * 3)
+        );
+
   return daysSince(newest.publishedAt) <= windowDays;
 }
 

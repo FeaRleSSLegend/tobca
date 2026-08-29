@@ -29,6 +29,8 @@ export interface ReadingCarouselItem {
   // instead of sitting on "Loading…" forever, and the Read link still
   // works (opening the full passage retries the fetch on its own).
   failed?: boolean;
+  /** The reader has explicitly confirmed this passage as read today. */
+  confirmed?: boolean;
 }
 
 interface ReadingCarouselProps {
@@ -97,7 +99,14 @@ export const ReadingCarousel = ({ readings, onPressCard }: ReadingCarouselProps)
               <View style={styles.iconBadge}>
                 <Ionicons name={iconFor(item.key)} size={15} color={c.pink} />
               </View>
-              <Text style={styles.label}>{item.label.toUpperCase()}</Text>
+              <Text style={[styles.label, { flex: 1 }]}>{item.label.toUpperCase()}</Text>
+              {/* WHICH passages are done, not just how many. The Plan tab's
+                  card can only show a count; this is where someone actually
+                  looks to decide what to read next, so the tick belongs on the
+                  card itself. */}
+              {item.confirmed && (
+                <Ionicons name="checkmark-circle" size={15} color={c.success} />
+              )}
             </View>
             <Text style={styles.reference}>{item.reference}</Text>
             {/* A bare "Loading…" in serif read as a verse that happened to say
