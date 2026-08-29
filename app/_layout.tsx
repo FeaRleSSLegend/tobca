@@ -207,10 +207,39 @@ function StartupGate({
 }) {
   const { hydrated, colors } = useAppearance();
   const [splashDone, setSplashDone] = useState(false);
+  // Has the animated splash actually PAINTED? Not "has it mounted" — mounted
+  // is a fact about the React tree, painted is a fact about the screen, and
+  // only the second one makes the handoff seamless.
+  const [splashPainted, setSplashPainted] = useState(false);
 
+  // THE HANDOFF. Both conditions are required, and each rules out a different
+  // visible failure:
+  //
+  //   hydrated       the stored Light/Dark choice is known, so whatever
+  //                  replaces the native splash is painted in the RIGHT
+  //                  theme. Without it, a dark-mode launch flashes light.
+  //   splashPainted  the animated splash has been laid out and its first
+  //                  frame drawn. Without it, the native splash can be pulled
+  //                  away with nothing behind it — a blank window for a frame
+  //                  or two, which is the gap being reported as "the ugly one
+  //                  showing first".
+  //
+  // The old code waited on `hydrated` alone and happened to work only because
+  // an AsyncStorage read cannot resolve synchronously, so the splash was
+  // always painted first by luck of the ordering. That is not a guarantee —
+  // a cached or synchronous store would break it — so the paint is now
+  // waited on explicitly rather than assumed.
   useEffect(() => {
-    if (hydrated) SplashScreen.hideAsync().catch(() => {});
-  }, [hydrated]);
+    if (hydrated && splashPainted) SplashScreen.hideAsync().catch(() => {});
+  }, [hydrated, splashPainted]);
+
+  // Safety valve. If onLayout somehow never fires (an SVG failing to
+  // measure, a device quirk), the native splash must not be held forever —
+  // a stuck launch screen is far worse than a one-frame seam.
+  useEffect(() => {
+    const t = setTimeout(() => setSplashPainted(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -234,7 +263,11 @@ function StartupGate({
       {/* Last child so it covers everything, including the player overlay.
           Unmounted once finished — it has no reason to stay in the tree. */}
       {!splashDone && (
-        <AnimatedSplash appReady={appReady} onDone={() => setSplashDone(true)} />
+        <AnimatedSplash
+          appReady={appReady}
+          onReady={() => setSplashPainted(true)}
+          onDone={() => setSplashDone(true)}
+        />
       )}
     </View>
   );

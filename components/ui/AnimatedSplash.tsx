@@ -77,6 +77,13 @@ interface AnimatedSplashProps {
   /** Called once the whole sequence (including fade-out) has finished. */
   onDone: () => void;
   /**
+   * Fired once this component has been laid out and its first frame is
+   * committed. This is the signal the NATIVE splash waits for before hiding:
+   * the handoff is only seamless if something is already painted underneath
+   * it, and "mounted" is not the same as "painted". See app/_layout.tsx.
+   */
+  onReady?: () => void;
+  /**
    * Logo width in points.
    *
    * This used to be pinned to app.json's splash `imageWidth` so the native
@@ -98,7 +105,7 @@ function Layers({ layers }: { layers: SwooshLayer[] }) {
   );
 }
 
-export const AnimatedSplash = ({ appReady, onDone, width = 220 }: AnimatedSplashProps) => {
+export const AnimatedSplash = ({ appReady, onDone, onReady, width = 220 }: AnimatedSplashProps) => {
   const styles = useStyles();
   const height = Math.round(width * (VB.height / VB.width));
 
@@ -108,6 +115,18 @@ export const AnimatedSplash = ({ appReady, onDone, width = 220 }: AnimatedSplash
   const screen = useRef(new Animated.Value(1)).current;
   const sheenX = useRef(new Animated.Value(-VB.width)).current;
   const [introDone, setIntroDone] = useState(false);
+  const readyFired = useRef(false);
+
+  // onLayout fires after this view has been measured, and the rAF that
+  // follows lands after the frame carrying it has actually been drawn. Only
+  // then is it true that something is on screen for the native splash to hand
+  // off to. Guarded so a re-layout (rotation, text-size change) cannot fire it
+  // twice.
+  const handleLayout = () => {
+    if (readyFired.current) return;
+    readyFired.current = true;
+    requestAnimationFrame(() => onReady?.());
+  };
 
   // ---- 1. THE INTRO. Always runs, exactly once, and starts on mount. ----
   // Nothing gates it: it does not wait on fonts, on the theme, or on any data.
@@ -204,7 +223,7 @@ export const AnimatedSplash = ({ appReady, onDone, width = 220 }: AnimatedSplash
     // Swallows touches rather than passing them through: the app is fully
     // mounted and live underneath, so a tap during the animation would
     // otherwise land on whatever happens to be behind it.
-    <Animated.View style={[styles.screen, { opacity: screen }]}>
+    <Animated.View style={[styles.screen, { opacity: screen }]} onLayout={handleLayout}>
       <View style={{ width, height }}>
         <Svg width={width} height={height} viewBox={VIEW_BOX}>
           <Defs>
